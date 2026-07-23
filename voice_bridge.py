@@ -5,13 +5,15 @@ The bridge runs alongside OpenOPC and bridges:
   Voice Provider (StepAudio/Seeduplex) → transcript → AudioChannel inbound queue
   AudioChannel.send() → TTS → speaker
 
-Supports three modes:
+Supports four modes:
   halfduplex  — stdin text input, macOS `say` output (always works, no API key)
+  livekit     — LiveKit agents: Deepgram STT -> DeepSeek LLM -> Deepgram TTS
   stepaudio   — StepFun Realtime API (WebSocket, needs API key)
   seeduplex   — ByteDance Seeduplex (WebRTC, needs npm @bytedance/seed-sdk)
 
 Usage:
   uv run python3 voice_bridge.py --mode halfduplex
+  uv run python3 voice_bridge.py --mode livekit
   uv run python3 voice_bridge.py --mode seeduplex --api-key sk-...
 """
 
@@ -39,6 +41,76 @@ async def _ensure_audio_channel_running() -> None:
         print(f"[bridge] ERROR: Cannot import AudioChannel: {e}")
         print("[bridge] Make sure OpenOPC is installed: cd ~/Projects/OpenOPC && uv pip install -e .")
         sys.exit(1)
+
+
+async def run_livekit() -> None:
+    """LiveKit mode: Deepgram STT → DeepSeek LLM (Boss) → Deepgram TTS.
+
+    The LLM in the LiveKit AgentSession IS the Boss. When the user asks
+    for coding work, the Boss calls delegate_coding tool → OpenOPC chain.
+    """
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    livekit_url = os.getenv("LIVEKIT_URL")
+    if not livekit_url:
+        print("[bridge] LiveKit not configured. Set LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET")
+        print("[bridge] Falling back to halfduplex mode...")
+        await run_halfduplex()
+        return
+
+    try:
+        from livekit.agents import AgentSession, AutoSubscribe, cli, inference
+        from livekit.agents.voice import TurnHandlingOptions
+        from agent import CodingVibeAgent
+    except ImportError as e:
+        print(f"[bridge] LiveKit agents not installed: {e}")
+        print("[bridge] Run: uv pip install livekit-agents python-dotenv")
+        print("[bridge] Falling back to halfduplex mode...")
+        await run_halfduplex()
+        return
+
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    deepgram_key = os.getenv("DEEPGRAM_API_KEY")
+
+    if not deepseek_key or not deepgram_key:
+        print("[bridge] Missing API keys. Set DEEPSEEK_API_KEY and DEEPGRAM_API_KEY")
+        print("[bridge] Falling back to halfduplex mode...")
+        await run_halfduplex()
+        return
+
+    agent = CodingVibeAgent(project=os.getenv("CV_PROJECT", "demo"))
+
+    session = AgentSession(
+        stt=inference.STT(
+            model="deepgram/nova-3",
+            api_key=deepgram_key,
+            language="multi",
+        ),
+        llm=inference.LLM.with_openai(
+            base_url="https://api.deepseek.com/v1",
+            model="deepseek-chat",
+            api_key=deepseek_key,
+        ),
+        tts=inference.TTS(
+            model="deepgram/aura-asteria-en",
+            api_key=deepgram_key,
+        ),
+        agent=agent,
+        turn_handling=TurnHandlingOptions(
+            interruption={"enabled": True},
+            preemptive_generation={"enabled": True, "max_retries": 3},
+        ),
+        auto_subscribe=AutoSubscribe.AUDIO_ONLY,
+    )
+
+    print("[bridge] LiveKit mode — connecting to", livekit_url)
+    print("[bridge] STT: deepgram/nova-3 | LLM: deepseek-chat | TTS: deepgram/aura-asteria-en")
+    print("[bridge] Agent: CodingVibeAgent (delegate_coding → OpenOPC chain)")
+    print("[bridge] Ctrl+C to exit")
+    print()
+
+    cli.run.app(livekit_url, session)
 
 
 async def run_halfduplex() -> None:
@@ -113,7 +185,7 @@ async def run_stepaudio(api_key: str) -> None:
 async def main() -> None:
     parser = argparse.ArgumentParser(description="Coding Vibe Voice Bridge")
     parser.add_argument(
-        "--mode", choices=["halfduplex", "stepaudio", "seeduplex"],
+        "--mode", choices=["halfduplex", "livekit", "stepaudio", "seeduplex"],
         default="halfduplex", help="Voice provider mode"
     )
     parser.add_argument("--api-key", default=os.getenv("STEPAUDIO_API_KEY", ""),
@@ -135,6 +207,8 @@ async def main() -> None:
         await run_seeduplex(args.seeduplex_key or args.api_key)
     elif args.mode == "stepaudio":
         await run_stepaudio(args.api_key)
+    elif args.mode == "livekit":
+        await run_livekit()
     else:
         await run_halfduplex()
 
