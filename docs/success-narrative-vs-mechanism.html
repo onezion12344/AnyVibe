@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Success Narratives vs Success Mechanisms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0d1b2a;
+  --surface:  #111d33;
+  --card:     #162236;
+  --border:   #1e3050;
+  --accent:   #e07a5f;
+  --accent2:  #d4a843;
+  --accent3:  #3a8a8a;
+  --white:    #f0e6d8;
+  --muted:    #8a9ab0;
+  --glow:     0 0 40px rgba(224, 122, 95, 0.15);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Space Grotesk', 'Noto Sans SC', -apple-system, sans-serif;
+  font-size: 11px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.stars {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%,  rgba(224,122,95,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(212,168,67,0.05) 0%, transparent 40%),
+    radial-gradient(ellipse at 20% 60%, rgba(58,138,138,0.04) 0%, transparent 40%);
+}
+
+.container {
+  position: relative; z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 40px 20px 60px;
+}
+
+/* ── Header ── */
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+.header .eyebrow {
+  font-size: 9px; letter-spacing: 0.2em;
+  color: var(--muted); text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.header h1 {
+  font-size: 24px; font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+.header .subtitle {
+  font-size: 11px; color: var(--muted);
+  max-width: 380px; margin: 0 auto;
+}
+
+/* ── Section ── */
+.section { margin-bottom: 32px; }
+.section h2 {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.1em; color: var(--muted);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+}
+.section h2::after {
+  content: ''; flex: 1; height: 1px;
+  background: rgba(224, 122, 95, 0.15);
+}
+
+/* ── Card ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 15px 17px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, transform 0.3s;
+  margin-bottom: 10px;
+}
+.card:hover {
+  border-color: rgba(224, 122, 95, 0.3);
+  transform: translateX(4px);
+}
+.card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.card:nth-child(5n+1)::before { background: linear-gradient(180deg, #e07a5f, #d4a843); }
+.card:nth-child(5n+2)::before { background: linear-gradient(180deg, #d4a843, #e07a5f); }
+.card:nth-child(5n+3)::before { background: linear-gradient(180deg, #3a8a8a, #e07a5f); }
+.card:nth-child(5n+4)::before { background: linear-gradient(180deg, #e07a5f, #3a8a8a); }
+.card:nth-child(5n+0)::before { background: linear-gradient(180deg, #d4a843, #3a8a8a); }
+
+.card h3 {
+  font-size: 13px; font-weight: 600;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  margin-bottom: 6px;
+}
+.card p { color: var(--muted); margin-bottom: 8px; }
+.card p:last-child { margin-bottom: 0; }
+
+/* ── Tags ── */
+.tag {
+  display: inline-block;
+  padding: 4px 10px; border-radius: 12px;
+  background: rgba(224, 122, 95, 0.08);
+  border: 1px solid rgba(224, 122, 95, 0.15);
+  font-size: 10px; color: var(--accent2);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin-right: 5px; margin-bottom: 4px;
+}
+.tag.teal  { background: rgba(58, 138, 138, 0.08); border-color: rgba(58,138,138,0.15); color: var(--accent3); }
+.tag.gold  { background: rgba(212, 168, 67, 0.08); border-color: rgba(212,168,67,0.15); color: var(--accent2); }
+.tag.dim   { background: rgba(138,154,176,0.08); border-color: rgba(138,154,176,0.15); color: var(--muted); }
+
+/* ── Quote ── */
+.section-quote {
+  border-left: 2px solid rgba(58, 138, 138, 0.4);
+  background: rgba(58, 138, 138, 0.04);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 14px;
+  font-size: 11px; font-style: italic;
+  color: var(--white); opacity: 0.85;
+  margin-bottom: 14px;
+}
+.pull-quote { text-align: center; margin: 20px 0; }
+.pull-quote .pq-mark {
+  font-size: 30px; line-height: 0.6;
+  color: rgba(224, 122, 95, 0.25);
+  font-family: Georgia, serif;
+}
+.pull-quote .pq-text {
+  font-size: 15px; font-weight: 600; line-height: 1.5;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.pull-quote .pq-attr {
+  font-size: 10px; color: var(--muted); margin-top: 6px;
+}
+
+/* ── Verdict Badge ── */
+.verdict {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 12px;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.verdict.validated { background: rgba(58,138,138,0.12); color: var(--accent3); }
+.verdict.mixed    { background: rgba(212,168,67,0.12); color: var(--accent2); }
+.verdict.folk     { background: rgba(224,122,95,0.12); color: var(--accent); }
+.verdict.danger   { background: rgba(224,122,95,0.15); color: var(--accent); font-weight: 700; }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; margin-bottom: 14px; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 10px; color: var(--muted);
+}
+th {
+  text-align: left; padding: 8px 10px;
+  font-weight: 600; font-size: 9px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent2);
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(30,48,80,0.5);
+  vertical-align: top;
+}
+tr:hover td { background: rgba(224,122,95,0.03); }
+
+/* ── Paper Ref ── */
+.ref {
+  font-size: 10px; color: var(--muted);
+  padding: 8px 10px;
+  border-left: 2px solid rgba(212,168,67,0.3);
+  margin-bottom: 6px;
+}
+.ref .authors { color: var(--accent2); font-weight: 500; }
+.ref .journal { color: var(--accent3); }
+
+/* ── Signal Divider ── */
+.signal-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 28px 0;
+}
+.signal-divider .line {
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(224,122,95,0.3), transparent);
+}
+.signal-divider span {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.2em; white-space: nowrap;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center; margin-top: 40px; padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.footer p {
+  font-size: 10px; color: var(--muted); letter-spacing: 0.05em;
+}
+
+/* ── Animations ── */
+.reveal {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+.dot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.5); }
+}
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<div class="container">
+
+<header class="header reveal">
+  <div class="eyebrow">AdventureX 2026 · Research Report</div>
+  <h1>Success Narratives vs Success Mechanisms</h1>
+  <p class="subtitle">What folk psychology claims about entrepreneurial success, what science actually shows, and how to tell an honest story without the survivorship bias theater</p>
+</header>
+
+<!-- ============================================================ -->
+<!-- PART 1: FOLK PSYCHOLOGY CONCEPTS                              -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>1. Folk Psychology Audit</h2>
+
+  <div class="card">
+    <span class="verdict folk">FOLK PSYCHOLOGY</span>
+    <h3>自我标榜 (Self-Branding)</h3>
+    <p>No validated psychological construct exists for "self-branding." The underlying behaviors map to signaling theory (Spence, 1973), impression management (Goffman, 1959), and narcissism (NPI, Raskin &amp; Terry, 1988).</p>
+    <p><strong>Key insight:</strong> Verbal self-promotion is cheap talk. Costly signals — GitHub commits, user growth data, third-party endorsements — are what rational observers should weigh. Most "personal branding" in startup culture is identity performance without verification cost.</p>
+    <span class="tag">Cheap Talk</span>
+    <span class="tag gold">Signaling Theory</span>
+    <span class="tag dim">NPI</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict mixed">MIXED — PHILOSOPHY ≠ PSYCHOLOGY</span>
+    <h3>主体性 (Agency / Subjectivity)</h3>
+    <p>Two distinct meanings are conflated: philosophical subjectivity (Descartes, Husserl — first-person perspective, unmeasurable) and psychological agency (Bandura's self-efficacy, Rotter's locus of control — validated constructs).</p>
+    <p><strong>Key insight:</strong> When someone says "you need more 主体性," they could mean: be proactive (behavioral activation), believe in yourself (self-efficacy, r=.38 with performance per Stajkovic &amp; Luthans meta-analysis), take responsibility (internal locus of control), or make your own judgments (autonomy per SDT). Vague = unfalsifiable = cheap.</p>
+    <span class="tag">Self-Efficacy</span>
+    <span class="tag gold">Locus of Control</span>
+    <span class="tag teal">SDT Autonomy</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict folk">FOLK NARRATIVE — ZERO EMPIRICAL EVIDENCE</span>
+    <h3>初心 (Beginner's Mind / Original Intention)</h3>
+    <p>Shoshin is a Zen spiritual concept (Suzuki, 1970), not a scientific construct. In modern Chinese, "不忘初心" is a political slogan (Xi Jinping, 2016) later absorbed into startup rhetoric. No empirical research validates "初心" as a predictor of anything.</p>
+    <p><strong>Key insight:</strong> Every successful founder claims they kept their 初心. So did 90% of those who failed. The concept is circular: success proves初心, failure proves its absence. Closest scientific constructs: cognitive flexibility (CFS, Dennis &amp; Vander Wal, 2010) and intellectual humility (Leary et al., 2017).</p>
+    <span class="tag">Zen / Not Science</span>
+    <span class="tag gold">Cognitive Flexibility</span>
+    <span class="tag teal">Intellectual Humility</span>
+    <span class="tag dim">Post-Hoc Attribution</span>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 2: WHY FOLK PSYCHOLOGY DOMINATES                         -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>2. Why Vague Concepts Dominate Startup Culture</h2>
+
+  <div class="card">
+    <h3>Fuzziness = Unfalsifiability = Safety</h3>
+    <p>"You need more 初心" can never be proven wrong. There is no operational definition, no measurement, no counterfactual test. This makes it a perfect narrative device — it explains everything and risks nothing.</p>
+  </div>
+
+  <div class="card">
+    <h3>Identity Signaling (Bourdieu's Cultural Capital)</h3>
+    <p>Using these words signals you belong to the "startup tribe." It's a shibboleth — not designed to convey information, but to mark insider status. The vaguer the concept, the stronger the identity signal.</p>
+  </div>
+
+  <div class="card">
+    <h3>Post-Hoc Rationalization (Taleb's Narrative Fallacy)</h3>
+    <p>Success demands a story. "I made 100 correct micro-decisions and got lucky on timing" is not a good story. "I kept my 初心 and had strong 主体性" is. The story replaces the mechanism because the story is what people want to hear — and what the successful person wants to believe about themselves.</p>
+  </div>
+
+  <div class="card">
+    <h3>Control Illusion</h3>
+    <p>"If I maintain 初心 / strengthen 主体性, I will succeed" implies success is controllable through internal states — ignoring the 90% startup base failure rate, market timing, and structural factors. This is psychologically comforting but statistically false.</p>
+  </div>
+
+  <div class="card">
+    <h3>Confidence Filter — Who Gets to Speak</h3>
+    <p>Only the highly confident (sometimes pathologically so) give talks, write threads, and dominate hackathon stages. Those who are cautious, uncertain, and nuanced self-select out of visibility. What we hear is the most confident 5%, not the most accurate 5%.</p>
+    <span class="tag danger">Key Mechanism</span>
+  </div>
+</div>
+
+<div class="signal-divider reveal">
+  <div class="line"></div>
+  <span>THE GAP</span>
+  <div class="line"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 2.5: ATTRIBUTION THEORY + NARRATIVE PSYCHOLOGY            -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>2.5. The Narrative—Mechanism Gap — Attribution Theory</h2>
+
+  <div class="card">
+    <span class="verdict validated">8,180 CITATIONS</span>
+    <h3>Motivated Reasoning (Kunda, 1990)</h3>
+    <p>People arrive at desired conclusions by selectively recruiting evidence — not blind wishing, but a sophisticated process of constructing <em>seemingly reasonable justifications</em>. Founders genuinely construct causal narratives where their agency is central. The 初心 story <em>feels true</em> because it has been processed through a motivated reasoning filter that discards counterevidence.</p>
+    <div class="ref"><span class="authors">Kunda, Z.</span> (1990). The case for motivated reasoning. <span class="journal">Psychological Bulletin, 108</span>(3), 480–498.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">FOUNDATIONAL</span>
+    <h3>Self-Serving Bias — It's Perceptual, Not Strategic (Miller &amp; Ross, 1975)</h3>
+    <p>People systematically take personal credit for success and externalize failure. This is NOT mere self-promotion — it is <em>cognitive</em>. People genuinely perceive stronger covariation between their actions and successful outcomes than exists. The person on stage is not lying. The distortion is perceptual.</p>
+    <div class="ref"><span class="authors">Miller, D.T. &amp; Ross, M.</span> (1975). Self-serving biases in the attribution of causality. <span class="journal">Psychological Bulletin, 82</span>(2), 213–225.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">DIRECT ENTREPRENEURIAL EVIDENCE</span>
+    <h3>Actor-Observer Bias in Founders (Rogoff, Lee &amp; Suh, 2004)</h3>
+    <p>Entrepreneurs attribute success to internal factors (effort, skills, decisions). Experts studying the same businesses see more external causation (market timing, luck). The person doing the thing sees their own agency. The observer sees the environment. Both are biased — in opposite directions.</p>
+    <div class="ref"><span class="authors">Rogoff, E.G., Lee, M.S. &amp; Suh, D.C.</span> (2004). Who done it? <span class="journal">Journal of Small Business Management, 42</span>(4), 364–376.</div>
+  </div>
+</div>
+
+<div class="section reveal">
+  <h2>2.6. Narrative Psychology — Stories as Sense-Making, Not Truth</h2>
+
+  <div class="card">
+    <span class="verdict validated">FOUNDATIONAL</span>
+    <h3>Two Modes of Thought (Bruner, 1986/1991)</h3>
+    <p><strong>Paradigmatic mode:</strong> logical-scientific — truth, verification, cause-effect. <strong>Narrative mode:</strong> meaning, believability, coherence, human agency. A good story is <em>not</em> a true story — it is a <em>coherent</em> story. Startup pitches operate in narrative mode. The test is "does this inspire?" — not "does this isolate actual causal factors?"</p>
+    <div class="ref"><span class="authors">Bruner, J.</span> (1986). <span class="journal">Actual Minds, Possible Worlds</span>. (1991). The narrative construction of reality. <span class="journal">Critical Inquiry, 18</span>(1), 1–21.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE</span>
+    <h3>Life Stories Are Reconstructive (McAdams, 2001)</h3>
+    <p>People construct internalized, evolving narratives to provide unity and purpose — shaped by current concerns and cultural scripts, <em>not</em> accurate historical records. 初心 and 主体性 are culturally scripted identity themes, not causal variables. The self that tells the story is not the self that experienced the events.</p>
+    <div class="ref"><span class="authors">McAdams, D.P.</span> (2001). The psychology of life stories. <span class="journal">Review of General Psychology, 5</span>(2), 100–122.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE</span>
+    <h3>Entrepreneurial Storytelling Paradox (Garud, Schildt &amp; Lant, 2014)</h3>
+    <p>Entrepreneurs use projective stories to win legitimacy. The expectations that win legitimacy <em>become the source of future disappointments</em>. Storytellers edit out dead ends, imbue random pivots with strategic genius, and create coherence that never existed in real time. The narrative is systematically different from lived experience.</p>
+    <div class="ref"><span class="authors">Garud, R., Schildt, H. &amp; Lant, T.K.</span> (2014). Entrepreneurial storytelling and the paradox of legitimacy. <span class="journal">Organization Science, 25</span>(5), 1479–1497.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">EMPIRICAL · 3,220 VERIFIED RECORDS</span>
+    <h3>Memory Itself Inflates (Bahrick, Hall &amp; Berger, 1996)</h3>
+    <p>89% accuracy recalling A's, 29% for D's. Most errors <em>inflated</em> the grade. Autobiographical memory has a built-in upward distortion function. Founders narrate from already-distorted memories — distortion compounds on distortion.</p>
+    <div class="ref"><span class="authors">Bahrick, H.P., Hall, L.K. &amp; Berger, S.A.</span> (1996). Accuracy and distortion in memory. <span class="journal">Psychological Science, 7</span>(5), 265–269.</div>
+  </div>
+</div>
+
+<div class="section reveal">
+  <h2>2.7. Hindsight Bias — "I Knew It All Along"</h2>
+
+  <div class="card">
+    <span class="verdict validated">FOUNDATIONAL</span>
+    <h3>The Original (Fischhoff, 1975)</h3>
+    <p>Receiving outcome knowledge increases postdicted likelihood <em>regardless of actual likelihood</em>. Judges were unaware of this effect. After a startup succeeds, founders genuinely believe their early decisions were more calculated than they were. The "knew-it-all-along" effect rewires memory.</p>
+    <div class="ref"><span class="authors">Fischhoff, B.</span> (1975). Hindsight is not equal to foresight. <span class="journal">J. Experimental Psychology: HPP, 1</span>(3), 288–299.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">COMPREHENSIVE REVIEW</span>
+    <h3>Three Components (Roese &amp; Vohs, 2012)</h3>
+    <p>Hindsight bias = memory distortion ("I said it would happen") + inevitability ("it had to happen") + foreseeability ("I knew it would happen"). Startup narratives display all three. "I always believed in this vision" is not accurate recall — it is hindsight bias.</p>
+    <div class="ref"><span class="authors">Roese, N.J. &amp; Vohs, K.D.</span> (2012). Hindsight bias. <span class="journal">Perspectives on Psychological Science, 7</span>(5), 411–426.</div>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 3: NARRATIVE VS MECHANISM RESEARCH                       -->
+<!-- ============================================================ -->
+
+<div class="signal-divider reveal">
+  <div class="line"></div>
+  <span>THE EVIDENCE</span>
+  <div class="line"></div>
+</div>
+
+<div class="section reveal">
+  <h2>3. What Psychology Shows — The Evidence</h2>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · NBER / Journal of Finance</span>
+    <h3>Persuasive Delivery Predicts Funding — Negatively Predicts Performance</h3>
+    <p>Machine learning analysis of full pitch videos found: warm, passionate pitches increase funding probability. BUT conditional on getting funded, high-passion startups <em>underperform</em>. The mechanism: persuasive delivery creates inaccurate investor beliefs.</p>
+    <div class="ref"><span class="authors">Hu, A. &amp; Ma, S.</span> (2021). Persuading Investors: A Video-Based Study. <span class="journal">NBER Working Paper No. 29048</span>, published in <span class="journal">Journal of Finance</span>.</div>
+    <span class="tag danger">Critical Finding</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · fMRI Study</span>
+    <h3>Founder Passion Increases Neural Engagement by 39%</h3>
+    <p>High-passion founders trigger significantly higher neural engagement in investors, mediating a 26% boost in investment interest. But this is a persuasion effect — not a performance signal.</p>
+    <div class="ref"><span class="authors">Shane, S., Drover, W., Clingingsmith, D., &amp; Cerf, M.</span> (2020). Founder passion, neural engagement, and informal investor interest. <span class="journal">Journal of Business Venturing, 35</span>(4).</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · Pre-Registered Experiment</span>
+    <h3>Success Stories Cause False Beliefs — Even When Bias Is Acknowledged</h3>
+    <p>Participants shown dropout-founder success stories became 55 percentage points more likely to bet on dropout-founded companies. Acknowledging the bias did not prevent the distortion. Most reported medium-to-high confidence and generated causal explanations to justify their decisions.</p>
+    <div class="ref"><span class="authors">Lifchits, G., Anderson, A., Goldstein, D.G., Hofman, J.M., &amp; Watts, D.J.</span> (2021). Success stories cause false beliefs about success. <span class="journal">Judgment and Decision Making, 16</span>(6), 1439–1463.</div>
+    <span class="tag danger">Critical Finding</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · Longitudinal Data</span>
+    <h3>Entrepreneurs Recalibrate Past Success Probabilities by ~20pp</h3>
+    <p>Using PSED longitudinal data on 198 nascent entrepreneurs: those who abandoned their ventures showed substantial hindsight bias, recalibrating recalled success probabilities from 77.3% down to 58.8%. Only those with the most formal education were immune.</p>
+    <div class="ref"><span class="authors">Cassar, G. &amp; Craig, J.</span> (2009). An investigation of hindsight bias in nascent venture activity. <span class="journal">Journal of Business Venturing, 24</span>(2), 149–164.</div>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · MIT PhD</span>
+    <h3>Narrative Backlash — Investors Often Reject Stories, Demand Data</h3>
+    <p>Only 33% of Shark Tank entrepreneurs told a story in their pitch. Even when investors acknowledged stories as high-quality, coherent, and resonant, they often dismissed them in favor of facts and substance. The paper introduces "narrative rebound" as a documented phenomenon.</p>
+    <div class="ref"><span class="authors">Turner, B.</span> (2023). The storytelling entrepreneur has no clothes: risks and rewards of narrative pitching. <span class="journal">MIT PhD Dissertation</span>.</div>
+    <span class="tag teal">Counter-Narrative</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · Meta-Analysis (50 effect sizes, N=15,751)</span>
+    <h3>Time Pressure Has a J-Curve Effect on Innovation</h3>
+    <p>High time pressure is <em>more</em> positively associated with innovation performance than moderate pressure. Learning behavior statistically mediates the relationship. Supervisor developmental feedback moderates it.</p>
+    <div class="ref"><span class="authors">Song, H., Zhang, Q., &amp; Li, Y.</span> (2023). Nonlinear effects of time pressure on innovation performance. <span class="journal">Frontiers in Psychology, 13</span>.</div>
+    <span class="tag">Hackathon-Relevant</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · Academy of Management Journal (105 citations)</span>
+    <h3>In Hackathons, Minimal Structure Beats Imported Process</h3>
+    <p>Teams that tried to import and compress organizational innovation processes <em>all failed</em>. Only teams that maintained temporal ambiguity — minimal coordination baseline, letting structure emerge — produced functioning novel products.</p>
+    <div class="ref"><span class="authors">Lifshitz-Assaf, H., Lebovitz, S., &amp; Zalmanson, L.</span> (2020). Minimal and adaptive coordination: how hackathon projects accelerate innovation without killing it. <span class="journal">Academy of Management Journal</span>.</div>
+    <span class="tag">Hackathon-Relevant</span>
+  </div>
+
+  <div class="card">
+    <span class="verdict validated">STRONG EVIDENCE · Journal of Business Venturing Insights</span>
+    <h3>Prepared Entrepreneurs Gain Legitimacy — With or Without Exaggeration</h3>
+    <p>Well-prepared entrepreneurs had high probability of gaining legitimacy regardless of whether they exaggerated in their pitch. But in 20% of cases, investors could not distinguish preparation from misrepresentation.</p>
+    <div class="ref"><span class="authors">Cottle, G.W. &amp; Anderson, B.S.</span> (2020). The temptation of exaggeration: exploring the line between preparedness and misrepresentation. <span class="journal">Journal of Business Venturing Insights, 14</span>.</div>
+  </div>
+</div>
+
+<div class="signal-divider reveal">
+  <div class="line"></div>
+  <span>SYNTHESIS</span>
+  <div class="line"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 4: PITCH ELEMENT AUDIT                                    -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>4. Pitch Element Audit — What's Real vs Theater</h2>
+
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr><th>Pitch Element</th><th>Scientific Status</th><th>What to Do Instead</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">Passionate Delivery</td>
+        <td><span class="verdict mixed" style="margin:0">MIXED</span><br><small>Wins funding, negatively predicts performance (Hu &amp; Ma, 2021)</small></td>
+        <td>Be passionate but back it with concrete data gathered during the hackathon</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">Founder Origin Story</td>
+        <td><span class="verdict folk" style="margin:0">WEAK</span><br><small>33% tell stories; investors often reject them (Turner, 2023)</small></td>
+        <td>30 seconds max, verifiable observation. "We noticed X. It bothered us. We built Y."</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">"Huge Market" (TAM)</td>
+        <td><span class="verdict folk" style="margin:0">THEATER</span><br><small>No research supports TAM slides predicting success</small></td>
+        <td>Say who you <em>can</em> reach. Name specific early adopters.</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">Time Pressure Story</td>
+        <td><span class="verdict validated" style="margin:0">VALIDATED</span><br><small>J-curve effect (Song et al., 2023 meta-analysis)</small></td>
+        <td>Frame as your secret weapon: "48 hours forced decisions others take weeks to make"</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">Team Diversity</td>
+        <td><span class="verdict mixed" style="margin:0">MIXED</span><br><small>Only works with flat structure (Krebs et al., 2025)</small></td>
+        <td>Show diversity + non-hierarchy. Mention skill-mapping at start.</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">Live Demo</td>
+        <td><span class="verdict validated" style="margin:0">STRONGEST</span><br><small>Best predictor in hackathon research. 50% never show it.</small></td>
+        <td><strong>Always end with demo.</strong> Skip a slide if needed.</td>
+      </tr>
+      <tr>
+        <td style="color:var(--accent2);font-weight:600">"If only 1%..." Math</td>
+        <td><span class="verdict folk" style="margin:0">THEATER</span><br><small>Mathematically hollow rhetorical device</small></td>
+        <td>Skip entirely. Damages credibility with any numerate judge.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 5: HACKATHON-SPECIFIC FINDINGS                            -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>5. Hackathon-Specific Science</h2>
+
+  <div class="card">
+    <h3>Team Transactive Memory — Skill-Map at Start</h3>
+    <p>202 Global Game Jam teams (48h): teams that knew who knew what (transactive memory systems) performed better. Task conflict amplified benefits when TMS was present; relationship conflict attenuated them.</p>
+    <div class="ref"><span class="authors">O'Toole, J. et al.</span> (2022). Transactive memory systems, temporary teams, and conflict. <span class="journal">Journal of Management</span>.</div>
+    <span class="tag">Actionable</span>
+  </div>
+
+  <div class="card">
+    <h3>Hierarchy Kills Idea Quality</h3>
+    <p>308 teams in #EUvsVirus hackathon: hierarchical cultural values correlated with <em>lower</em> idea quality. Flat teams produced better ideas.</p>
+    <div class="ref"><span class="authors">Krebs, B.P. et al.</span> (2025). Revealing the impact of cultural value orientations on creative outcomes. <span class="journal">R&amp;D Management</span>.</div>
+    <span class="tag">Actionable</span>
+  </div>
+
+  <div class="card">
+    <h3>193,353 Hackathon Projects Analyzed</h3>
+    <p>Computational creativity analysis (novelty × usefulness) of 10,363 refined projects. Largest-scale quantitative study of hackathon output to date.</p>
+    <div class="ref"><span class="authors">CHI 2025</span>. How hackathons foster creativity? Toward automated assessment of large-scale creativity. <span class="journal">Proceedings of the 2025 CHI Conference</span>.</div>
+  </div>
+</div>
+
+<div class="signal-divider reveal">
+  <div class="line"></div>
+  <span>BOTTOM LINE</span>
+  <div class="line"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 6: THE HONEST PITCH                                      -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>6. The Honest Pitch — What It Sounds Like</h2>
+
+  <div class="pull-quote">
+    <div class="pq-mark">"</div>
+    <div class="pq-text">We noticed X. It bothered us. We tried three directions — two failed. This one works. Here is the data we gathered in 48 hours. We do not know if it scales — but we think it might, and here is why. We need help.</div>
+    <div class="pq-attr">— The most honest thing you can say on a hackathon stage</div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Why This Works</h3>
+    <p><strong>No folk psychology.</strong> No 初心, no 主体性, no self-branding theater. Just: observation → test → result → uncertainty → ask.</p>
+    <p><strong>Costly signals replace cheap talk.</strong> Working prototype. Test data. Failed attempts admitted. This is what a rational observer should update on.</p>
+    <p><strong>Survivorship bias is named, not hidden.</strong> "We do not know if it scales" is the most disarming sentence in a pitch room. Every judge has heard a hundred people claim certainty. Zero have been right.</p>
+    <p><strong>Confidence filter is inverted.</strong> The most confident people in the room are the least likely to be accurate. Showing uncertainty is not weakness — it is metacognitive accuracy.</p>
+  </div>
+
+  <div class="section-quote">
+    <strong>On Jobs vs Cook vs Huang:</strong> Jobs' abrasiveness was a <em>byproduct</em> of his success, not its cause. The same trait in a failed founder is called "arrogance." Cook and Huang prove you can build trillion-dollar companies without the theater. The behaviors that get mythologized are the ones that happened to coexist with success — not the ones that produced it.
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- PART 7: KEY PAPERS                                             -->
+<!-- ============================================================ -->
+
+<div class="section reveal">
+  <h2>7. Key Papers</h2>
+
+  <div class="ref"><span class="authors">Hu, A. &amp; Ma, S.</span> (2021). Persuading Investors: A Video-Based Study. <span class="journal">NBER / Journal of Finance</span>. <em>The single most devastating paper: passionate pitches win funding but predict worse performance. Persuasion works by creating inaccurate beliefs.</em></div>
+
+  <div class="ref"><span class="authors">Lifchits, G. et al.</span> (2021). Success stories cause false beliefs about success. <span class="journal">Judgment and Decision Making</span>. <em>Pre-registered experiment: success stories distort beliefs by 55pp even when bias is acknowledged.</em></div>
+
+  <div class="ref"><span class="authors">Cassar, G. &amp; Craig, J.</span> (2009). Hindsight bias in nascent venture activity. <span class="journal">Journal of Business Venturing</span>. <em>Entrepreneurs recalibrate past success estimates by ~20pp after failure.</em></div>
+
+  <div class="ref"><span class="authors">Turner, B.</span> (2023). The storytelling entrepreneur has no clothes. <span class="journal">MIT PhD Dissertation</span>. <em>Only 33% tell stories; investors often reject them for data. Narrative rebound is real.</em></div>
+
+  <div class="ref"><span class="authors">Lifshitz-Assaf, H. et al.</span> (2020). Minimal and adaptive coordination in hackathons. <span class="journal">Academy of Management Journal</span>. <em>Imported process fails in hackathons. Minimal structure + emergent coordination wins.</em></div>
+
+  <div class="ref"><span class="authors">Song, H. et al.</span> (2023). Nonlinear effects of time pressure on innovation. <span class="journal">Frontiers in Psychology</span>. <em>J-curve: high time pressure &gt; moderate pressure for innovation. Meta-analysis of 50 effect sizes.</em></div>
+
+  <div class="ref"><span class="authors">Shane, S. et al.</span> (2020). Founder passion, neural engagement, and investor interest. <span class="journal">Journal of Business Venturing</span>. <em>fMRI: passion +39% neural engagement, +26% interest. A persuasion mechanism, not a quality signal.</em></div>
+
+  <div class="ref"><span class="authors">Bandura, A.</span> (1977–present). Self-efficacy: toward a unifying theory. <span class="journal">Psychological Review</span>. <em>The validated construct behind what people vaguely call "主体性." r=.38 with performance (meta-analysis).</em></div>
+</div>
+
+<footer class="footer reveal">
+  <p>Research compiled at AdventureX 2026 · Yellow Sheep Aesthetics · Methodology: 12 AnySearch queries, 3 subagent passes, cross-verified sources</p>
+  <p style="margin-top:6px">「为创造，再一次信仰之跃」— But verify your claims first.</p>
+</footer>
+
+</div>
+
+<script>
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
