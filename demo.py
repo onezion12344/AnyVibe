@@ -87,92 +87,147 @@ class MCPClient:
         time.sleep(0.1)
         return self._read_response()
 
+    def claim_delegation(self, task_id="auto"):
+        self._rpc("tools/call", {
+            "name": "coding_vibe_claim_delegation",
+            "arguments": {"task_id": task_id}
+        }, 4)
+        time.sleep(0.1)
+        return self._read_response()
+
+    def complete_delegation(self, task_id, summary, files_changed=None):
+        args = {"task_id": task_id, "summary": summary}
+        if files_changed:
+            args["files_changed"] = files_changed
+        self._rpc("tools/call", {
+            "name": "coding_vibe_complete_delegation",
+            "arguments": args
+        }, 5)
+        time.sleep(0.1)
+        return self._read_response()
+
     def close(self):
         self.proc.terminate()
 
 
-def simulate_ceo(description, repo_path, task_id):
-    """Simulate what the CEO model does with a delegation."""
+def simulate_ceo_via_mcp(client):
+    """Simulate the CEO role using the actual MCP tools.
+
+    This is the real CEO loop: claim → execute → complete.
+    In production, the hook toggles to CEO protocol and the model does this.
+    Here we simulate it to prove the MCP bridge works end-to-end.
+    """
     print()
     print("=" * 60)
-    print("CEO MODEL PICKING UP:", task_id)
-    print("  Repo:", repo_path)
-    print("  Task:", description)
+    print("CEO MODEL PICKING UP (via claim_delegation)")
     print("=" * 60)
-    time.sleep(0.8)
 
-    print("\n[CEO] Reading project context...")
-    time.sleep(0.4)
+    # CEO calls claim_delegation("auto") to pick up oldest pending task
+    claim_result = client.claim_delegation("auto")
+    if claim_result.get("status") != "claimed":
+        print("[CEO] No pending tasks to claim:", json.dumps(claim_result, indent=2))
+        return None
+    print("[CEO] Claimed task:", claim_result["task_id"])
+    print("[CEO] Task:", claim_result["description"])
+    print("[CEO] Repo:", claim_result["repo_path"])
+
+    time.sleep(0.5)
+
+    repo_path = claim_result["repo_path"]
     if os.path.exists(repo_path):
         files = os.listdir(repo_path)
         print("[CEO] Found %d files in repo" % len(files))
 
-    print("\n[CEO] Reasoning about the task...")
+    print("\n[CEO] Implementing...")
     for step in [
-        "Analyzing requirements and constraints...",
-        "Designing the implementation approach...",
-        "Planning Architect -> Builder -> Reviewer chain...",
+        "Analyzing requirements...",
+        "Planning implementation...",
+        "Writing code...",
+        "Running tests...",
     ]:
-        time.sleep(0.5)
+        time.sleep(0.4)
         print("  ", step)
 
-    print("\n[CEO] Delegating to OpenOPC engineering team...")
-    time.sleep(0.6)
-    print("  -> Architect: Designing the solution...")
-    time.sleep(0.4)
-    print("  -> Builder: Implementing the code...")
-    time.sleep(0.4)
-    print("  -> Reviewer: Verifying the implementation...")
-    time.sleep(0.4)
-
-    result = {
-        "task_id": task_id,
-        "status": "completed",
-        "summary": "Successfully implemented: " + description,
-        "files_changed": ["main.py"],
-        "tests_passed": True,
-    }
-    print("\n[CEO] Task complete:", json.dumps(result, indent=2))
+    # CEO completes the delegation — this auto-creates task-complete checkpoint
+    summary = "Successfully implemented: " + claim_result["description"]
+    result = client.complete_delegation(
+        claim_result["task_id"],
+        summary,
+        files_changed=["main.py"],
+    )
+    print("\n[CEO] Delegation completed:", json.dumps(result, indent=2))
     return result
 
 
 def demo_scripted():
-    """Non-interactive scripted demo."""
+    """Non-interactive scripted demo — full CS→CEO→CS loop via MCP."""
     client = MCPClient()
     repo = os.path.expanduser("~/Projects/OpenOPC_workplace/demo")
     task = "Add a /health endpoint returning status and uptime JSON"
 
-    steps = [
-        ("CS", "Call received. User wants to add a /health endpoint."),
-        ("CP", client.checkpoint(
-            "requirements-gathered",
-            "User needs /health endpoint in demo server", 10)),
-        ("DL", client.delegate(
-            "add-health-endpoint",
-            "Add GET /health endpoint returning status + uptime JSON", repo)),
-        ("CP", client.checkpoint(
-            "delegating-to-ceo",
-            "Task delegated to CEO for implementation", 30)),
-        ("CEO", "Reasoning + OpenOPC chain (Architect->Builder->Reviewer)..."),
-        ("CP", client.checkpoint(
-            "task-complete",
-            "Added /health endpoint. Returns status + uptime. Tests pass.", 100)),
-        ("CS", "Delivering results: Your /health endpoint is live!"),
-    ]
+    print("=" * 55)
+    print("  CODING VIBE — Full Loop Demo (CS → CEO → CS)")
+    print("=" * 55)
+    print()
 
-    for label, content in steps:
-        time.sleep(0.3)
-        if isinstance(content, str):
-            print("[%s] %s" % (label, content))
-        else:
-            print("[%s] %s" % (label, json.dumps(content)[:120]))
+    # === TURN 1: CS Protocol ===
+    print("--- Turn 1: CS gathers requirements ---")
+    print('[CS]  "Coding Vibe, how can I help?"')
+    print('[User] "Hey, I need to add a /health endpoint"')
+    print()
 
+    r = client.checkpoint(
+        "requirements-gathered",
+        "User needs /health endpoint in " + repo, 10)
+    print("[CS] Checkpoint:", r["checkpoint"])
+
+    r = client.delegate(
+        "add-health-endpoint",
+        "Add GET /health endpoint returning status + uptime JSON to the demo FastAPI server", repo)
+    print("[CS] Delegated:", r["task_id"])
+    print("[CS] Delegation file written:", r["delegation_file"])
+
+    r = client.checkpoint(
+        "delegating-to-ceo",
+        "Task handed off to CEO. Will notify when done.", 30)
+    print("[CS] Checkpoint:", r["checkpoint"])
+    print('[CS]  "The team is on it! Go enjoy your ride."')
+    print()
+    print(">>> Hook detects pending delegation → next turn = CEO protocol")
+    print()
+
+    time.sleep(0.5)
+
+    # === TURN 2: CEO Protocol ===
+    print("--- Turn 2: CEO picks up and implements ---")
+    result = simulate_ceo_via_mcp(client)
+    if not result:
+        print("[CEO] No tasks to process")
+        return
+
+    print()
+    print(">>> Hook detects task-complete checkpoint → next turn = CS protocol")
+    print()
+
+    time.sleep(0.5)
+
+    # === TURN 3: CS delivers ===
+    print("--- Turn 3: CS delivers results ---")
     state = client.session_state()
-    print("\nSession: %d checkpoints, %d delegations" % (
-        len(state.get("checkpoints", [])),
-        len(state.get("delegations", []))))
-    print("State saved to: %s/session.json" % STATE_DIR)
+    checkpoints = state.get("checkpoints", [])
+    latest = checkpoints[-1] if checkpoints else {}
+
+    print('[User] "How did it go?"')
+    print('[CS]  "Good news! The engineering team finished."')
+    print('[CS]  "' + latest.get("message", "Task complete!") + '"')
+    print()
+    print("   Progress: %d%%" % latest.get("progress_pct", 100))
+    print("   Total checkpoints:", len(checkpoints))
+    print("   Delegations:", len(state.get("delegations", [])))
+    print("   State saved: %s/session.json" % STATE_DIR)
     client.close()
+    print()
+    print("Full loop complete! CS → CEO → CS, all via MCP bridge.")
 
 
 def demo_interactive():
@@ -227,11 +282,7 @@ def demo_interactive():
 
     input("\n[Press Enter to see CEO work in background...] ")
 
-    result = simulate_ceo(user_task, repo, task_id)
-
-    client.checkpoint(
-        "task-complete",
-        "Done! " + result["summary"] + ". Tests passed.", 100)
+    result = simulate_ceo_via_mcp(client)
 
     input("\n[Press Enter to see CS deliver results...] ")
 
@@ -271,10 +322,15 @@ if __name__ == "__main__":
             print("  Checkpoint:", r["checkpoint"])
             r = client.delegate(task_id, args.task, repo)
             print("  Delegated:", r["task_id"])
+            print("  File:", r["delegation_file"])
+            print("\n--- CEO Turn ---")
+            simulate_ceo_via_mcp(client)
+            print("\n--- CS Delivers ---")
             state = client.session_state()
-            print("  State: %d checkpoints, %d delegations" % (
-                len(state.get("checkpoints", [])),
-                len(state.get("delegations", []))))
+            cp = state.get("checkpoints", [])
+            print("  Latest:", cp[-1]["message"] if cp else "N/A")
+            print("  Session: %d checkpoints, %d delegations" % (
+                len(cp), len(state.get("delegations", []))))
             client.close()
         else:
             demo_interactive()
