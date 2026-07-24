@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import uuid
 from typing import AsyncIterator
 
@@ -51,10 +52,17 @@ class ClaudeCodeAdapter(HarnessAdapter):
         # is a positional arg, so a task starting with "-" would otherwise be
         # parsed as a flag (argv flag smuggling). Everything after "--" is
         # treated as positional.
+        # --dangerously-skip-permissions: the engineer runs unattended (no TTY
+        # to approve edits/tools), so permission prompts would hang it. Override
+        # via CV_CLAUDE_PERMISSION_MODE if a stricter mode is wanted.
+        perm_flag = os.environ.get(
+            "CV_CLAUDE_PERMISSION_MODE", "--dangerously-skip-permissions"
+        )
         cmd = [
             "claude", "-p",
             "--verbose",
             "--output-format", "stream-json",
+            perm_flag,
             "--", task,
         ]
 

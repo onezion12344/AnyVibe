@@ -8,12 +8,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import uuid
+from pathlib import Path
 from typing import AsyncIterator
 
 from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
 
-OPC_ROOT = "$HOME/Projects/OpenOPC"   # overridable via env OPC_ROOT
+# OpenOPC project root — where `uv run opc` must execute. Overridable via env.
+OPC_ROOT = os.environ.get("OPC_ROOT") or str(Path.home() / "Projects" / "OpenOPC")
 
 # Module-level handle store (per-process, shared across instances)
 _handles: dict[str, dict] = {}
@@ -43,18 +46,21 @@ class OpenOPCAdapter(HarnessAdapter):
     async def spawn(self, task: str, *, repo_path: str, context: dict | None = None) -> str:
         handle = str(uuid.uuid4())
 
-        # Pre-flight: is opc on PATH?
+        # Pre-flight: can we run opc via uv in the OpenOPC project root?
+        # (opc has no --version; `--help` always exits 0. Must run in OPC_ROOT
+        # so `uv run` resolves the OpenOPC project/venv, not the target repo.)
         try:
             proc = await asyncio.create_subprocess_exec(
-                "opc", "--version",
-                stdout=asyncio.subprocess.PIPE,
+                "uv", "run", "opc", "--help",
+                stdout=asyncio.subprocess.DEVNULL,
                 stderr=asyncio.subprocess.DEVNULL,
+                cwd=str(self._opc_root),
             )
-            await asyncio.wait_for(proc.communicate(), timeout=5)
+            await asyncio.wait_for(proc.communicate(), timeout=30)
             if proc.returncode != 0:
-                raise RuntimeError("opc returned non-zero")
+                raise RuntimeError("`uv run opc --help` returned non-zero")
         except (FileNotFoundError, TimeoutError, RuntimeError) as exc:
-            _store_failure(handle, str(exc))
+            _store_failure(handle, f"OpenOPC pre-flight failed: {exc}")
             return handle
 
         # Pre-flight passed — create the handle entry before handing to _run
@@ -89,7 +95,7 @@ class OpenOPCAdapter(HarnessAdapter):
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                cwd=repo_path,
+                cwd=str(self._opc_root),
             )
 
             # Drain stderr concurrently to prevent the child from blocking on a
