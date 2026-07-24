@@ -36,3 +36,17 @@ Yellow-Sheep deep-space nautical: `--bg #0d1b2a`, coral `#e07a5f` / gold `#d4a84
 2. Company view + tool-call visibility.
 3. Cuter kanban (replicate Qoder strengths).
 4. Talking sheep avatar (Tier 1 → Tier 2).
+
+## 5. Layered / async progressive-response design (owner idea)
+Never leave the user in silence while a slow tier works — tiered feedback:
+- **T0 (instant):** fast brain speaks a filler ("好的，我查一下，稍等哈") + optional clarifying question.
+- **T1 (seconds):** step-3.7-flash gives a preliminary answer from its own knowledge / quick lookup.
+- **T2 (minutes):** CEO returns the strong verdict → spoken as a follow-up in the SAME call, or ring-back if the call ended.
+Each tier answers with what it has now, upgrades when the higher tier reports → saves user time.
+
+**Pipecat implementation (confirmed feasible):**
+- filler-while-tool-runs: push a `TTSSpeakFrame` when `dispatch_to_engineer` is invoked.
+- `dispatch_to_engineer` returns FAST (ack), doesn't block the turn; fast LLM can give a first-pass answer.
+- CEO runs as a background task; on completion, INJECT an out-of-band assistant turn into the live Pipecat pipeline (`queue_frame` → TTS → spoken) — proactive mid-call update, no polling.
+- fallback: call ended → agent-calls-you ring-back (already built).
+This is a strong reason to build on Pipecat (hand-rolled bridge can't cleanly inject async turns). AEC (hands-free) also comes free with Pipecat's WebRTC transport.
