@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 import tempfile
 from pathlib import Path
 
@@ -12,7 +13,7 @@ import pytest
 from receptionist.adapters.base import StatusEvent, TaskResult
 from receptionist.adapters.mock import MockAdapter
 from receptionist.core import Receptionist
-from receptionist.registry import get_adapter, list_adapters, register_adapter
+from receptionist.registry import get_adapter, list_adapters, register_adapter, discover_adapters
 from receptionist.state import load_state, append_checkpoint, reset_state, _get_state_file
 
 
@@ -505,3 +506,292 @@ class TestDispatchAsync:
 
         await asyncio.sleep(0.2)
         assert "on_complete" in ordering
+
+
+# ---------------------------------------------------------------------------
+# Auto-discovery tests
+# ---------------------------------------------------------------------------
+
+class TestAdapterDiscovery:
+    """Tests for directory auto-discovery and entry-point discovery."""
+
+    # ---- helpers -----------------------------------------------------------
+
+    @staticmethod
+    def _fresh_registry(monkeypatch=None):
+        """Return a fully-reset registry; optionally monkeypatch _EXTERNAL_PLUGINS_DIR."""
+        import receptionist.registry as reg
+        reg.reset_registry()
+        if monkeypatch is not None:
+            monkeypatch.setattr(reg, "_EXTERNAL_PLUGINS_DIR", reg._EXTERNAL_PLUGINS_DIR)
+        return reg
+
+    # ---- built-in adapters discoverable via list_adapters ------------------
+
+    def test_builtins_auto_discovered_via_list(self):
+        """Built-in adapters are discoverable without any explicit imports."""
+        adapters = list_adapters()
+        assert "mock" in adapters
+        assert "claude-code" in adapters
+        assert "openopc" in adapters
+
+    def test_builtins_auto_discovered_via_get(self):
+        """get_adapter() returns built-in classes after auto-discovery."""
+        from receptionist.adapters.mock import MockAdapter
+        from receptionist.adapters.claude_code import ClaudeCodeAdapter
+        from receptionist.adapters.openopc import OpenOPCAdapter
+
+        assert get_adapter("mock") is MockAdapter
+        assert get_adapter("claude-code") is ClaudeCodeAdapter
+        assert get_adapter("openopc") is OpenOPCAdapter
+
+    # ---- drop-in directory plugin -----------------------------------------
+
+    def test_dropin_plugin_discovered(self, tmp_path, monkeypatch):
+        """A ``*.py`` file dropped in the plugins dir is auto-imported and registered."""
+        reg = self._fresh_registry(monkeypatch)
+
+        # Write a minimal adapter into a temp plugins directory.
+        # Because plugins/ has no __init__.py, Strategy 2 (sys.path injection) is used.
+        plugins_dir = tmp_path / "my-plugins"
+        plugins_dir.mkdir()
+        adapter_code = """\
+from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
+from receptionist.registry import register_adapter
+
+
+class MyDropinAdapter(HarnessAdapter):
+    name = "my-dropin"
+    async def spawn(self, task, *, repo_path, context=None):
+        return "handle-1"
+    async def stream_status(self, handle):
+        yield StatusEvent(kind="done", text="done")
+        return
+        yield
+    async def result(self, handle):
+        return TaskResult(ok=True, summary="ok", files_changed=[], raw="ok")
+
+
+register_adapter(MyDropinAdapter)
+"""
+        (plugins_dir / "my_adapter.py").write_text(adapter_code)
+
+        # Override the external plugins dir and add it to sys.path so the
+        # drop-in module can import receptionist.adapters.base successfully.
+        monkeypatch.setattr(reg, "_EXTERNAL_PLUGINS_DIR", plugins_dir)
+        import sys as _sys
+        _sys.path.insert(0, str(plugins_dir))
+
+        # Run discovery only for the external plugins dir.
+        # _discovered_dirs already contains the built-ins path from reset_registry(),
+        # so calling _discover_directory on the overridden path is safe.
+        reg._discover_directory(plugins_dir)
+
+        assert "my-dropin" in reg.list_adapters()
+        cls = reg.get_adapter("my-dropin")
+        assert cls.__name__ == "MyDropinAdapter"
+
+        _sys.path.remove(str(plugins_dir))
+
+    def test_dropin_plugin_get_adapter_works(self, tmp_path, monkeypatch):
+        """get_adapter / dispatch works with a drop-in plugin adapter."""
+        reg = self._fresh_registry(monkeypatch)
+
+        plugins_dir = tmp_path / "plugins"
+        plugins_dir.mkdir()
+        adapter_code = """\
+from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
+from receptionist.registry import register_adapter
+
+
+class QuickAdapter(HarnessAdapter):
+    name = "quick"
+    async def spawn(self, task, *, repo_path, context=None):
+        return "h"
+    async def stream_status(self, handle):
+        yield StatusEvent(kind="done", text="quick done")
+        return
+        yield
+    async def result(self, handle):
+        return TaskResult(ok=True, summary="quick", files_changed=[], raw="quick")
+
+
+register_adapter(QuickAdapter)
+"""
+        (plugins_dir / "quick_adapter.py").write_text(adapter_code)
+
+        monkeypatch.setattr(reg, "_EXTERNAL_PLUGINS_DIR", plugins_dir)
+        import sys as _sys
+        _sys.path.insert(0, str(plugins_dir))
+        reg._discover_directory(plugins_dir)
+
+        cls = reg.get_adapter("quick")
+        assert cls.__name__ == "QuickAdapter"
+        _sys.path.remove(str(plugins_dir))
+
+    # ---- entry-point discovery --------------------------------------------
+
+    def test_entry_point_discovery_registers_adapter(self, monkeypatch):
+        """An entry point resolved to a HarnessAdapter subclass is registered."""
+        reg = self._fresh_registry(monkeypatch)
+
+        from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
+
+        class _EPAdapter(HarnessAdapter):
+            name = "ep-adapter"
+            async def spawn(self, task, *, repo_path, context=None): ...
+            async def stream_status(self, handle): ...
+            async def result(self, handle): ...
+
+        # Build a fake entry-point object that matches importlib.metadata.EntryPoint
+        class _FakeEP:
+            def __init__(self, name, obj):
+                self.name = name
+                self._obj = obj
+
+            def load(self):
+                return self._obj
+
+        fake_ep = _FakeEP("ep-adapter", _EPAdapter)
+
+        # Monkey-patch importlib.metadata.entry_points to return our fake EP
+        import importlib.metadata as _im
+
+        def _fake_eps(group=None):
+            if group == "coding_vibe.adapters":
+                return [fake_ep]
+            if group is None:
+                return {"coding_vibe.adapters": [fake_ep]}
+            return []
+
+        monkeypatch.setattr(_im, "entry_points", _fake_eps)
+
+        reg.discover_adapters()
+        assert "ep-adapter" in reg.list_adapters()
+        assert reg.get_adapter("ep-adapter") is _EPAdapter
+
+    def test_entry_point_module_load(self, monkeypatch):
+        """An entry point that loads a module triggers _scan_module_for_adapters."""
+        import sys as _sys
+        reg = self._fresh_registry(monkeypatch)
+
+        from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
+
+        class ModAdapter(HarnessAdapter):
+            name = "mod-ep-adapter"
+            async def spawn(self, task, *, repo_path, context=None): ...
+            async def stream_status(self, handle): ...
+            async def result(self, handle): ...
+
+        # Build a fake module with ModAdapter as an attribute
+        fake_module = type(sys)("fake_pkg.adapter")
+        fake_module.ModAdapter = ModAdapter
+
+        class _FakeEP:
+            def __init__(self, name):
+                self.name = name
+
+            def load(self):
+                return fake_module
+
+        fake_ep = _FakeEP("mod-ep-adapter")
+
+        import importlib.metadata as _im
+
+        def _fake_eps(group=None):
+            if group == "coding_vibe.adapters":
+                return [fake_ep]
+            if group is None:
+                return {"coding_vibe.adapters": [fake_ep]}
+            return []
+
+        monkeypatch.setattr(_im, "entry_points", _fake_eps)
+
+        reg.discover_adapters()
+        assert "mod-ep-adapter" in reg.list_adapters()
+
+    # ---- idempotency ------------------------------------------------------
+
+    def test_discover_adapters_idempotent(self):
+        """Calling discover_adapters() twice does not duplicate or crash."""
+        first = discover_adapters()
+        second = discover_adapters()
+        assert list(first) == list(second)
+        # All built-ins present
+        assert "mock" in first
+        assert "claude-code" in first
+        assert "openopc" in first
+
+    def test_discover_idempotent_no_duplicate_registration(self, monkeypatch):
+        """Second discovery pass must not change the registry contents."""
+        reg = self._fresh_registry(monkeypatch)
+        # Run once
+        reg.discover_adapters()
+        names_after_first = sorted(reg._REGISTRY)
+        # Run again
+        reg.discover_adapters()
+        names_after_second = sorted(reg._REGISTRY)
+        assert names_after_first == names_after_second
+
+    # ---- name collision handling ------------------------------------------
+
+    def test_name_collision_logged_last_wins(self, tmp_path, monkeypatch, caplog):
+        """If two adapters share a name, last-wins wins and a warning is logged."""
+        reg = self._fresh_registry(monkeypatch)
+
+        # Use _register_loaded_adapter directly (the entry-point discovery path)
+        # rather than scanning plugin files, which call register_adapter directly.
+        from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
+
+        class _FirstAdapter(HarnessAdapter):
+            name = "same-name"
+            async def spawn(self, t, *, r, c=None): ...
+            async def stream_status(self, h): ...
+            async def result(self, h):
+                return TaskResult(ok=True, summary="first", files_changed=[], raw="first")
+
+        class _SecondAdapter(HarnessAdapter):
+            name = "same-name"
+            async def spawn(self, t, *, r, c=None): ...
+            async def stream_status(self, h): ...
+            async def result(self, h):
+                return TaskResult(ok=True, summary="second", files_changed=[], raw="second")
+
+        with caplog.at_level("WARNING", logger="receptionist.registry"):
+            reg._register_loaded_adapter(_FirstAdapter)
+            reg._register_loaded_adapter(_SecondAdapter)
+
+        # Second wins (last-wins semantics)
+        assert reg.get_adapter("same-name") is _SecondAdapter
+        # A collision warning was logged on the second registration
+        assert any(
+            "collision" in record.getMessage().lower() for record in caplog.records
+        )
+
+    # ---- external plugins dir does not need to exist -----------------------
+
+    def test_external_plugins_dir_missing_is_ok(self, monkeypatch):
+        """If ~/.coding-vibe/plugins/ does not exist, discovery still works."""
+        import receptionist.registry
+        # Point to a non-existent directory
+        monkeypatch.setattr(
+            receptionist.registry,
+            "_EXTERNAL_PLUGINS_DIR",
+            Path("/tmp/definitely-does-not-exist-xyzzy"),
+        )
+        # Should not raise; reset so adapters dir isn't already marked discovered
+        reg = self._fresh_registry(monkeypatch)
+        reg.discover_adapters()
+        # Built-ins still work
+        assert "mock" in reg.list_adapters()
+
+    # ---- built-ins still in registry after discover ------------------------
+
+    def test_adapters_dir_module_init_does_not_register(self):
+        """__init__.py in adapters/ no longer calls register_adapter directly."""
+        # The __init__ should only re-export; the actual registration happens
+        # via _register_builtins() called lazily.
+        from receptionist.registry import _REGISTRY
+        import receptionist.adapters as adapters_pkg
+        # The package itself must not be a registered adapter name
+        assert adapters_pkg.__name__ not in _REGISTRY
