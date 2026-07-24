@@ -55,7 +55,7 @@ Current live pipeline (master): browser WS `/api/call` → StepFun realtime (voi
 - **P2** — Cuter kanban (replicate Qoder's board strengths). Talking **Yellow-Sheep pet** via Codex-pet sprite format + `codex-pet-companion` web SDK. English TTS upgrade (MiMo has an OpenAI-compatible API `mimo-v2.5-tts`; needs a `MIMO_API_KEY`). Native iOS/Android build. launchd for servers/tunnel. `dse-agent` OpenOPC DB recovery (owner-gated). Add a `QoderAdapter` to OpenOPC (registry has no qoder).
 
 ## How to run
-See `docs/RUNBOOK.md`. Quick local call (master): `http://localhost:5091/call?token=<CV_API_TOKEN>` (headphones). Pipecat (branch): `miniforge3/bin/python3 voice/server.py` → `http://localhost:7860`.
+See `docs/RUNBOOK.md`. Quick local call (master): `http://localhost:5091/call?token=<CV_API_TOKEN>` (headphones). Pipecat: `miniforge3/bin/python3 voice/server.py` → `http://localhost:7860`.
 
 ## Branches
 `master` (integrated + live bridge + **Pipecat** + shared abstraction) · `feat/pipecat-voice` (merged) · `feat/ceo-fanout` · `feat/openopc-staffing` · `feat/webui`.
