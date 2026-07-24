@@ -339,13 +339,9 @@ const CV = (() => {
         startWaveform();
         startBoardPoll();
         renderBoard();
-        // demo hook: auto-fire an incoming_call 6 s into the call
-        autoIncomingTimer = setTimeout(() => {
-          if (state === 'in-call') {
-            // Simulate the agent calling you back
-            window.CV.simulateIncomingCall('任务完成，需要您确认方案');
-          }
-        }, 6000);
+        // NOTE: incoming calls come ONLY from the server via /api/events
+        // (agent-calls-you). No client-side demo auto-fire — it interrupted
+        // real calls. Use window.CV.simulateIncomingCall(reason) manually to demo.
         break;
       }
       case 'incoming': {
