@@ -23,7 +23,7 @@ from typing import Any
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -32,16 +32,26 @@ from fastapi.staticfiles import StaticFiles
 _THIS_DIR = Path(__file__).parent
 _PROJECT_ROOT = _THIS_DIR.parent
 
-# ── Load .env: try worktree root first, then parent (original repo) ─────────────
-_env_candidates = [
-    _PROJECT_ROOT / ".env",          # worktree root  (/coding-vibe-webui/.env)
-    _PROJECT_ROOT.parent / ".env",   # parent repo    (/coding-vibe/.env)
+# ── Load .env ──────────────────────────────────────────────────────────────────
+# The .env lives in the sibling main repo coding-vibe/.env (not the worktree).
+# We check several known locations so the module works regardless of cwd or
+# how it is loaded (direct file vs -c vs uvicorn).
+from pathlib import Path as _Path
+
+_home = _Path.home()
+_env_locations = [
+    _home / "Projects" / "coding-vibe" / ".env",          # sibling of worktree
+    _Path(__file__).resolve().parents[2] / "coding-vibe" / ".env",  # computed
+    _home / "Projects" / "coding-vibe-webui" / ".env",     # worktree (if .env added later)
+    _Path.cwd() / ".env",                                    # current working dir
 ]
-for _ef in _env_candidates:
+for _ef in _env_locations:
     if _ef.exists():
         load_dotenv(_ef, override=False)
         print(f"[config] Loaded .env from {_ef}")
         break
+else:
+    print("[config] WARNING: no .env found — StepFun voice features will be disabled")
 
 # ── Import receptionist (project root must be on sys.path) ─────────────────────
 import sys
@@ -161,24 +171,41 @@ async def dispatch(body: dict[str, Any]):
     )
 
     receptionist = Receptionist()
-    task_id = str(uuid.uuid4())[:8]
-    await _log_event(task_id, "info", f"Task dispatched: {task[:120]}")
 
-    # fire-and-forget via asyncio background task
-    async def _run():
-        try:
-            tid = await receptionist.dispatch_async(
-                task,
-                backend=backend,
-                repo_path=repo_path,
-                on_status=await _on_status(task_id),
-                on_complete=await _on_complete(task_id),
-            )
-        except Exception as exc:
-            await _log_event(task_id, "error", str(exc))
+    # captured_tid is populated by the callback once dispatch_async creates the id
+    captured: dict[str, str | None] = {"id": None}
 
-    asyncio.create_task(_run())
-    return {"task_id": task_id}
+    async def on_status(event):  # event: StatusEvent
+        tid = captured["id"]
+        if tid is None:
+            return
+        _task_events[tid].append(
+            {"ts": time.time(), "kind": event.kind, "text": event.text}
+        )
+
+    def on_complete(result):  # result: TaskResult
+        tid = captured["id"]
+        if tid is None:
+            return
+        _task_results[tid] = {
+            "ok": result.ok,
+            "summary": result.summary,
+            "files_changed": result.files_changed,
+            "raw": result.raw,
+            "ts": time.time(),
+        }
+
+    # dispatch_async is non-blocking: it returns immediately with the task_id
+    returned_id = await receptionist.dispatch_async(
+        task,
+        backend=backend,
+        repo_path=repo_path,
+        on_status=on_status,
+        on_complete=on_complete,
+    )
+    captured["id"] = returned_id
+
+    return {"task_id": returned_id}
 
 
 @app.get("/api/board")
@@ -310,20 +337,17 @@ async def task_detail(task_id: str):
 
 
 @app.post("/api/voice")
-async def voice(audio: bytes = None, file: Any = None):
+async def voice(file: UploadFile = File(...)):
     """Transcribe an audio blob via StepFun ASR, then dispatch the transcript.
 
-    Accepts either raw bytes in the request body OR a multipart 'file' field.
+    Accepts a multipart 'file' field with an audio blob.
     Returns {transcript, task_id}.
     """
-    # Accept both raw body and multipart
     raw_audio: bytes | None = None
     if file is not None:
         raw_audio = await file.read()
-    elif audio is not None:
-        raw_audio = audio
     else:
-        raise HTTPException(400, "No audio provided. Send raw bytes or multipart 'file'.")
+        raise HTTPException(400, "No audio provided. Upload via multipart 'file' field.")
 
     if not STEPFUN_API_KEY:
         raise HTTPException(
