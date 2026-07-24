@@ -1,4 +1,4 @@
-/* ── call.js — CV state machine + mock backend ─────────────────────────
+/* ── call.js — CV state machine + audio engine ─────────────────────────
  *
  * State: idle → dialing → in-call → (incoming/ended) → idle
  *
@@ -30,23 +30,49 @@ const CV = (() => {
   }
 
   /* ══════════════════════════════════════════════════════════════════
-   * REAL AUDIO ENGINE  (mic → PCM16 24k → WS /api/call → playback)
+   * AUDIO ENGINE  (mic → PCM16 24k → WS /api/call → playback)
    * StepFun stepaudio-2.5-realtime: 24 kHz mono PCM16 both ways.
+   *
+   * CAPTURE  — AudioWorkletProcessor (off-main-thread) with iOS Safari
+   *             fallback to ScriptProcessorNode.
+   * PLAYBACK — jitter-buffered queue; frames scheduled 80-120 ms ahead
+   *             of playHead so bursty WS delivery doesn't create gaps.
    * ══════════════════════════════════════════════════════════════════ */
   const RATE = 24000;
+  const JITTER_LEAD = 0.1;   // seconds — small buffer ahead of playHead
+
   const rt = {
     active: false, muted: false, level: 0,
-    ws: null, ctx: null, micStream: null, node: null, src: null, sink: null,
-    playHead: 0, playing: [],
+    ws: null, ctx: null, micStream: null,
+    // capture
+    workletNode: null, workletPort: null, awAvailable: false,
+    // playback queue
+    playHead: 0, pendingPCM: [], _draining: false,
 
+    /* ─── start() ──────────────────────────────────────────────────── */
     async start() {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC({ sampleRate: RATE });
       await this.ctx.resume();                       // iOS: must follow a tap
+
+      /* Mic — browser AEC / NS / AGC on the capture path.  */
+      /* NOTE on echo: browser AEC reference is the mic capture path only.
+       * AudioContext → destination playback is NOT included in the AEC
+       * reference on most browsers, so mic may pick up agent's voice and
+       * feed it back.  We do NOT duck the mic (full-duplex is desired);
+       * instead we rely on server-side barge-in.  For reliable hands-free
+       * AEC the real fix is WebRTC / LiveKit, which gives the AEC a full
+       * loopback reference.  Headphones avoid the problem in the meantime. */
       this.micStream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
       });
-      // Open the bridge WS and wait for it to be ready.
+
+      /* Open the bridge WS and wait for it to be ready. */
       this.ws = new WebSocket(wsUrl('/api/call'));
       this.ws.binaryType = 'arraybuffer';
       await new Promise((res, rej) => {
@@ -58,24 +84,81 @@ const CV = (() => {
       if (token) this.ws.send(JSON.stringify({ type: 'auth', token }));
       this.ws.onmessage = (m) => this._onServer(m);
       this.ws.onclose = () => { this.active = false; };
-      // Capture graph: mic → ScriptProcessor → zero-gain sink (no echo).
-      this.src = this.ctx.createMediaStreamSource(this.micStream);
-      this.node = this.ctx.createScriptProcessor(4096, 1, 1);
-      this.sink = this.ctx.createGain(); this.sink.gain.value = 0;
-      this.src.connect(this.node); this.node.connect(this.sink); this.sink.connect(this.ctx.destination);
-      this.node.onaudioprocess = (e) => this._onMic(e);
-      this.inRate = this.ctx.sampleRate || RATE;   // iOS may force 48k despite the hint
+
+      /* ── Capture graph ───────────────────────────────────────────────
+       * Try AudioWorklet first (iOS 14.5+, modern Chrome/Firefox/Safari).
+       * Fall back to ScriptProcessorNode on older Safari / browsers that
+       * don't support AudioWorklet (still runs on the main thread but
+       * avoids a complete breakage).
+       * ─────────────────────────────────────────────────────────────── */
+      this.awAvailable = typeof this.ctx.audioWorklet?.addModule === 'function';
+
+      if (this.awAvailable) {
+        try {
+          await this.ctx.audioWorklet.addModule('/static/audio-worklet.js');
+          this.workletNode = new AudioWorkletNode(this.ctx, 'cv-mic-processor');
+          this.workletPort = this.workletNode.port;
+          // Tell the worklet the actual context sample-rate (iOS may force 48 k).
+          this.workletPort.postMessage({
+            type: 'init',
+            contextRate: this.ctx.sampleRate || RATE,
+          });
+          this.workletPort.onmessage = (e) => {
+            if (e.data instanceof Int16Array) this._onMicPCM(e.data);
+          };
+          this.srcNode = this.ctx.createMediaStreamSource(this.micStream);
+          this.srcNode.connect(this.workletNode);
+          // Zero-gain path so mic isn't routed to speakers (avoids feedback loop).
+          this.sink = this.ctx.createGain();
+          this.sink.gain.value = 0;
+          this.workletNode.connect(this.sink);
+          this.sink.connect(this.ctx.destination);
+        } catch (err) {
+          console.warn('[CV] AudioWorklet failed, falling back to ScriptProcessor:', err.message);
+          this.awAvailable = false;
+        }
+      }
+
+      if (!this.awAvailable) {
+        // ── ScriptProcessor fallback ──────────────────────────────────
+        this.srcNode = this.ctx.createMediaStreamSource(this.micStream);
+        this.node = this.ctx.createScriptProcessor(4096, 1, 1);
+        this.sink = this.ctx.createGain();
+        this.sink.gain.value = 0;
+        this.srcNode.connect(this.node);
+        this.node.connect(this.sink);
+        this.sink.connect(this.ctx.destination);
+        this.node.onaudioprocess = (e) => this._onMicScript(e);
+      }
+
+      this.inRate = this.ctx.sampleRate || RATE;
       this.playHead = this.ctx.currentTime;
       this.active = true;
     },
 
-    _onMic(e) {
+    /* ─── AudioWorklet path: receives Int16 PCM from the processor ──── */
+    _onMicPCM(pcm) {
+      // Level meter from raw PCM (no Float32 conversion needed).
+      let sum = 0;
+      const len = pcm.length;
+      for (let i = 0; i < len; i++) {
+        const f = pcm[i] / 0x8000;
+        sum += f * f;
+      }
+      this.level = Math.min(1, Math.sqrt(sum / len) * 4);
+
+      if (this.muted || !this.ws || this.ws.readyState !== 1) return;
+      try { this.ws.send(pcm); } catch {}
+    },
+
+    /* ─── ScriptProcessor fallback: Float32 → Int16 → WS ─────────── */
+    _onMicScript(e) {
       const inb = e.inputBuffer.getChannelData(0);
-      // level for the waveform
-      let sum = 0; for (let i = 0; i < inb.length; i++) sum += inb[i] * inb[i];
+      let sum = 0;
+      for (let i = 0; i < inb.length; i++) sum += inb[i] * inb[i];
       this.level = Math.min(1, Math.sqrt(sum / inb.length) * 4);
       if (this.muted || !this.ws || this.ws.readyState !== 1) return;
-      // Resample to 24 kHz if the context isn't already there (iOS often is 48k).
+
       let samples = inb;
       if (this.inRate !== RATE) {
         const ratio = RATE / this.inRate;
@@ -92,50 +175,100 @@ const CV = (() => {
       const pcm = new Int16Array(samples.length);
       for (let i = 0; i < samples.length; i++) {
         const s = Math.max(-1, Math.min(1, samples[i]));
-        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
-      try { this.ws.send(pcm.buffer); } catch {}
+      try { this.ws.send(pcm); } catch {}
     },
 
+    /* ─── Incoming audio: queue → jitter-buffered drain loop ────────── */
     _onServer(m) {
       if (typeof m.data === 'string') {
         try {
           const d = JSON.parse(m.data);
-          if (d.type === 'barge-in') this._flush();   // stop playback, user is talking
+          if (d.type === 'barge-in') this._flush();        // user started talking
+          if (d.type === 'response-done') this._draining = false;
         } catch {}
         return;
       }
-      const i16 = new Int16Array(m.data);
-      const f32 = new Float32Array(i16.length);
-      for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 0x8000;
-      const buf = this.ctx.createBuffer(1, f32.length, RATE);
-      buf.copyToChannel(f32, 0);
-      const src = this.ctx.createBufferSource();
-      src.buffer = buf; src.connect(this.ctx.destination);
-      const now = this.ctx.currentTime;
-      const t = Math.max(now + 0.02, this.playHead);
-      src.start(t); this.playHead = t + buf.duration;
-      this.playing.push(src);
-      src.onended = () => { this.playing = this.playing.filter(s => s !== src); };
+
+      // Binary Int16 PCM @ 24 kHz — push to queue, kick the drain loop.
+      this.pendingPCM.push(new Int16Array(m.data));
+      this._draining = true;
+      this._scheduleDrain();
+    },
+
+    /**
+     * Drain loop: pull queued PCM chunks, convert to AudioBuffers, and
+     * schedule them at max(ctx.currentTime + JITTER_LEAD, playHead).
+     * Uses requestAnimationFrame so it stays responsive and cancels
+     * cleanly when the queue empties or the call ends.
+     */
+    _scheduleDrain() {
+      if (!this._draining || !this.ctx) return;
+      const ctx = this.ctx;
+
+      const tick = () => {
+        if (!this._draining || !this.ctx || this.pendingPCM.length === 0) return;
+
+        const now = ctx.currentTime;
+        // Only schedule if the next frame would land within our lead window.
+        if (this.playHead > now + JITTER_LEAD) {
+          requestAnimationFrame(tick);
+          return;
+        }
+
+        const chunk = this.pendingPCM.shift();
+        if (!chunk) { requestAnimationFrame(tick); return; }
+
+        const buf = ctx.createBuffer(1, chunk.length, RATE);
+        // Copy Int16 → Float32 for the AudioBuffer.
+        const dst = buf.getChannelData(0);
+        for (let i = 0; i < chunk.length; i++) dst[i] = chunk[i] / 0x8000;
+
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        const t = Math.max(ctx.currentTime + JITTER_LEAD, this.playHead);
+        src.start(t);
+        this.playHead = t + buf.duration;
+        this._playing.push(src);
+        src.onended = () => { this._playing = this._playing.filter(s => s !== src); };
+
+        requestAnimationFrame(tick);
+      };
+
+      requestAnimationFrame(tick);
     },
 
     _flush() {
-      this.playing.forEach(s => { try { s.stop(); } catch {} });
-      this.playing = [];
-      this.playHead = this.ctx ? this.ctx.currentTime : 0;
+      // Stop all scheduled sources.
+      this._playing.forEach(s => { try { s.stop(); } catch {} });
+      this._playing = [];
+      // Drop queued-but-not-yet-scheduled PCM.
+      this.pendingPCM = [];
+      // Reset playHead so the next frame lands at a safe time.
+      this.playHead = this.ctx ? this.ctx.currentTime + JITTER_LEAD : JITTER_LEAD;
+      this._draining = false;
     },
 
     stop() {
       this.active = false;
+      this._draining = false;
+      // AudioWorklet teardown
+      if (this.workletPort) { try { this.workletPort.onmessage = null; } catch {} }
+      if (this.workletNode) { try { this.workletNode.disconnect(); } catch {} }
+      // ScriptProcessor teardown
       try { this.node && (this.node.onaudioprocess = null); } catch {}
-      try { this.src && this.src.disconnect(); } catch {}
-      try { this.node && this.node.disconnect(); } catch {}
+      // Graph teardown
+      try { this.srcNode && this.srcNode.disconnect(); } catch {}
       try { this.sink && this.sink.disconnect(); } catch {}
       try { this.micStream && this.micStream.getTracks().forEach(t => t.stop()); } catch {}
       this._flush();
       try { this.ws && this.ws.close(); } catch {}
       try { this.ctx && this.ctx.close(); } catch {}
-      this.ws = null; this.ctx = null; this.micStream = null; this.node = null;
+      this.ws = null; this.ctx = null; this.micStream = null;
+      this.workletNode = null; this.workletPort = null;
+      this.node = null; this.srcNode = null; this.sink = null;
     },
   };
 
@@ -359,10 +492,9 @@ const CV = (() => {
   }
 
   /* ══════════════════════════════════════════════════════════════════
-   * INIT  (wire events channel on idle → incoming)
+   * INIT  (after DOMContentLoaded)
    * ══════════════════════════════════════════════════════════════════ */
   function init() {
-    // Attach listeners
     document.getElementById('btn-call')   .addEventListener('click', () => transition('dialing'));
     document.getElementById('btn-mute')   .addEventListener('click', toggleMute);
     document.getElementById('btn-hangup') .addEventListener('click', hangUp);
@@ -422,9 +554,9 @@ const CV = (() => {
 
   function renderBoard() {
     const d = boardData;
-    renderCol('pending',   d.pending   || []);
-    renderCol('inProgress',d.in_progress || []);
-    renderCol('done',      d.done      || []);
+    renderCol('pending',     d.pending     || []);
+    renderCol('inProgress',  d.in_progress || []);
+    renderCol('done',        d.done        || []);
   }
 
   function renderCol(id, tasks) {
@@ -463,10 +595,9 @@ const CV = (() => {
   function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   /* ══════════════════════════════════════════════════════════════════
-   * BOOTSTRAP  (after DOMContentLoaded)
+   * BOOTSTRAP
    * ══════════════════════════════════════════════════════════════════ */
   window.addEventListener('DOMContentLoaded', init);
 
-  // Expose api for inspection / console use
   return { api, state: () => state };
 })();
