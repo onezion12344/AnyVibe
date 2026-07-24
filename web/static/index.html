@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Coding Vibe</title>
+<style>
+  :root {
+    --bg: #0e0e14;
+    --surface: #1a1a24;
+    --surface2: #22222e;
+    --border: #2a2a38;
+    --accent: #7c6fef;
+    --accent-glow: rgba(124,111,239,0.35);
+    --green: #4ade80;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --text: #e4e4ef;
+    --text-dim: #8888a0;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ───────────────────────────────────────────── */
+  .header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(14,14,20,0.88);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+  .header h1 span { color: var(--accent); }
+  .status-pill {
+    font-size: 12px; color: var(--text-dim);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 3px 10px;
+  }
+
+  /* ── Main scrollable area ─────────────────────────────── */
+  .content { padding: 16px 14px 100px; }
+
+  /* ── Call Section ─────────────────────────────────────── */
+  .call-section {
+    text-align: center;
+    padding: 22px 0 18px;
+  }
+  .call-section p { color: var(--text-dim); font-size: 14px; margin-bottom: 18px; }
+
+  /* ── Voice Button ─────────────────────────────────────── */
+  .voice-wrap { display: flex; justify-content: center; margin-bottom: 18px; }
+  .voice-btn {
+    width: 108px; height: 108px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    box-shadow: 0 0 32px var(--accent-glow), 0 8px 24px rgba(0,0,0,0.5);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 42px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .voice-btn:active { transform: scale(0.91); }
+  .voice-btn.recording {
+    animation: pulse-ring 1.2s ease infinite;
+    background: linear-gradient(135deg, #ef4444, #f87171);
+    box-shadow: 0 0 40px rgba(239,68,68,0.55), 0 8px 24px rgba(0,0,0,0.5);
+  }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+    70%  { box-shadow: 0 0 0 20px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+  .voice-label { font-size: 12px; color: var(--text-dim); margin-top: 10px; }
+
+  /* ── Text Input ────────────────────────────────────────── */
+  .text-input-wrap {
+    display: flex; gap: 8px; margin-bottom: 14px;
+    align-items: center;
+  }
+  .text-input-wrap input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font-size: 15px;
+    padding: 12px 14px;
+    outline: none;
+  }
+  .text-input-wrap input:focus { border-color: var(--accent); }
+  .send-btn {
+    background: var(--accent);
+    color: #fff; border: none; border-radius: 12px;
+    padding: 12px 18px; font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .send-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* ── Transcript / Status ───────────────────────────────── */
+  .status-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    min-height: 72px;
+  }
+  .status-card .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-dim); margin-bottom: 8px;
+  }
+  .status-card .transcript { font-size: 15px; color: var(--text); margin-bottom: 8px; }
+  .status-card .progress-bar-wrap {
+    background: var(--border); border-radius: 6px; height: 6px; overflow: hidden;
+  }
+  .status-card .progress-bar {
+    height: 100%; border-radius: 6px;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    transition: width 0.6s ease;
+    width: 0%;
+  }
+  .status-card .progress-bar.done { background: var(--green); }
+  .status-card .events {
+    margin-top: 10px;
+    max-height: 120px; overflow-y: auto;
+  }
+  .status-card .event {
+    font-size: 13px; color: var(--text-dim);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .status-card .event:last-child { border-bottom: none; }
+  .event .kind {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--accent); flex-shrink: 0; min-width: 52px;
+  }
+  .event.error .kind { color: var(--red); }
+  .event.done .kind { color: var(--green); }
+
+  /* ── Kanban ───────────────────────────────────────────── */
+  .kanban-header {
+    font-size: 13px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    margin: 20px 0 10px;
+  }
+  .kanban {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+  .col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 8px;
+    min-height: 80px;
+  }
+  .col-header {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.07em; margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .col-header .count {
+    background: var(--surface2);
+    border-radius: 50%; width: 20px; height: 20px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .col-pending  .col-header { color: var(--text-dim); }
+  .col-active   .col-header { color: var(--amber); }
+  .col-done     .col-header { color: var(--green); }
+
+  .task-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 10px 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    transition: border-color 0.2s;
+  }
+  .task-card:last-child { margin-bottom: 0; }
+  .task-card.active { border-color: var(--accent); }
+  .task-card.done   { border-color: var(--green); opacity: 0.72; }
+  .task-card .tid  { font-size: 10px; color: var(--accent); font-family: monospace; margin-bottom: 4px; }
+  .task-card .msg  { color: var(--text); font-size: 12px; line-height: 1.4; }
+  .task-card .prog {
+    margin-top: 6px; background: var(--border); border-radius: 4px; height: 4px; overflow: hidden;
+  }
+  .task-card .prog-fill {
+    height: 100%; border-radius: 4px;
+    background: var(--accent); transition: width 0.5s ease;
+  }
+  .task-card.done .prog-fill { background: var(--green); }
+  .task-card .files { color: var(--text-dim); font-size: 11px; margin-top: 5px; }
+
+  .empty-col {
+    text-align: center; color: var(--text-dim); font-size: 12px;
+    padding: 16px 0;
+  }
+
+  /* ── Scrollbar ─────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>⚡</span> Coding Vibe</h1>
+  <div class="status-pill" id="server-status">Checking…</div>
+</div>
+
+<div class="content">
+
+  <!-- ── Voice + Text ── -->
+  <div class="call-section">
+    <p id="subtitle">按住说话 · 描述你想做的事</p>
+    <div class="voice-wrap">
+      <button class="voice-btn" id="voice-btn" aria-label="按住说话">🎤</button>
+    </div>
+    <p class="voice-label">按住说话 · 松开即发送</p>
+
+    <div class="text-input-wrap" style="margin-top:14px">
+      <input type="text" id="text-input" placeholder="或用文字描述…" autocomplete="off" />
+      <button class="send-btn" id="send-btn">发送</button>
+    </div>
+  </div>
+
+  <!-- ── Status / Transcript ── -->
+  <div class="status-card" id="status-card">
+    <div class="label">任务状态</div>
+    <div id="transcript-area">等待指令…</div>
+    <div id="progress-area" style="margin-top:10px;display:none">
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+    </div>
+    <div class="events" id="events-area"></div>
+  </div>
+
+  <!-- ── Kanban ── -->
+  <div class="kanban-header">Agent Board</div>
+  <div class="kanban">
+    <div class="col col-pending">
+      <div class="col-header">Pending <span class="count" id="cnt-pending">0</span></div>
+      <div id="col-pending"></div>
+    </div>
+    <div class="col col-active">
+      <div class="col-header">In Progress <span class="count" id="cnt-active">0</span></div>
+      <div id="col-active"></div>
+    </div>
+    <div class="col col-done">
+      <div class="col-header">Done <span class="count" id="cnt-done">0</span></div>
+      <div id="col-done"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '';
+const voiceBtn   = document.getElementById('voice-btn');
+const textInput  = document.getElementById('text-input');
+const sendBtn    = document.getElementById('send-btn');
+const transcript = document.getElementById('transcript-area');
+const progressArea = document.getElementById('progress-area');
+const progressBar  = document.getElementById('progress-bar');
+const eventsArea   = document.getElementById('events-area');
+const serverStatus = document.getElementById('server-status');
+
+let mediaRecorder   = null;
+let audioChunks     = [];
+let activeTaskId    = null;
+let pollTimer       = null;
+let isRecording     = false;
+
+// ── Server check ────────────────────────────────────────
+async function checkServer() {
+  try {
+    const r = await fetch(API + '/api/board', {signal: AbortSignal.timeout(3000)});
+    serverStatus.textContent = r.ok ? '● Live' : '● Offline';
+    serverStatus.style.color = r.ok ? 'var(--green)' : 'var(--red)';
+  } catch {
+    serverStatus.textContent = '● Offline';
+    serverStatus.style.color = 'var(--red)';
+  }
+}
+setInterval(checkServer, 10000);
+checkServer();
+
+// ── Kanban ──────────────────────────────────────────────
+async function refreshBoard() {
+  try {
+    const r = await fetch(API + '/api/board');
+    if (!r.ok) return;
+    const d = await r.json();
+    renderCol('pending',   d.pending);
+    renderCol('active',    d.in_progress);
+    renderCol('done',      d.done);
+  } catch {}
+}
+function renderCol(id, tasks) {
+  const col = document.getElementById('col-' + id);
+  const cnt = document.getElementById('cnt-' + id);
+  cnt.textContent = tasks.length;
+  if (!tasks.length) { col.innerHTML = '<div class="empty-col">—</div>'; return; }
+  col.innerHTML = tasks.map(c => `
+    <div class="task-card ${c.status === 'running' || c.status === 'delegated' ? 'active' : c.status === 'completed' ? 'done' : ''}">
+      <div class="tid">#${esc(c.task_id)}</div>
+      <div class="msg">${esc(c.latest_message || c.description || '')}</div>
+      <div class="prog"><div class="prog-fill" style="width:${c.progress_pct||0}%"></div></div>
+      ${c.files_changed && c.files_changed.length ? `<div class="files">📁 ${c.files_changed.length} file(s)</div>` : ''}
+    </div>`).join('');
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ── Dispatch text ───────────────────────────────────────
+async function dispatchText(text) {
+  if (!text.trim()) return;
+  try {
+    const r = await fetch(API + '/api/dispatch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({task: text, backend: 'mock'}),
+    });
+    if (!r.ok) throw new Error('dispatch failed');
+    const d = await r.json();
+    activeTaskId = d.task_id;
+    transcript.textContent = '📝 ' + text;
+    progressArea.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressBar.classList.remove('done');
+    eventsArea.innerHTML = '';
+    startPolling();
+  } catch (e) {
+    transcript.textContent = '❌ ' + e.message;
+  }
+}
+
+// ── Polling ─────────────────────────────────────────────
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    if (!activeTaskId) { stopPolling(); return; }
+    try {
+      const r = await fetch(API + '/api/task/' + activeTaskId);
+      if (!r.ok) return;
+      const d = await r.json();
+      progressBar.style.width = (d.progress_pct || 0) + '%';
+      if (d.status === 'done') { progressBar.classList.add('done'); stopPolling(); }
+      // Append new events
+      const existing = eventsArea.querySelectorAll('.event').length;
+      const evts = (d.events || []).slice(existing);
+      for (const e of evts) {
+        if (!e.kind) continue;
+        const div = document.createElement('div');
+        div.className = 'event ' + (e.kind === 'error' ? 'error' : e.kind === 'done' ? 'done' : '');
+        div.innerHTML = `<span class="kind">${esc(e.kind)}</span><span>${esc(e.text || '')}</span>`;
+        eventsArea.appendChild(div);
+        eventsArea.scrollTop = eventsArea.scrollHeight;
+      }
+      if (d.latest_message) {
+        transcript.textContent = d.latest_message;
+      }
+      // Speak result on done
+      if (d.status === 'done' && d.result?.summary) {
+        speak(d.result.summary);
+      }
+      // Refresh kanban every poll
+      refreshBoard();
+    } catch {}
+  }, 2000);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+// ── TTS ─────────────────────────────────────────────────
+function speak(text) {
+  // Try StepFun TTS endpoint first, fall back to SpeechSynthesis
+  fetch(API + '/api/tts?text=' + encodeURIComponent(text))
+    .then(r => {
+      if (!r.ok) throw new Error('TTS failed');
+      return r.blob();
+    })
+    .then(blob => {
+      const url = URL.createObjectURL(blob);
+      new Audio(url).play();
+    })
+    .catch(() => {
+      // iOS Safari fallback
+      if ('speechSynthesis' in window) {
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'zh-CN';
+        speechSynthesis.speak(u);
+      }
+    });
+}
+
+// ── Voice recording ─────────────────────────────────────
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    mediaRecorder = new MediaRecorder(stream, {mimeType: 'audio/webm;codecs=opus'});
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size) audioChunks.push(e.data); };
+    mediaRecorder.onstop = sendAudio;
+    mediaRecorder.start(100);
+    isRecording = true;
+    voiceBtn.classList.add('recording');
+    voiceBtn.textContent = '⏹';
+  } catch (e) {
+    alert('Microphone access denied. Use the text input below.');
+  }
+}
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+    isRecording = false;
+    voiceBtn.classList.remove('recording');
+    voiceBtn.textContent = '🎤';
+  }
+}
+async function sendAudio() {
+  if (!audioChunks.length) return;
+  const blob = new Blob(audioChunks, {type: 'audio/webm'});
+  transcript.textContent = '🎙 Transcribing…';
+  try {
+    const form = new FormData();
+    form.append('file', blob, 'recording.webm');
+    const r = await fetch(API + '/api/voice', {method: 'POST', body: form});
+    if (!r.ok) {
+      const msg = await r.text();
+      throw new Error(msg || 'ASR failed');
+    }
+    const d = await r.json();
+    dispatchText(d.transcript);
+  } catch (e) {
+    transcript.textContent = '❌ ' + e.message;
+    alert('语音识别失败，请用下方文字框输入。');
+  }
+}
+
+// ── Button events ───────────────────────────────────────
+voiceBtn.addEventListener('mousedown',  startRecording);
+voiceBtn.addEventListener('touchstart', e => { e.preventDefault(); startRecording(); });
+voiceBtn.addEventListener('mouseup',    stopRecording);
+voiceBtn.addEventListener('touchend',   e => { e.preventDefault(); stopRecording(); });
+
+sendBtn.addEventListener('click', () => dispatchText(textInput.value));
+textInput.addEventListener('keydown', e => { if (e.key === 'Enter') dispatchText(textInput.value); });
+
+// ── Initial render ──────────────────────────────────────
+refreshBoard();
+</script>
+</body>
+</html>
