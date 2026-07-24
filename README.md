@@ -45,7 +45,7 @@ Test it (should list 5 tools):
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
-  | python3 mcp/server.py 2>/dev/null
+  | python3 cv_mcp/server.py 2>/dev/null
 ```
 
 ### 2. Register in your harness
@@ -55,7 +55,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
 ```json
 "coding-vibe": {
   "command": "python3",
-  "args": ["/Users/<you>/Projects/coding-vibe/mcp/server.py"],
+  "args": ["/Users/<you>/Projects/coding-vibe/cv_mcp/server.py"],
   "env": {"CODING_VIBE_STATE_DIR": "/Users/<you>/.coding-vibe"}
 }
 ```
@@ -67,7 +67,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' \
   "mcpServers": {
     "coding-vibe": {
       "command": "python3",
-      "args": ["/path/to/coding-vibe/mcp/server.py"]
+      "args": ["/path/to/coding-vibe/cv_mcp/server.py"]
     }
   }
 }
@@ -166,7 +166,7 @@ LIVEKIT_API_SECRET=secret
 
 ```
 coding-vibe/
-├── mcp/
+├── cv_mcp/
 │   └── server.py          # MCP server (5 tools, stdio transport)
 ├── voice_bridge.py        # Voice bridge (halfduplex/livekit/stepaudio/seeduplex)
 ├── agent.py               # LiveKit CodingVibeAgent (Boss + delegate_coding tool)
