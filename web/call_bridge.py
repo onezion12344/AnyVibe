@@ -46,15 +46,48 @@ _SAMPLE_RATE = 24_000
 _FRAMES_PER_CHUNK = 480  # 20 ms
 _RAW_CHUNK_BYTES = _FRAMES_PER_CHUNK * 2  # 960 bytes per 20 ms chunk
 
-# CS "receptionist" system prompt
+# CS "receptionist" system prompt — judges intent, dispatches coding work itself.
 _SYSTEM_INSTRUCTIONS = (
-    "You are the CS receptionist for a coding vibe studio. "
-    "You are fast, friendly, and helpful. Your job is to listen to the caller, "
-    "understand their request, and dispatch it to the right engineer or tool. "
-    "Keep replies short and conversational — you are talking on a phone call. "
-    "If the user wants to talk to a human or a specific tool, acknowledge it and "
-    "hand off politely. Never refuse to help."
+    "你是 Coding Vibe 工作室的电话接线员（CS）。你说话简短、自然、友好，像在打电话。"
+    "你要自己判断来电者的意图：如果只是闲聊、问候或询问进度，就正常对话，不要调用工具。"
+    "但只要来电者表达出要『做/写/修/搭建/实现某个东西』这类编程或工程需求，你就必须调用 "
+    "dispatch_to_engineer 工具，把需求整理成一句清晰的任务描述交给工程团队——不要自己写代码。"
+    "调用工具后，用一句话告诉来电者『已经交给工程师了，忙完我打给你』。始终乐于帮忙。"
 )
+
+# Backend the CS dispatches to. Real subprocess backends require a token (the
+# /api/call WS is token-gated); if no token is set, fall back to mock so we never
+# expose an unauthenticated code-exec path.
+_CALL_BACKEND = os.environ.get(
+    "CV_CALL_BACKEND", "claude-code" if CV_API_TOKEN else "mock"
+)
+if _CALL_BACKEND in ("claude-code", "openopc") and not CV_API_TOKEN:
+    _CALL_BACKEND = "mock"
+_CALL_REPO = os.environ.get("CV_DEMO_REPO", "/tmp/cv-demo")
+
+# Tool the CS can call when it judges the caller wants engineering work done.
+_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "dispatch_to_engineer",
+            "description": (
+                "Send a coding/engineering task to the engineering team. Call this "
+                "whenever the caller wants something built, written, fixed, or implemented."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "A clear, self-contained description of the task to build.",
+                    }
+                },
+                "required": ["task"],
+            },
+        },
+    }
+]
 
 # Maximum incoming message size (bytes) — defend against memory bombs
 _MAX_WS_MESSAGE_BYTES = 1 << 20  # 1 MiB
@@ -62,23 +95,68 @@ _MAX_WS_MESSAGE_BYTES = 1 << 20  # 1 MiB
 
 # ── Helper: tool-call stub ────────────────────────────────────────────────────────
 
-def dispatch_to_engineer(task: str) -> dict[str, Any]:
-    """Stub: called by the CS receptionist when a task needs routing.
+async def dispatch_to_engineer(task: str) -> dict[str, Any]:
+    """Dispatch a coding task to the engineer (CEO) backend.
 
-    Later implementation will forward *task* to the backend dispatch pipeline
-    (e.g. the receptionist agent in receptionist/).
-
-    Args:
-        task: Natural-language task description from the caller.
-
-    Returns:
-        Acknowledgment dict so the caller can log or confirm the hand-off.
+    Spawns the task via the receptionist, records a delegation in shared state so
+    the kanban shows it live, and RINGS the caller back when the engineer finishes
+    (the agent-calls-you differentiator). Returns an ack dict for the CS to voice.
     """
-    return {
-        "status": "dispatched",
-        "task": task,
-        "note": "Stub — integrate with receptionist backend when available.",
-    }
+    import time as _time
+    from pathlib import Path as _Path
+    try:
+        from receptionist.core import Receptionist
+        from receptionist.state import load_state, save_state
+    except Exception as exc:
+        _log("DISPATCH", f"receptionist import failed: {exc}")
+        return {"status": "error", "error": str(exc)}
+
+    try:
+        _Path(_CALL_REPO).mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    r = Receptionist()
+
+    async def _on_complete(result: Any) -> None:
+        # mark the delegation done, then ring the caller back
+        try:
+            st2 = load_state()
+            for d in st2.get("delegations", []):
+                if d.get("task_id") == tid:
+                    d["status"] = "completed"
+            save_state(st2)
+        except Exception:
+            pass
+        try:
+            from web.signaling import ring
+            summary = (getattr(result, "summary", "") or "")[:80]
+            await ring(reason=f"任务完成：{summary}", frm="CEO")
+        except Exception as exc:
+            _log("DISPATCH", f"ring failed: {exc}")
+
+    tid = await r.dispatch_async(
+        task,
+        backend=_CALL_BACKEND,
+        repo_path=_CALL_REPO,
+        on_complete=_on_complete,
+    )
+
+    # record a delegation so /api/board shows it as in-progress right away
+    try:
+        st = load_state()
+        st.setdefault("delegations", []).append({
+            "task_id": tid,
+            "description": task,
+            "status": "running",
+            "created_at": _time.time(),
+        })
+        save_state(st)
+    except Exception as exc:
+        _log("DISPATCH", f"state write failed: {exc}")
+
+    _log("DISPATCH", f"dispatched task_id={tid} backend={_CALL_BACKEND}: {task[:80]}")
+    return {"status": "dispatched", "task_id": tid, "backend": _CALL_BACKEND}
 
 
 # ── Helper: build StepFun client events ─────────────────────────────────────────
@@ -93,6 +171,8 @@ def _client_session_update(event_id: str) -> dict[str, Any]:
             "voice": "linjiajiejie",
             "input_audio_format": "pcm16",
             "output_audio_format": "pcm16",
+            "tools": _TOOLS,
+            "tool_choice": "auto",
             "turn_detection": {
                 "type": "server_vad",
                 "prefix_padding_ms": 500,
@@ -341,6 +421,39 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
                 await browser_ws.send_json({"type": "response-done"})
             except Exception:
                 pass
+
+        # ── Function call: CS decided to dispatch to the engineer ───────────────
+        elif evt_type == "response.function_call_arguments.done":
+            call_id = evt.get("call_id", "")
+            try:
+                args = json.loads(evt.get("arguments", "") or "{}")
+            except Exception:
+                args = {}
+            task = (args.get("task") or "").strip()
+            _log("OUT", f"CS dispatched via tool: {task[:80]}")
+            ack: dict[str, Any] = {"status": "no-op"}
+            if task:
+                try:
+                    ack = await dispatch_to_engineer(task)
+                except Exception as exc:
+                    ack = {"status": "error", "error": str(exc)}
+                try:
+                    await browser_ws.send_json({"type": "dispatched", "task": task, **ack})
+                except Exception:
+                    pass
+            # Feed the tool result back so the CS voices a confirmation.
+            try:
+                await step_ws.send(json.dumps({
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": json.dumps(ack, ensure_ascii=False),
+                    },
+                }))
+                await step_ws.send(json.dumps({"type": "response.create"}))
+            except Exception as exc:
+                _log("OUT", f"function_call_output send failed: {exc}")
 
         # ── Session confirmed ───────────────────────────────────────────────────
         elif evt_type == "session.updated":
