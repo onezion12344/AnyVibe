@@ -12,6 +12,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import os
 import time
@@ -23,7 +24,7 @@ from typing import Any
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -55,26 +56,60 @@ STATE_DIR = Path(os.environ.get("CODING_VIBE_STATE_DIR", Path.home() / ".coding-
 SESSION_FILE = STATE_DIR / "session.json"
 STATIC_DIR = _THIS_DIR / "static"
 
-# ── Security: network-facing backend allowlist ──────────────────────────────────
+# ── Security: network-facing dispatch controls ──────────────────────────────────
 # This server is reachable over the network (LAN / tunnel). Real backends such as
 # `claude-code` and `openopc` spawn subprocesses (e.g. `claude
 # --dangerously-skip-permissions`), so an unauthenticated caller choosing them
-# would be remote code execution. Only allowlisted backends may be dispatched.
-# Default is mock-only; widen via CV_ALLOWED_BACKENDS (comma-separated) ONLY once
-# token auth gates the dangerous backends.
+# would be remote code execution. Three layers guard the dispatch endpoints:
+#   1. backend allowlist (default mock-only)
+#   2. bearer token (constant-time) required on state-changing endpoints
+#   3. repo_path constrained to resolved, allowlisted roots
 _ALLOWED_BACKENDS = {
     b.strip()
     for b in os.environ.get("CV_ALLOWED_BACKENDS", "mock").split(",")
     if b.strip()
 }
 
+# Backends that spawn real subprocesses — dispatching these unauthenticated is RCE.
+_DANGEROUS_BACKENDS = {"claude-code", "openopc"}
+
+# Shared secret for /api/dispatch and /api/voice. Empty = no auth (safe only while
+# the allowlist is mock-only).
+CV_API_TOKEN = os.environ.get("CV_API_TOKEN", "")
+
+# repo_path (the subprocess cwd) must resolve to / under one of these roots.
+_ALLOWED_REPO_ROOTS = [
+    Path(p).expanduser().resolve()
+    for p in os.environ.get(
+        "CV_ALLOWED_REPO_ROOTS", "/tmp/cv-demo:/tmp/cv-e2e:/tmp/cv-ooc"
+    ).split(":")
+    if p.strip()
+]
+
+# Fail closed: never expose an unauthenticated subprocess backend. If a dangerous
+# backend is allowlisted but no token is configured, refuse to start.
+if (_ALLOWED_BACKENDS & _DANGEROUS_BACKENDS) and not CV_API_TOKEN:
+    raise RuntimeError(
+        "Refusing to start: CV_ALLOWED_BACKENDS includes a subprocess-spawning "
+        f"backend {sorted(_ALLOWED_BACKENDS & _DANGEROUS_BACKENDS)} but CV_API_TOKEN "
+        "is unset — that would be an unauthenticated RCE surface. Set CV_API_TOKEN."
+    )
+
+
+def _check_auth(token: str | None) -> None:
+    """Enforce the bearer token on state-changing endpoints, if one is configured."""
+    if CV_API_TOKEN:
+        if not token or not hmac.compare_digest(token, CV_API_TOKEN):
+            raise HTTPException(401, "Missing or invalid API token")
+
 
 def _guard_dispatch(task: str, backend: str, repo_path: str) -> None:
     """Reject network-supplied dispatch params that are unsafe.
 
     - backend must be on the allowlist (blocks RCE via dangerous adapters)
-    - task / repo_path must not start with '-' (defense-in-depth against argv
-      flag smuggling; the adapters also terminate flags with a `--` sentinel)
+    - task must not start with '-' (defense-in-depth vs argv flag smuggling;
+      adapters also terminate flags with a `--` sentinel)
+    - repo_path (the subprocess cwd) must resolve under an allowlisted root
     """
     if backend not in _ALLOWED_BACKENDS:
         raise HTTPException(
@@ -84,8 +119,13 @@ def _guard_dispatch(task: str, backend: str, repo_path: str) -> None:
         )
     if task.startswith("-"):
         raise HTTPException(400, "Invalid 'task': must not start with '-'")
-    if repo_path.startswith("-"):
-        raise HTTPException(400, "Invalid 'repo_path': must not start with '-'")
+    root = Path(repo_path).expanduser().resolve()
+    if not any(root == a or a in root.parents for a in _ALLOWED_REPO_ROOTS):
+        raise HTTPException(
+            400,
+            f"repo_path {str(root)!r} is outside the allowed roots "
+            f"{[str(r) for r in _ALLOWED_REPO_ROOTS]}",
+        )
 
 STEPFUN_API_KEY = os.environ.get("STEPFUN_API_KEY", "")
 STEPFUN_BASE_URL = os.environ.get("STEPFUN_BASE_URL", "https://api.stepfun.com/v1")
@@ -181,7 +221,7 @@ async def root():
 
 
 @app.post("/api/dispatch")
-async def dispatch(body: dict[str, Any]):
+async def dispatch(body: dict[str, Any], request: Request):
     """Dispatch a text task. Returns {task_id}."""
     task: str = body.get("task", "").strip()
     if not task:
@@ -192,7 +232,8 @@ async def dispatch(body: dict[str, Any]):
         "CV_DEMO_REPO", "/tmp/cv-demo"
     )
 
-    # Security gate: allowlist backend, reject dash-leading argv smuggling.
+    # Security gate: auth token (if configured), backend allowlist, repo_path root.
+    _check_auth(request.headers.get("x-cv-token") or request.query_params.get("token"))
     _guard_dispatch(task, backend, repo_path)
 
     receptionist = Receptionist()
@@ -345,12 +386,13 @@ async def task_detail(task_id: str):
 
 
 @app.post("/api/voice")
-async def voice(audio: bytes = None, file: Any = None):
+async def voice(request: Request, audio: bytes = None, file: Any = None):
     """Transcribe an audio blob via StepFun ASR, then dispatch the transcript.
 
     Accepts either raw bytes in the request body OR a multipart 'file' field.
     Returns {transcript, task_id}.
     """
+    _check_auth(request.headers.get("x-cv-token") or request.query_params.get("token"))
     # Accept both raw body and multipart
     raw_audio: bytes | None = None
     if file is not None:
