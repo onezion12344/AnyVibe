@@ -46,9 +46,9 @@ class OpenOPCAdapter(HarnessAdapter):
         # Pre-flight: is opc on PATH?
         try:
             proc = await asyncio.create_subprocess_exec(
-                "command", "opc", "--version",
+                "opc", "--version",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await asyncio.wait_for(proc.communicate(), timeout=5)
             if proc.returncode != 0:
@@ -72,10 +72,12 @@ class OpenOPCAdapter(HarnessAdapter):
             "--org", "coding-vibe",
             "--agent", "claude_code",
             "--stream-json",
+            "--",
             task,
         ]
 
         _handles[handle]["status"] = "running"
+        stderr_drainer: asyncio.Task[None] | None = None
 
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -84,6 +86,14 @@ class OpenOPCAdapter(HarnessAdapter):
                 stderr=asyncio.subprocess.PIPE,
                 cwd=repo_path,
             )
+
+            # Drain stderr concurrently to prevent the child from blocking on a
+            # full ~64 KB pipe buffer.
+            async def _drain_stderr() -> None:
+                async for _ in proc.stderr:
+                    pass
+
+            stderr_drainer = asyncio.create_task(_drain_stderr())
 
             async for raw_line in proc.stdout:
                 line = raw_line.decode(errors="replace").strip()
@@ -121,6 +131,12 @@ class OpenOPCAdapter(HarnessAdapter):
             )
         finally:
             _handles[handle]["status"] = "done"
+            # Ensure the stderr drainer finishes cleanly
+            if stderr_drainer is not None:
+                try:
+                    await asyncio.wait_for(stderr_drainer, timeout=1.0)
+                except asyncio.TimeoutError:
+                    stderr_drainer.cancel()
 
     async def stream_status(self, handle: str) -> AsyncIterator[StatusEvent]:
         store = _handles.get(handle)

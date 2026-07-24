@@ -28,9 +28,9 @@ class ClaudeCodeAdapter(HarnessAdapter):
         # Pre-flight check: is claude on PATH?
         try:
             proc = await asyncio.create_subprocess_exec(
-                "command", "claude", "--version",
+                "claude", "--version",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
             )
             await asyncio.wait_for(proc.communicate(), timeout=5)
             if proc.returncode != 0:
@@ -48,10 +48,9 @@ class ClaudeCodeAdapter(HarnessAdapter):
 
     async def _run(self, handle: str, task: str, repo_path: str, context: dict | None) -> None:
         cmd = [
-            "command", "claude", "-p", task,
+            "claude", "-p", task,
             "--verbose",
             "--output-format", "stream-json",
-            "-c", repo_path,   # cd into repo_path before running
         ]
 
         _handles[handle]["status"] = "running"
@@ -60,7 +59,7 @@ class ClaudeCodeAdapter(HarnessAdapter):
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.DEVNULL,
                 cwd=repo_path,
             )
 
