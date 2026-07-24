@@ -50,3 +50,13 @@ Each tier answers with what it has now, upgrades when the higher tier reports �
 - CEO runs as a background task; on completion, INJECT an out-of-band assistant turn into the live Pipecat pipeline (`queue_frame` → TTS → spoken) — proactive mid-call update, no polling.
 - fallback: call ended → agent-calls-you ring-back (already built).
 This is a strong reason to build on Pipecat (hand-rolled bridge can't cleanly inject async turns). AEC (hands-free) also comes free with Pipecat's WebRTC transport.
+
+## 6. Digital Pet (Codex-pet ecosystem) — RESEARCHED, recorded, not building yet
+**Verdict: mature, 接入即用 — adopt the Codex-pet format + web SDK. The owner's "比特化"(sprite) instinct is right — the format IS a sprite-sheet.**
+
+- **Codex Pet** (merged into Codex CLI May 2026): animated companion, states = idle / running / waving / jumping / working / waiting / review / failed (+ 16 look angles v2). Format (reverse-engineered, community-standard, no official spec): `pet.json` (manifest: animation grid rows, spriteVersion) + `spritesheet.webp` (atlas, e.g. v1 1536×1872 8×9 grid).
+- **`codex-pet-companion`** (JS/Web Component) = the **directly usable** piece for us: `<codex-pet>` tag + `pet.play('waving',{returnTo:'idle'})` / `SpriteAnimator.setState('working')` → exactly the **tool-call → preset-motion** mapping we want, web-embeddable → drops onto the call page.
+- **`codex-pet-gen`** auto-generates custom Codex-compatible pet packages via image-gen → we generate a **Yellow-Sheep sprite-sheet** in Codex-pet format.
+- Ecosystem (desktop, FYI): CoPet, OpenPet(+MCP/HTTP/CLI), OpenPets(macOS+MCP), UniPet, Peon-Pet — map real agent events (prompt/tool-call/waiting/success/error) → pet reactions. We want the **web SDK**, not the desktop apps.
+- **Recommended integration (later):** generate a Yellow-Sheep pet package (Codex format, ~8 motions: idle/listening/thinking/working/celebrate/failed) → embed `codex-pet-companion` on the call page → map our call+agent states to `pet.play(...)`. Low effort, mature. This is the pet form; supersedes the static-PNG Tier-1 avatar note (§3).
+- Full report: `docs/research/digital-pet.md`.
