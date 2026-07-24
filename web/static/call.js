@@ -10,43 +10,166 @@ const CV = (() => {
   /* ── Auth pass-through ─────────────────────────────────────────── */
   const token = new URLSearchParams(location.search).get('token') || '';
 
+  /* ── WS URL helper (token via query — browsers can't set WS headers) ── */
+  function wsUrl(path) {
+    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    const t = token ? ('?token=' + encodeURIComponent(token)) : '';
+    return `${scheme}://${location.host}${path}${t}`;
+  }
+
   /* ══════════════════════════════════════════════════════════════════
-   * MOCK BACKEND  (swap to real WS — see comment on each method)
+   * REAL AUDIO ENGINE  (mic → PCM16 24k → WS /api/call → playback)
+   * StepFun stepaudio-2.5-realtime: 24 kHz mono PCM16 both ways.
+   * ══════════════════════════════════════════════════════════════════ */
+  const RATE = 24000;
+  const rt = {
+    active: false, muted: false, level: 0,
+    ws: null, ctx: null, micStream: null, node: null, src: null, sink: null,
+    playHead: 0, playing: [],
+
+    async start() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      this.ctx = new AC({ sampleRate: RATE });
+      await this.ctx.resume();                       // iOS: must follow a tap
+      this.micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
+      // Open the bridge WS and wait for it to be ready.
+      this.ws = new WebSocket(wsUrl('/api/call'));
+      this.ws.binaryType = 'arraybuffer';
+      await new Promise((res, rej) => {
+        this.ws.onopen = res;
+        this.ws.onerror = () => rej(new Error('call WS error'));
+        setTimeout(() => rej(new Error('call WS timeout')), 8000);
+      });
+      this.ws.onmessage = (m) => this._onServer(m);
+      this.ws.onclose = () => { this.active = false; };
+      // Capture graph: mic → ScriptProcessor → zero-gain sink (no echo).
+      this.src = this.ctx.createMediaStreamSource(this.micStream);
+      this.node = this.ctx.createScriptProcessor(4096, 1, 1);
+      this.sink = this.ctx.createGain(); this.sink.gain.value = 0;
+      this.src.connect(this.node); this.node.connect(this.sink); this.sink.connect(this.ctx.destination);
+      this.node.onaudioprocess = (e) => this._onMic(e);
+      this.inRate = this.ctx.sampleRate || RATE;   // iOS may force 48k despite the hint
+      this.playHead = this.ctx.currentTime;
+      this.active = true;
+    },
+
+    _onMic(e) {
+      const inb = e.inputBuffer.getChannelData(0);
+      // level for the waveform
+      let sum = 0; for (let i = 0; i < inb.length; i++) sum += inb[i] * inb[i];
+      this.level = Math.min(1, Math.sqrt(sum / inb.length) * 4);
+      if (this.muted || !this.ws || this.ws.readyState !== 1) return;
+      // Resample to 24 kHz if the context isn't already there (iOS often is 48k).
+      let samples = inb;
+      if (this.inRate !== RATE) {
+        const ratio = RATE / this.inRate;
+        const outLen = Math.round(inb.length * ratio);
+        const out = new Float32Array(outLen);
+        for (let i = 0; i < outLen; i++) {
+          const src = i / ratio;
+          const i0 = Math.floor(src), i1 = Math.min(i0 + 1, inb.length - 1);
+          const frac = src - i0;
+          out[i] = inb[i0] * (1 - frac) + inb[i1] * frac;
+        }
+        samples = out;
+      }
+      const pcm = new Int16Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        const s = Math.max(-1, Math.min(1, samples[i]));
+        pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+      }
+      try { this.ws.send(pcm.buffer); } catch {}
+    },
+
+    _onServer(m) {
+      if (typeof m.data === 'string') {
+        try {
+          const d = JSON.parse(m.data);
+          if (d.type === 'barge-in') this._flush();   // stop playback, user is talking
+        } catch {}
+        return;
+      }
+      const i16 = new Int16Array(m.data);
+      const f32 = new Float32Array(i16.length);
+      for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 0x8000;
+      const buf = this.ctx.createBuffer(1, f32.length, RATE);
+      buf.copyToChannel(f32, 0);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf; src.connect(this.ctx.destination);
+      const now = this.ctx.currentTime;
+      const t = Math.max(now + 0.02, this.playHead);
+      src.start(t); this.playHead = t + buf.duration;
+      this.playing.push(src);
+      src.onended = () => { this.playing = this.playing.filter(s => s !== src); };
+    },
+
+    _flush() {
+      this.playing.forEach(s => { try { s.stop(); } catch {} });
+      this.playing = [];
+      this.playHead = this.ctx ? this.ctx.currentTime : 0;
+    },
+
+    stop() {
+      this.active = false;
+      try { this.node && (this.node.onaudioprocess = null); } catch {}
+      try { this.src && this.src.disconnect(); } catch {}
+      try { this.node && this.node.disconnect(); } catch {}
+      try { this.sink && this.sink.disconnect(); } catch {}
+      try { this.micStream && this.micStream.getTracks().forEach(t => t.stop()); } catch {}
+      this._flush();
+      try { this.ws && this.ws.close(); } catch {}
+      try { this.ctx && this.ctx.close(); } catch {}
+      this.ws = null; this.ctx = null; this.micStream = null; this.node = null;
+    },
+  };
+
+  /* ══════════════════════════════════════════════════════════════════
+   * BACKEND  (real WS with graceful mock fallback)
    * ══════════════════════════════════════════════════════════════════ */
   const api = {
 
-    /* connectCall()
-     * Real: open WS /api/call?token=…  (binary PCM16 each way)
-     * Mock: resolve after 1.2 s, start driving a fake waveform array   */
+    /* connectCall() → open the real StepFun voice bridge; fall back to mock. */
     async connectCall() {
-      await delay(1200);
-      return { ok: true, channel: 'mock' };
+      try {
+        await rt.start();
+        return { ok: true, channel: 'stepfun' };
+      } catch (e) {
+        console.warn('[CV] real audio unavailable, using mock:', e && e.message);
+        rt.active = false;
+        await delay(800);
+        return { ok: true, channel: 'mock' };
+      }
     },
 
-    /* events()
-     * Real: open WS /api/events?token=…  push JSON events
-     * Mock: keep a listener map; call simulateIncomingCall(reason)
-     *       to fire one. Also auto-fire a sample incoming_call ~6 s
-     *       after the call goes in-call (demo hook).                  */
+    /* events() → real WS /api/events (server can ring you); demo hook kept. */
     events() {
       const listeners = [];
+      const emit = (evt, data) =>
+        listeners.filter(l => l.evt === evt).forEach(l => l.fn(data));
       const sub = {
         on: (evt, fn) => listeners.push({ evt, fn }),
-        off: (evt, fn) {},
-        close() { listeners.length = 0; },
+        off() {},
+        close() { try { sub._ws && sub._ws.close(); } catch {} listeners.length = 0; },
       };
-      // expose global for demo
+      try {
+        const ws = new WebSocket(wsUrl('/api/events'));
+        ws.onmessage = (m) => {
+          try {
+            const d = JSON.parse(m.data);
+            if (d.type === 'incoming_call') emit('incoming_call', { reason: d.reason || '' });
+          } catch {}
+        };
+        sub._ws = ws;
+      } catch (e) { /* events WS optional; demo hook still works */ }
+      // demo / manual trigger
       window.CV = window.CV || {};
-      window.CV.simulateIncomingCall = (reason) => {
-        listeners.filter(l => l.evt === 'incoming_call').forEach(l => l.fn({ reason }));
-      };
+      window.CV.simulateIncomingCall = (reason) => emit('incoming_call', { reason });
       return sub;
     },
 
-    /* board()
-     * Real: GET /api/board  (token via x-cv-token header, not the URL query,
-     *       so it doesn't leak into logs/Referer)
-     * Mock: return static sample data; never fails so kanban is never empty */
+    /* board() — GET /api/board (token via x-cv-token header). */
     async board() {
       try {
         const r = await fetch('/api/board', {
@@ -57,9 +180,9 @@ const CV = (() => {
       return sampleBoard();
     },
 
-    /* hangUp() */
+    /* hangUp() — tear down the real audio engine. */
     async hangUp() {
-      await delay(300);
+      try { rt.stop(); } catch {}
       return { ok: true };
     },
   };
@@ -123,10 +246,16 @@ const CV = (() => {
   function startWaveform() {
     wfAmps = Array.from({ length: BARS }, () => Math.random() * 0.15 + 0.05);
     wfTimer = setInterval(() => {
-      wfAmps = wfAmps.map((_, i) => {
-        const target = Math.random() * 0.85 + 0.05;
-        return wfAmps[i] + (target - wfAmps[i]) * 0.35;
-      });
+      if (rt.active) {
+        // Drive bars from the real mic level (plus a little life).
+        const base = rt.level;
+        wfAmps = wfAmps.map(() => Math.max(0.05, Math.min(1, base * (0.6 + Math.random() * 0.9))));
+      } else {
+        wfAmps = wfAmps.map((_, i) => {
+          const target = Math.random() * 0.85 + 0.05;
+          return wfAmps[i] + (target - wfAmps[i]) * 0.35;
+        });
+      }
       renderWaveform();
     }, 80);
   }
@@ -259,6 +388,7 @@ const CV = (() => {
   let muted = false;
   function toggleMute() {
     muted = !muted;
+    rt.muted = muted;
     document.getElementById('btn-mute').classList.toggle('active', muted);
   }
 

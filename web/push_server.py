@@ -16,6 +16,7 @@ ring_native     async — ring every registered device with a reason
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -73,7 +74,7 @@ def _detect_fcm() -> bool:
 def _check_auth(token: str | None) -> None:
     """Shared token-auth helper used by push routes."""
     if CV_API_TOKEN:
-        if not token or token != CV_API_TOKEN:
+        if not token or not hmac.compare_digest(token, CV_API_TOKEN):
             raise HTTPException(401, "Missing or invalid API token (x-cv-token)")
 
 

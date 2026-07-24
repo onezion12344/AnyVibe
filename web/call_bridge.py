@@ -165,7 +165,11 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
 
     step_ws: Any = None
     try:
-        step_ws = await _ws_lib.connect(STEPFUN_WS_URL, extra_headers=stepfun_headers)
+        # websockets >=14 renamed extra_headers → additional_headers; support both.
+        try:
+            step_ws = await _ws_lib.connect(STEPFUN_WS_URL, additional_headers=stepfun_headers)
+        except TypeError:
+            step_ws = await _ws_lib.connect(STEPFUN_WS_URL, extra_headers=stepfun_headers)
     except Exception as exc:
         _log("SF", f"Failed to connect to StepFun: {exc}")
         await websocket.close(

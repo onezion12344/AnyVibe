@@ -39,6 +39,32 @@ class WebSocketAudioEngine(
 
         private const val WS_RECONNECT_BASE_MS = 1_000L
         private const val WS_RECONNECT_MAX_MS  = 30_000L
+
+        // SECURITY: the media endpoint must NOT be trusted from the push payload as-is.
+        // A forged push could point us at an attacker server and exfiltrate callToken
+        // (sent as an Authorization: Bearer header). Only connect to pinned hosts over
+        // TLS. Edit this to your real backend host(s) before shipping.
+        private val ALLOWED_WS_HOSTS = setOf(
+            "anyvibe.onezion.top",
+            "161.118.214.70",
+        )
+
+        /** Returns true only for a wss:// URL whose host is in the allowlist. */
+        fun isTrustedServerUrl(url: String): Boolean {
+            return try {
+                val u = java.net.URI(url)
+                u.scheme == "wss" && u.host in ALLOWED_WS_HOSTS
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+
+    init {
+        // Reject an untrusted/downgraded media endpoint before any token is sent.
+        require(isTrustedServerUrl(serverUrl)) {
+            "Refusing untrusted media server_url: $serverUrl (must be wss:// to an allowlisted host)"
+        }
     }
 
     @Volatile private var running = false
