@@ -15,7 +15,7 @@ import sys
 import time
 
 STATE_DIR = os.path.expanduser("~/.coding-vibe")
-MCP_SERVER = os.path.expanduser("~/Projects/coding-vibe/mcp/server.py")
+MCP_SERVER = os.path.expanduser("~/Projects/coding-vibe/cv_mcp/server.py")
 
 
 class MCPClient:
@@ -23,7 +23,7 @@ class MCPClient:
 
     def __init__(self):
         self.proc = subprocess.Popen(
-            ["python3", MCP_SERVER],
+            [sys.executable, MCP_SERVER],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True,
