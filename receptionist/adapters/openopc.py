@@ -233,9 +233,15 @@ class OpenOPCAdapter(HarnessAdapter):
                 cwd=str(self._opc_root),
             )
 
+            stderr_tail: list[str] = []
+
             async def _drain_stderr() -> None:
-                async for _ in proc.stderr:
-                    pass
+                async for _line in proc.stderr:
+                    s = _line.decode(errors="replace").rstrip()
+                    if s:
+                        stderr_tail.append(s)
+                        if len(stderr_tail) > 40:
+                            del stderr_tail[0]
 
             stderr_drainer = asyncio.create_task(_drain_stderr())
 
@@ -264,6 +270,16 @@ class OpenOPCAdapter(HarnessAdapter):
                     break
 
             await asyncio.wait_for(proc.wait(), timeout=self._timeout)
+
+            # A non-zero exit (e.g. corrupted DB, crash) must NOT read as success.
+            if proc.returncode not in (0, None):
+                tail = "\n".join(stderr_tail[-8:]) or "(no stderr)"
+                _handles[handle]["events"].append(
+                    StatusEvent(
+                        kind="error",
+                        text=f"opc exec exited {proc.returncode}: {tail[:400]}",
+                    )
+                )
 
         except asyncio.TimeoutError:
             _handles[handle]["events"].append(
