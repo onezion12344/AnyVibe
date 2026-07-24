@@ -39,7 +39,7 @@ const CV = (() => {
    *             of playHead so bursty WS delivery doesn't create gaps.
    * ══════════════════════════════════════════════════════════════════ */
   const RATE = 24000;
-  const JITTER_LEAD = 0.1;   // seconds — small buffer ahead of playHead
+  const JITTER_LEAD = 0.18;   // seconds — buffer ahead of playHead (smoother vs latency)
 
   const rt = {
     active: false, muted: false, level: 0,
@@ -191,53 +191,30 @@ const CV = (() => {
         return;
       }
 
-      // Binary Int16 PCM @ 24 kHz — push to queue, kick the drain loop.
-      this.pendingPCM.push(new Int16Array(m.data));
-      this._draining = true;
-      this._scheduleDrain();
+      // Binary Int16 PCM @ 24 kHz — schedule immediately on the playHead
+      // timeline. Web Audio plays each buffer at its exact scheduled time, so
+      // bursty WS delivery still comes out gapless. NO requestAnimationFrame
+      // (rAF throttles under jank / when the tab blurs → the "卡死" stutter).
+      this._enqueuePCM(new Int16Array(m.data));
     },
 
-    /**
-     * Drain loop: pull queued PCM chunks, convert to AudioBuffers, and
-     * schedule them at max(ctx.currentTime + JITTER_LEAD, playHead).
-     * Uses requestAnimationFrame so it stays responsive and cancels
-     * cleanly when the queue empties or the call ends.
-     */
-    _scheduleDrain() {
-      if (!this._draining || !this.ctx) return;
+    /* ─── Schedule one PCM chunk gaplessly on the playHead timeline ──── */
+    _enqueuePCM(chunk) {
       const ctx = this.ctx;
-
-      const tick = () => {
-        if (!this._draining || !this.ctx || this.pendingPCM.length === 0) return;
-
-        const now = ctx.currentTime;
-        // Only schedule if the next frame would land within our lead window.
-        if (this.playHead > now + JITTER_LEAD) {
-          requestAnimationFrame(tick);
-          return;
-        }
-
-        const chunk = this.pendingPCM.shift();
-        if (!chunk) { requestAnimationFrame(tick); return; }
-
-        const buf = ctx.createBuffer(1, chunk.length, RATE);
-        // Copy Int16 → Float32 for the AudioBuffer.
-        const dst = buf.getChannelData(0);
-        for (let i = 0; i < chunk.length; i++) dst[i] = chunk[i] / 0x8000;
-
-        const src = ctx.createBufferSource();
-        src.buffer = buf;
-        src.connect(ctx.destination);
-        const t = Math.max(ctx.currentTime + JITTER_LEAD, this.playHead);
-        src.start(t);
-        this.playHead = t + buf.duration;
-        this._playing.push(src);
-        src.onended = () => { this._playing = this._playing.filter(s => s !== src); };
-
-        requestAnimationFrame(tick);
-      };
-
-      requestAnimationFrame(tick);
+      if (!ctx || !chunk.length) return;
+      const buf = ctx.createBuffer(1, chunk.length, RATE);
+      const dst = buf.getChannelData(0);
+      for (let i = 0; i < chunk.length; i++) dst[i] = chunk[i] / 0x8000;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      const now = ctx.currentTime;
+      // If we've underrun (playHead fell behind real time), resync with a fresh lead.
+      if (this.playHead < now + 0.02) this.playHead = now + JITTER_LEAD;
+      src.start(this.playHead);
+      this.playHead += buf.duration;
+      this._playing.push(src);
+      src.onended = () => { this._playing = this._playing.filter(s => s !== src); };
     },
 
     _flush() {
