@@ -7,14 +7,26 @@
  * ──────────────────────────────────────────────────────────────────── */
 
 const CV = (() => {
-  /* ── Auth pass-through ─────────────────────────────────────────── */
-  const token = new URLSearchParams(location.search).get('token') || '';
+  /* ── Auth token ────────────────────────────────────────────────────
+   * Arrives once via ?token= (opening a link on your phone). We stash it in
+   * sessionStorage and STRIP it from the visible URL so it isn't bookmarked
+   * or leaked further. It's sent to APIs via the x-cv-token header (fetch) or
+   * as the first WS message (auth) — never in a WS URL / access log. */
+  let token = new URLSearchParams(location.search).get('token')
+           || sessionStorage.getItem('cv_token') || '';
+  if (token) {
+    sessionStorage.setItem('cv_token', token);
+    if (location.search.includes('token=')) {
+      const u = new URL(location.href);
+      u.searchParams.delete('token');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    }
+  }
 
-  /* ── WS URL helper (token via query — browsers can't set WS headers) ── */
+  /* ── WS URL helper (NO token in the URL — sent as first message) ── */
   function wsUrl(path) {
     const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-    const t = token ? ('?token=' + encodeURIComponent(token)) : '';
-    return `${scheme}://${location.host}${path}${t}`;
+    return `${scheme}://${location.host}${path}`;
   }
 
   /* ══════════════════════════════════════════════════════════════════
@@ -42,6 +54,8 @@ const CV = (() => {
         this.ws.onerror = () => rej(new Error('call WS error'));
         setTimeout(() => rej(new Error('call WS timeout')), 8000);
       });
+      // First message must be auth (server validates before processing audio).
+      if (token) this.ws.send(JSON.stringify({ type: 'auth', token }));
       this.ws.onmessage = (m) => this._onServer(m);
       this.ws.onclose = () => { this.active = false; };
       // Capture graph: mic → ScriptProcessor → zero-gain sink (no echo).
@@ -155,6 +169,7 @@ const CV = (() => {
       };
       try {
         const ws = new WebSocket(wsUrl('/api/events'));
+        ws.onopen = () => { if (token) ws.send(JSON.stringify({ type: 'auth', token })); };
         ws.onmessage = (m) => {
           try {
             const d = JSON.parse(m.data);

@@ -132,18 +132,29 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     compare) whenever the env var is set; otherwise the connection is rejected
     immediately with close code 4401.
     """
-    # ── Auth gate ────────────────────────────────────────────────────────────────
+    # ── Auth gate ──────────────────────────────────────────────────────────
+    # Browsers can't set headers on a WebSocket, and a token in the URL leaks
+    # into access logs. Accept it from the query (back-compat) OR, preferably,
+    # as the first text message {"type":"auth","token":"..."} the client sends
+    # right after the socket opens.
+    await websocket.accept()
+
     if CV_API_TOKEN:
-        provided = token or ""
-        if not hmac.compare_digest(provided, CV_API_TOKEN):
-            _log("AUTH", "Invalid or missing token — rejecting with 4401")
+        ok = bool(token) and hmac.compare_digest(token, CV_API_TOKEN)
+        if not ok:
+            try:
+                first = await asyncio.wait_for(websocket.receive_text(), timeout=5)
+                provided = (json.loads(first) or {}).get("token", "")
+                ok = bool(provided) and hmac.compare_digest(provided, CV_API_TOKEN)
+            except Exception:
+                ok = False
+        if not ok:
+            _log("AUTH", "Invalid/missing token — closing 4401")
             await websocket.close(code=4401, reason="Invalid token")
             return
         _log("AUTH", "Token validated OK")
     else:
         _log("AUTH", "CV_API_TOKEN not set — connection open without auth")
-
-    await websocket.accept()
 
     # ── Connect to StepFun ───────────────────────────────────────────────────────
     if not STEPFUN_API_KEY:

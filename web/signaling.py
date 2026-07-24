@@ -118,11 +118,22 @@ async def ws_events(
     Clients may also send text frames (ignored by the server at present).
     """
     # ---- auth ----
-    if EXPECTED_TOKEN and not _check_token(token):
-        await websocket.close(code=4401, reason="Invalid token")
-        return
-
+    # Token from query (back-compat) OR first message {"type":"auth","token":...}
+    # so the secret never has to appear in the WS URL / access logs.
     await websocket.accept()
+    if EXPECTED_TOKEN:
+        ok = bool(token) and _check_token(token)
+        if not ok:
+            try:
+                first = await asyncio.wait_for(websocket.receive_text(), timeout=5)
+                provided = (json.loads(first) or {}).get("token", "")
+                ok = bool(provided) and _check_token(provided)
+            except Exception:
+                ok = False
+        if not ok:
+            await websocket.close(code=4401, reason="Invalid token")
+            return
+
     cid = await _clients.add(websocket)
     try:
         # Keep the connection alive; just drain incoming frames.
