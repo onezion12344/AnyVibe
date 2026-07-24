@@ -55,6 +55,38 @@ STATE_DIR = Path(os.environ.get("CODING_VIBE_STATE_DIR", Path.home() / ".coding-
 SESSION_FILE = STATE_DIR / "session.json"
 STATIC_DIR = _THIS_DIR / "static"
 
+# ── Security: network-facing backend allowlist ──────────────────────────────────
+# This server is reachable over the network (LAN / tunnel). Real backends such as
+# `claude-code` and `openopc` spawn subprocesses (e.g. `claude
+# --dangerously-skip-permissions`), so an unauthenticated caller choosing them
+# would be remote code execution. Only allowlisted backends may be dispatched.
+# Default is mock-only; widen via CV_ALLOWED_BACKENDS (comma-separated) ONLY once
+# token auth gates the dangerous backends.
+_ALLOWED_BACKENDS = {
+    b.strip()
+    for b in os.environ.get("CV_ALLOWED_BACKENDS", "mock").split(",")
+    if b.strip()
+}
+
+
+def _guard_dispatch(task: str, backend: str, repo_path: str) -> None:
+    """Reject network-supplied dispatch params that are unsafe.
+
+    - backend must be on the allowlist (blocks RCE via dangerous adapters)
+    - task / repo_path must not start with '-' (defense-in-depth against argv
+      flag smuggling; the adapters also terminate flags with a `--` sentinel)
+    """
+    if backend not in _ALLOWED_BACKENDS:
+        raise HTTPException(
+            403,
+            f"Backend {backend!r} is not permitted over the API. "
+            f"Allowed: {sorted(_ALLOWED_BACKENDS)}",
+        )
+    if task.startswith("-"):
+        raise HTTPException(400, "Invalid 'task': must not start with '-'")
+    if repo_path.startswith("-"):
+        raise HTTPException(400, "Invalid 'repo_path': must not start with '-'")
+
 STEPFUN_API_KEY = os.environ.get("STEPFUN_API_KEY", "")
 STEPFUN_BASE_URL = os.environ.get("STEPFUN_BASE_URL", "https://api.stepfun.com/v1")
 STEPFUN_ASR_MODEL = "step-asr"
@@ -159,6 +191,9 @@ async def dispatch(body: dict[str, Any]):
     repo_path: str = body.get("repo_path") or os.environ.get(
         "CV_DEMO_REPO", "/tmp/cv-demo"
     )
+
+    # Security gate: allowlist backend, reject dash-leading argv smuggling.
+    _guard_dispatch(task, backend, repo_path)
 
     receptionist = Receptionist()
     task_id = str(uuid.uuid4())[:8]
