@@ -19,6 +19,7 @@ Then open http://localhost:7860 in a browser and click "Connect".
 from __future__ import annotations
 
 import asyncio
+import hmac
 import os
 import sys
 import uuid
@@ -41,17 +42,38 @@ from voice.bot import main as bot_main  # noqa: E402 — local, after sys.path
 
 # ── Config ────────────────────────────────────────────────────────────────────────
 
-_HOST = os.environ.get("CV_PIPECAT_HOST", "0.0.0.0")
+# Bind to loopback by default; binding to 0.0.0.0 must be an explicit opt-in.
+_HOST = os.environ.get("CV_PIPECAT_HOST", "127.0.0.1")
 _PORT = int(os.environ.get("CV_PIPECAT_PORT", "7860"))
 _ICE_SERVERS = os.environ.get(
     "CV_PIPECAT_ICE_SERVERS",  # comma-separated STUN URLs
     "stun:stun.l.google.com:19302",
 ).split(",")
 
+# Auth: /api/offer starts a bot that can reach dispatch → CEO (code exec), so it
+# must be gated the same as the rest of the API. Token via x-cv-token header,
+# ?token= query, or body {"token": ...}.
+CV_API_TOKEN = os.environ.get("CV_API_TOKEN", "")
+_DANGEROUS_BACKENDS = {"claude-code", "openopc"}
+_MAX_CONNECTIONS = int(os.environ.get("CV_PIPECAT_MAX_CONN", "32"))
+
 # ── In-memory connection registry ────────────────────────────────────────────────
 # Each browser peer gets its own SmallWebRTCConnection + background bot task.
 _connections: dict[str, SmallWebRTCConnection] = {}
 _connection_lock = asyncio.Lock()
+
+
+def _check_offer_auth(request: "Request", body: dict) -> bool:
+    """Constant-time token check for /api/offer (open only if no token set)."""
+    if not CV_API_TOKEN:
+        return True
+    tok = (
+        request.headers.get("x-cv-token")
+        or request.query_params.get("token")
+        or (body.get("token") if isinstance(body, dict) else "")
+        or ""
+    )
+    return bool(tok) and hmac.compare_digest(tok, CV_API_TOKEN)
 
 
 # ── App ──────────────────────────────────────────────────────────────────────────
@@ -85,9 +107,14 @@ async def handle_offer(request: Request) -> JSONResponse:
     except Exception:
         return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
 
+    # Auth gate — same token as the rest of the API (this endpoint reaches the CEO).
+    if not _check_offer_auth(request, body):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+
     sdp: str = body.get("sdp", "")
     sdp_type: str = body.get("type", "offer")
-    session_id: str = body.get("session_id") or str(uuid.uuid4())[:8]
+    # Always server-generated — never trust a client-supplied session_id.
+    session_id: str = str(uuid.uuid4())[:8]
 
     if not sdp or sdp_type != "offer":
         return JSONResponse(
@@ -100,6 +127,8 @@ async def handle_offer(request: Request) -> JSONResponse:
     connection = SmallWebRTCConnection(ice_servers=ice_servers)
 
     async with _connection_lock:
+        if len(_connections) >= _MAX_CONNECTIONS:
+            return JSONResponse({"error": "server at capacity"}, status_code=429)
         _connections[session_id] = connection
 
     # Build transport params
@@ -204,5 +233,23 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    print(f"[server] Coding Vibe Pipecat voice server → http://localhost:{_PORT}", flush=True)
+    # Fail closed: never arm a subprocess backend (claude-code/openopc → code exec)
+    # without an auth token, since /api/offer would then be an unauthenticated RCE.
+    _backend = os.environ.get("CV_CALL_BACKEND", "mock")
+    if _backend in _DANGEROUS_BACKENDS and not CV_API_TOKEN:
+        print(
+            f"\n[FATAL] CV_CALL_BACKEND={_backend!r} spawns subprocesses but CV_API_TOKEN "
+            "is unset — /api/offer would be an unauthenticated code-exec surface. "
+            "Set CV_API_TOKEN or use CV_CALL_BACKEND=mock.\n",
+            flush=True,
+        )
+        sys.exit(1)
+    if _HOST != "127.0.0.1" and not CV_API_TOKEN:
+        print(
+            f"\n[WARN] Binding to {_HOST} without CV_API_TOKEN — /api/offer is open on "
+            "the network. Set CV_API_TOKEN or bind CV_PIPECAT_HOST=127.0.0.1.\n",
+            flush=True,
+        )
+
+    print(f"[server] Coding Vibe Pipecat voice server → http://{_HOST}:{_PORT}", flush=True)
     uvicorn.run(app, host=_HOST, port=_PORT)

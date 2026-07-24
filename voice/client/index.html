@@ -168,7 +168,9 @@
 
     function log(msg) {
       const line = new Date().toISOString().split("T")[1].slice(0, 8) + " " + msg;
-      logEl.innerHTML += "<span>" + line + "</span>";
+      const span = document.createElement("span");
+      span.textContent = line;            // textContent — no HTML interpretation (XSS-safe)
+      logEl.appendChild(span);
       logEl.scrollTop = logEl.scrollHeight;
     }
 
