@@ -31,6 +31,7 @@ import os
 import uuid
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 
@@ -40,6 +41,10 @@ router = APIRouter()
 
 STEPFUN_API_KEY: str = os.environ.get("STEPFUN_API_KEY", "")
 STEPFUN_WS_URL = "wss://api.stepfun.com/v1/realtime?model=stepaudio-2.5-realtime"
+STEPFUN_BASE_URL: str = os.environ.get("STEPFUN_BASE_URL", "https://api.stepfun.com/v1")
+# Text "brain" that decides intent + dispatch on each transcript (reliable text
+# tool-calling — the realtime audio model's tool-calling is only ~1/3 reliable).
+CS_BRAIN_MODEL = os.environ.get("CV_CS_BRAIN_MODEL", "step-3.7-flash")
 CV_API_TOKEN: str = os.environ.get("CV_API_TOKEN", "")
 
 # Audio constants (PCM16 / 24 kHz / mono)
@@ -47,13 +52,14 @@ _SAMPLE_RATE = 24_000
 _FRAMES_PER_CHUNK = 480  # 20 ms
 _RAW_CHUNK_BYTES = _FRAMES_PER_CHUNK * 2  # 960 bytes per 20 ms chunk
 
-# CS "receptionist" system prompt — judges intent, dispatches coding work itself.
+# CS "receptionist" VOICE persona. The realtime model ONLY talks — it does NOT
+# decide dispatch (its audio tool-calling is unreliable). A separate text brain
+# (_classify_and_dispatch on the transcript) makes the dispatch decision.
 _SYSTEM_INSTRUCTIONS = (
-    "你是 Coding Vibe 工作室的电话接线员（CS）。你说话简短、自然、友好，像在打电话。"
-    "你要自己判断来电者的意图：如果只是闲聊、问候或询问进度，就正常对话，不要调用工具。"
-    "但只要来电者表达出要『做/写/修/搭建/实现某个东西』这类编程或工程需求，你就必须调用 "
-    "dispatch_to_engineer 工具，把需求整理成一句清晰的任务描述交给工程团队——不要自己写代码。"
-    "调用工具后，用一句话告诉来电者『已经交给工程师了，忙完我打给你』。始终乐于帮忙。"
+    "你是 Coding Vibe 工作室的电话接线员（CS）。说话简短、自然、口语化，像在打电话。"
+    "如果来电者想做/写/改某个代码或功能，就热情、简短地回应：『好的，我马上安排工程师处理，"
+    "忙完打给你哈。』然后就好——不要自己写代码、不要解释实现细节。"
+    "如果只是闲聊或问进度，就自然地聊。始终友好。"
 )
 
 # Backend the CS dispatches to. Real code-exec backends (claude-code/openopc) are
@@ -73,8 +79,8 @@ _TOOLS = [
         "function": {
             "name": "dispatch_to_engineer",
             "description": (
-                "Send a coding/engineering task to the engineering team. Call this "
-                "whenever the caller wants something built, written, fixed, or implemented."
+                "把用户的编程/写代码/修bug/做功能/搭网站/写脚本等一切软件开发需求派给工程团队。"
+                "只要用户想做任何代码或软件相关的事，就调用它。"
             ),
             "parameters": {
                 "type": "object",
@@ -161,6 +167,57 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
     return {"status": "dispatched", "task_id": tid, "backend": _CALL_BACKEND}
 
 
+async def _classify_and_dispatch(transcript: str, browser_ws: Any) -> None:
+    """Decide — via the text CS brain (reliable tool-calling) — whether the user's
+    spoken turn is a coding request, and if so dispatch it. This replaces the
+    realtime audio model's tool-calling, which is only ~1/3 reliable.
+    """
+    text = (transcript or "").strip()
+    if not text or not STEPFUN_API_KEY:
+        return
+    payload = {
+        "model": CS_BRAIN_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "你是任务分诊器。判断用户这句话是不是想让工程团队做/写/改/修任何代码、"
+                    "程序、功能、网站、脚本或软件。如果是，调用 dispatch_to_engineer 并给出"
+                    "一句简洁清晰的任务描述；如果只是闲聊/问候/问进度，就什么都不做、不要调用工具。"
+                ),
+            },
+            {"role": "user", "content": text},
+        ],
+        "tools": _TOOLS,
+        "tool_choice": "auto",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(
+                f"{STEPFUN_BASE_URL}/chat/completions",
+                headers={"Authorization": f"Bearer {STEPFUN_API_KEY}"},
+                json=payload,
+            )
+        if r.status_code != 200:
+            _log("CLASSIFY", f"brain non-200: {r.status_code} {r.text[:120]}")
+            return
+        choice = (r.json().get("choices") or [{}])[0]
+        tool_calls = (choice.get("message") or {}).get("tool_calls") or []
+        for tc in tool_calls:
+            if (tc.get("function") or {}).get("name") == "dispatch_to_engineer":
+                args = json.loads(tc["function"].get("arguments") or "{}")
+                task = (args.get("task") or "").strip()
+                if task and not task.startswith("-"):
+                    ack = await dispatch_to_engineer(task)
+                    try:
+                        await browser_ws.send_json({"type": "dispatched", "task": task, **ack})
+                    except Exception:
+                        pass
+                return
+    except Exception as exc:
+        _log("CLASSIFY", f"error: {exc}")
+
+
 # ── Helper: build StepFun client events ─────────────────────────────────────────
 
 def _client_session_update(event_id: str) -> dict[str, Any]:
@@ -173,13 +230,14 @@ def _client_session_update(event_id: str) -> dict[str, Any]:
             "voice": "linjiajiejie",
             "input_audio_format": "pcm16",
             "output_audio_format": "pcm16",
-            "tools": _TOOLS,
-            "tool_choice": "auto",
             "turn_detection": {
                 "type": "server_vad",
-                "prefix_padding_ms": 500,
-                "silence_duration_ms": 100,
-                "energy_awakeness_threshold": 2500,
+                "prefix_padding_ms": 300,
+                "silence_duration_ms": 500,
+                # REQUIRED: without create_response, StepFun detects speech
+                # start/stop but never auto-generates a reply — the call goes
+                # silent. This flag makes it respond after you stop talking.
+                "create_response": True,
             },
         },
     }
@@ -461,6 +519,12 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
                 await step_ws.send(json.dumps({"type": "response.create"}))
             except Exception as exc:
                 _log("OUT", f"function_call_output send failed: {exc}")
+
+        # ── User's turn transcribed → decide dispatch via the text brain ────────
+        elif evt_type == "conversation.item.input_audio_transcription.completed":
+            tx = evt.get("transcript", "") or ""
+            _log("OUT", f"user transcript: {tx[:80]}")
+            asyncio.create_task(_classify_and_dispatch(tx, browser_ws))
 
         # ── Session confirmed ───────────────────────────────────────────────────
         elif evt_type == "session.updated":
