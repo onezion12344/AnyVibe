@@ -1,61 +1,65 @@
 # HANDOFF — coding-vibe
 
-**What this is:** a voice-first AI coding companion. You *call* a fast CS "receptionist" (StepFun realtime voice); it judges intent and dispatches coding work to a powerful engineer/CEO backend that fans out subagents; when done it *calls you back*. Bidirectional calling (agent→you) is the wedge vs Codex.
+**Repo:** https://github.com/onezion12344/coding-vibe
+**What this is:** a voice-first AI coding companion. You *call* a fast CS "receptionist" (voice); it decides intent and dispatches coding work to a powerful engineer/CEO backend that fans out subagents; when done it *calls you back*. **Bidirectional calling (agent→you) is the wedge vs Codex.**
+**Status:** web voice loop works end-to-end (talk → CS → dispatch → board → callback), verified. Two voice backends exist behind one abstraction. Company-brain + avatar + kanban are researched & designed, not yet built. Native (iOS/Android) are scaffolds.
 
-**Status:** web voice loop works end-to-end (talk → CS → dispatch → board → callback). Native (iOS/Android) are scaffolds. See "What works / doesn't" below.
+---
 
-## Architecture
+## Architecture (as decided — see `docs/DECISIONS.md` D1–D10a)
 ```
-Browser call UI ──WS /api/call──► call_bridge ──► StepFun stepaudio-2.5-realtime (voice, barge-in, tool-calling)
-     │  ▲                                  │ dispatch_to_engineer(task) [CS decides via tool_choice=auto]
-     │  │ WS /api/events (incoming call)   ▼
-     │  └───────── signaling ◄──ring()── Receptionist.dispatch_async ──► HarnessAdapter
-     └── GET /api/board (kanban ◄ session.json)                          ├─ mock
-                                                                         ├─ claude-code  (works)
-                                                                         ├─ openopc      (works, fresh project)
-                                                                         └─ qoder        (feasibility TBD)
+You ──call──▶ 🐑 CS receptionist (VOICE only)
+                 │  transcript
+                 ▼
+             text brain (owns the tool decision — reliable)  ──dispatch_to_engineer──▶ CEO backend ──▶ org/subagents
+                 │                                                                          │ done / needs input
+                 └──────────────── agent calls YOU back (ring) ◀───────────────────────────┘
 ```
+Two hard-won principles, both evidence-locked:
+- **D9 — voice model speaks; a TEXT LLM owns the tool decision.** Realtime audio tool-calling is ~1/3 reliable on *every* platform (StepFun 2/10 measured; StepFun engineer + OpenAI community + Gemini native-audio all confirm; Gemini half-cascade = text-decision = 90-100%). Never put dispatch in the audio path.
+- **D10 — persistent orchestrator, not spawn-per-task.** Keep ONE main/CEO session, inject the transcript stream, it orchestrates a preset role team. Realizable on **Qoder SDK** (D10a — fits the Alibaba×Qoder Singapore 2026 hackathon) or **OpenOPC** (fallback).
+
+## Two voice backends behind one shared abstraction
+`web/engineer_dispatch.py` = the shared dispatch brain (`dispatch_to_engineer`, `classify_and_dispatch`, `TOOLS`). Both backends call it → swap by config:
+| Backend | Where | Transport | State |
+|---|---|---|---|
+| **StepFun WS bridge** | `web/call_bridge.py` (master, LIVE) | raw WebSocket + Web Audio (gapless-playback fixed) | works; needs headphones (no AEC) |
+| **Pipecat** | `feat/pipecat-voice` branch (`voice/`) | WebRTC (smooth + hands-free AEC) | built, imports clean, not yet A/B-tested with a live call |
+
+Current live pipeline (master): browser WS `/api/call` → StepFun realtime (voice) → `step-3.7-flash` classifier on transcript (dispatch decision) → CEO (`CV_CALL_BACKEND`).
 
 ## Code map
 | Path | Purpose |
 |---|---|
-| `web/server.py` | FastAPI app; mounts routers; auth/allowlist/fail-closed; `/`, `/call`, `/api/dispatch|board|task|voice|tts` |
-| `web/call_bridge.py` | `WS /api/call` full-duplex bridge to StepFun; CS persona + `dispatch_to_engineer` tool → real backend; rings on complete |
-| `web/signaling.py` | `WS /api/events` + `POST /api/call/ring` (agent→user); client registry; `ring()` helper |
-| `web/push_server.py` | APNs VoIP + FCM senders + device registry (native ring, scaffold) |
-| `web/static/call.{html,js,css}` | Yellow-Sheep call UI: idle/dialing/in-call/incoming/ended; real Web Audio engine + mock fallback |
-| `receptionist/core.py` | `Receptionist.dispatch_async`; fan-out directive prepend; checkpoints → state |
-| `receptionist/adapters/*` | `base.py` (ABC), `claude_code.py`, `openopc.py`, `mock.py`; `registry.py` auto-discovery |
-| `ios/`, `android/` | CallKit+PushKit / Telecom+FCM scaffolds + setup READMEs |
-| `docs/` | DECISIONS, PITFALLS, RUNBOOK (read these) |
-| `~/Projects/OpenOPC/scripts/coding-vibe-preset.py` | staffs the `coding-vibe` org for a project |
+| `web/server.py` | FastAPI app; auth (token, fail-closed), allowlist; `/`, `/call`, `/api/dispatch|board|task|voice|tts`, mounts routers |
+| `web/call_bridge.py` | StepFun realtime voice bridge (WS `/api/call`) — imports the shared dispatch brain |
+| `web/engineer_dispatch.py` | **shared** dispatch brain (both voice backends use it) — on `feat/pipecat-voice`; folds to master on merge |
+| `web/signaling.py` | WS `/api/events` + `POST /api/call/ring` (agent→you) |
+| `web/push_server.py` | APNs/FCM device push (native ring, scaffold) |
+| `web/static/call.{html,js,css}` + `audio-worklet.js` | Yellow-Sheep call UI + AudioWorklet capture / gapless playback |
+| `voice/` (branch) | Pipecat bot: `bot.py`, `stepfun_tts.py`, `server.py` (:7860), `client/` |
+| `receptionist/` | `Receptionist.dispatch_async` + `adapters/` (mock, claude-code, openopc) + registry |
+| `ios/`, `android/` | CallKit+PushKit / Telecom+FCM scaffolds |
+| `docs/DECISIONS.md`, `docs/PITFALLS.md`, `docs/RUNBOOK.md`, `docs/research/*`, `docs/ui-and-company-view-notes.md` | decisions, earned bugs, runbook, all research, UI/company-view/pet/kanban design |
 
-## What WORKS
-- Real-time voice call to the CS (browser ↔ StepFun), server-VAD, barge-in — verified handshake + audio path.
-- CS intelligently dispatches via tool-calling (verified StepFun emits `function_call`).
-- `claude-code` backend executes real tasks; `openopc` backend executes via a fresh project (`cvlive`).
-- Agent-calls-you: `/api/call/ring` → full-screen web incoming call + ringtone.
+## What WORKS (verified)
+- Full call loop through the bridge: **voice reply + reliable dispatch (3/3) + board task + ring-back.**
 - Security: token auth (first-message WS + header REST), fail-closed on code-exec backends, backend allowlist, repo_path roots, CORS creds off.
-- Transport: localhost + LAN(:5443, self-signed) + Oracle public(:8443 via reverse tunnel). Cloudflare blocked.
+- OpenOPC backend executes via a fresh project (`cvlive`); claude-code backend executes. `dispatch_async` checkpoints → board.
+- Transport: localhost + LAN (`:5443`) + Oracle public (`:8443` reverse tunnel). Cloudflare edge blocked on this network.
 
-## What DOESN'T (yet)
-- **Live voice not yet user-confirmed on a real call** — audio quality/timing needs a real test pass.
-- **Kanban shows one CEO task card, not per-subagent cards** — adapter streams CEO text, doesn't emit per-`Task` spawn events.
-- **Native iOS/Android** — scaffolds only; need Xcode/Gradle build + APNs/FCM creds + device.
-- **Qoder backend** — feasibility research pending (may be GUI-only, no headless path).
-- **OpenOPC `demo`/`dse-agent` tasks.db corrupted** — sidestepped via fresh project; `dse-agent` recovery awaits owner OK.
-- **Services via nohup, not launchd** — don't survive reboot yet.
+## What's NOT done / TODO
+- **P0** — A/B the Pipecat backend with a live call (run `voice/server.py`); pick StepFun-bridge vs Pipecat as default. Confirm audio quality after the gapless-playback fix.
+- **P1** — Build the **persistent-company** (D10) on Qoder SDK (competition) or OpenOPC: one persistent orchestrator + preset role team, transcript streamed in, tiered/async feedback (filler → preliminary → CEO verdict).
+- **P1** — **Company view + tool-call visibility** (see what the CEO actually did; per-subagent cards) — the "它做了什么操作能看到吗" gap.
+- **P1** — Merge `feat/pipecat-voice` (folds the shared `engineer_dispatch.py` onto master).
+- **P2** — Cuter kanban (replicate Qoder's board strengths). Talking **Yellow-Sheep pet** via Codex-pet sprite format + `codex-pet-companion` web SDK. English TTS upgrade (MiMo has an OpenAI-compatible API `mimo-v2.5-tts`; needs a `MIMO_API_KEY`). Native iOS/Android build. launchd for servers/tunnel. `dse-agent` OpenOPC DB recovery (owner-gated). Add a `QoderAdapter` to OpenOPC (registry has no qoder).
 
 ## How to run
-See `docs/RUNBOOK.md`. Quick local test: open `http://localhost:5091/call?token=<CV_API_TOKEN>` on the Mac.
+See `docs/RUNBOOK.md`. Quick local call (master): `http://localhost:5091/call?token=<CV_API_TOKEN>` (headphones). Pipecat (branch): `miniforge3/bin/python3 voice/server.py` → `http://localhost:7860`.
 
-## TODO (priority)
-- **P0** — real-call audio verification; confirm CS→dispatch→board→callback on a live call.
-- **P1** — per-subagent kanban cards (emit adapter `Task` tool_use events → session.json); switch/confirm the chosen default backend (claude-code vs openopc); launchd for the servers + tunnel.
-- **P2** — Qoder adapter (if feasible); native Phase B (CallKit/Telecom build + push provider); `dse-agent` DB recovery (owner-gated); persist device registry.
-
-## Key decisions / pitfalls
-`docs/DECISIONS.md` · `docs/PITFALLS.md`
+## Branches
+`master` (integrated + live bridge) · `feat/pipecat-voice` (Pipecat backend + shared abstraction) · `feat/ceo-fanout` · `feat/openopc-staffing` · `feat/webui`.
 
 ## Contact
 Owner: Harry (onezion12344).
