@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import hashlib
 import hmac
 import json
 import os
@@ -55,12 +56,12 @@ _SYSTEM_INSTRUCTIONS = (
     "调用工具后，用一句话告诉来电者『已经交给工程师了，忙完我打给你』。始终乐于帮忙。"
 )
 
-# Backend the CS dispatches to. Real subprocess backends require a token (the
-# /api/call WS is token-gated); if no token is set, fall back to mock so we never
-# expose an unauthenticated code-exec path.
-_CALL_BACKEND = os.environ.get(
-    "CV_CALL_BACKEND", "claude-code" if CV_API_TOKEN else "mock"
-)
+# Backend the CS dispatches to. Real code-exec backends (claude-code/openopc) are
+# OFF by default — enabling one is a deliberate, separately-gated decision:
+# set CV_CALL_BACKEND=claude-code AND a token (the /api/call WS is token-gated).
+# Without a token we force mock (fail-closed) so a spoken request can never reach
+# an unauthenticated code-exec path.
+_CALL_BACKEND = os.environ.get("CV_CALL_BACKEND", "mock")
 if _CALL_BACKEND in ("claude-code", "openopc") and not CV_API_TOKEN:
     _CALL_BACKEND = "mock"
 _CALL_REPO = os.environ.get("CV_DEMO_REPO", "/tmp/cv-demo")
@@ -155,7 +156,8 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
     except Exception as exc:
         _log("DISPATCH", f"state write failed: {exc}")
 
-    _log("DISPATCH", f"dispatched task_id={tid} backend={_CALL_BACKEND}: {task[:80]}")
+    thash = hashlib.sha256(task.encode()).hexdigest()[:8]
+    _log("DISPATCH", f"dispatched task_id={tid} backend={_CALL_BACKEND} task#{thash}")
     return {"status": "dispatched", "task_id": tid, "backend": _CALL_BACKEND}
 
 
@@ -430,9 +432,14 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
             except Exception:
                 args = {}
             task = (args.get("task") or "").strip()
-            _log("OUT", f"CS dispatched via tool: {task[:80]}")
+            thash = hashlib.sha256(task.encode()).hexdigest()[:8] if task else "-"
+            _log("OUT", f"CS dispatched via tool (task#{thash})")
             ack: dict[str, Any] = {"status": "no-op"}
-            if task:
+            if task.startswith("-"):
+                # defense-in-depth vs argv flag smuggling (adapters also use `--`)
+                _log("OUT", f"Rejected task starting with '-' (task#{thash})")
+                ack = {"status": "error", "error": "Invalid task"}
+            elif task:
                 try:
                     ack = await dispatch_to_engineer(task)
                 except Exception as exc:
