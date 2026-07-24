@@ -49,7 +49,7 @@ async def run_livekit() -> None:
     The LLM in the LiveKit AgentSession IS the Boss (CS receptionist).
     Provider is controlled by CV_CS_PROVIDER env var:
       - deepseek  (default) — DeepSeek Chat via OpenAI-compatible endpoint
-      - stepfun   — StepFun step-router-v1 via OpenAI-compatible endpoint
+      - stepfun   — StepFun step-3.7-flash via OpenAI-compatible endpoint
     """
     from dotenv import load_dotenv
     load_dotenv()
@@ -82,7 +82,7 @@ async def run_livekit() -> None:
     if cs_provider == "stepfun":
         stepfun_key = os.getenv("STEPFUN_API_KEY")
         stepfun_base = os.getenv("STEPFUN_BASE_URL", "https://api.stepfun.com/v1")
-        stepfun_model = os.getenv("STEPFUN_MODEL", "step-router-v1")
+        stepfun_model = os.getenv("STEPFUN_MODEL", "step-3.7-flash")
         if not stepfun_key:
             print("[bridge] CV_CS_PROVIDER=stepfun but STEPFUN_API_KEY is not set — falling back to halfduplex...")
             await run_halfduplex()
