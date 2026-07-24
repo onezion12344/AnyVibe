@@ -2,11 +2,18 @@
 
 Endpoints:
   GET  /              → index.html
+  GET  /call          → call.html
   POST /api/dispatch  → {task_id}
   GET  /api/board     → kanban JSON
   GET  /api/task/{id} → status + events + result
   POST /api/voice     → transcribe audio blob → dispatch → {transcript, task_id}
   GET  /api/tts       → synthesized audio/mpeg
+  WS   /api/call      → realtime voice bridge (call_bridge router)
+  WS   /api/events    → realtime signaling (signaling router)
+  POST /api/call/ring → trigger incoming-call event (signaling router)
+  POST /api/devices/register  → register push device (push_server router)
+  GET  /api/devices           → list registered devices
+  POST /api/devices/ring      → native push ring
 """
 
 from __future__ import annotations
@@ -50,6 +57,11 @@ import sys
 sys.path.insert(0, str(_PROJECT_ROOT))
 from receptionist.core import Receptionist  # noqa: E402
 from receptionist.state import load_state  # noqa: E402
+
+# ── Import routers (mounted below) ─────────────────────────────────────────────
+from web.call_bridge import router as call_bridge_router  # noqa: E402
+from web.signaling   import router as signaling_router    # noqa: E402
+from web.push_server import router as push_server_router  # noqa: E402
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 STATE_DIR = Path(os.environ.get("CODING_VIBE_STATE_DIR", Path.home() / ".coding-vibe"))
@@ -157,12 +169,26 @@ app = FastAPI(title="Coding Vibe Web UI", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    # Auth is a bearer token in a header/query param, NOT a cookie — so we do not
+    # need (and must not enable) credentialed CORS. Wildcard origin + credentials
+    # is a spec violation and a token-leak amplifier; keep credentials off.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# ── Mount sub-routers ────────────────────────────────────────────────────────────
+# call_bridge  → WS  /api/call           (realtime voice bridge to StepFun)
+# signaling    → WS  /api/events         (live event push)
+#               → POST /api/call/ring     (trigger incoming-call event)
+# push_server  → POST /api/devices/register  (register push device)
+#               → GET  /api/devices          (list registered devices)
+#               → POST /api/devices/ring     (native push ring)
+app.include_router(call_bridge_router)
+app.include_router(signaling_router)
+app.include_router(push_server_router)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -220,6 +246,15 @@ async def root():
     raise HTTPException(500, "index.html not found")
 
 
+@app.get("/call")
+async def call_page():
+    """Serve the call UI."""
+    call_html = STATIC_DIR / "call.html"
+    if call_html.exists():
+        return FileResponse(str(call_html))
+    raise HTTPException(500, "call.html not found")
+
+
 @app.post("/api/dispatch")
 async def dispatch(body: dict[str, Any], request: Request):
     """Dispatch a text task. Returns {task_id}."""
@@ -258,8 +293,9 @@ async def dispatch(body: dict[str, Any], request: Request):
 
 
 @app.get("/api/board")
-async def board():
+async def board(request: Request):
     """Return kanban-shaped JSON derived from session.json."""
+    _check_auth(request.headers.get("x-cv-token") or request.query_params.get("token"))
     session = _load_session()
     delegations = session.get("delegations", [])
     checkpoints = session.get("checkpoints", [])
@@ -346,8 +382,9 @@ async def board():
 
 
 @app.get("/api/task/{task_id}")
-async def task_detail(task_id: str):
+async def task_detail(task_id: str, request: Request):
     """Get status, event log, and final result for a task."""
+    _check_auth(request.headers.get("x-cv-token") or request.query_params.get("token"))
     events = _task_events.get(task_id, [])
     result = _task_results.get(task_id)
 

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Coding Vibe · Call</title>
+<link rel="stylesheet" href="call.css">
+</head>
+<body>
+
+<div id="star-bg"></div>
+
+<div id="app">
+
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <div class="hd">
+    <div class="hd-title">羊 · Coding Vibe</div>
+    <div class="hd-badge" id="hd-badge">Idle</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       1 · IDLE
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div class="view active" id="view-idle">
+    <div class="tagline">「为创造，再一次信仰之跃」</div>
+    <button class="call-btn" id="btn-call" aria-label="Call CS receptionist">
+      <!-- phone handset SVG inline -->
+      <svg width="54" height="54" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07
+                 A19.5 19.5 0 0 1 4.69 13.72a19.79 19.79 0 0 1-3.07-8.67
+                 A2 2 0 0 1 3.6 2.92h3a2 2 0 0 1 2 1.72
+                 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91
+                 a16 16 0 0 0 6.18 6.18l.94-.94a2 2 0 0 1 2.11-.45
+                 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+    </button>
+    <div class="call-btn-label">Call CS · Receptionist</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       2 · DIALING
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-dialing">
+    <div class="pulsar">
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring"></div>
+      <div class="ring-center">
+        <!-- connecting icon -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </div>
+    </div>
+    <div class="dialing-label">Connecting…</div>
+    <div class="dialing-sub">Dialing CS receptionist</div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       3 · IN-CALL
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-in-call">
+
+    <!-- Waveform / level meter -->
+    <div style="width:100%;padding:10px 16px 4px;display:flex;align-items:center;gap:10px">
+      <div class="live-dot"></div>
+      <span style="font-size:11px;font-weight:500;color:var(--accent2);letter-spacing:0.08em;text-transform:uppercase">Live</span>
+    </div>
+    <div id="wf-strip" style="display:flex;align-items:flex-end;gap:2px;height:52px;padding:0 16px;width:100%"></div>
+    <div style="height:1px;background:var(--border);margin:6px 0"></div>
+
+    <!-- Mute / Hang-up -->
+    <div class="ctrl-row">
+      <button class="ctrl-btn ctrl-mute" id="btn-mute" aria-label="Toggle mute">
+        <!-- mic icon -->
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+      </button>
+      <button class="ctrl-btn ctrl-hang" id="btn-hangup" aria-label="Hang up">
+        <!-- phone-off icon -->
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45
+                   12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2
+                   19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 4.69 13.72a19.79 19.79 0 0 1-3.07-8.67
+                   A2 2 0 0 1 3.6 2.92h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81
+                   2 2 0 0 1-.45 2.11L8.09 9.91"/>
+          <line x1="23" y1="1" x2="1" y2="23" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Agent Kanban -->
+    <div class="kanban-panel">
+      <div class="kanban-title">Agent Board</div>
+      <div class="kanban-cols">
+
+        <div class="col col-pending">
+          <div class="col-hd">
+            Pending
+            <span class="col-badge" id="cnt-pending">0</span>
+          </div>
+          <div id="col-pending"></div>
+        </div>
+
+        <div class="col col-active">
+          <div class="col-hd">
+            In Progress
+            <span class="col-badge" id="cnt-active">0</span>
+          </div>
+          <div id="col-active"></div>
+        </div>
+
+        <div class="col col-done">
+          <div class="col-hd">
+            Done
+            <span class="col-badge" id="cnt-done">0</span>
+          </div>
+          <div id="col-done"></div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /in-call -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       4 · INCOMING  (full-screen overlay)
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-incoming">
+    <div class="in-avatar">🐑</div>
+    <div class="in-name">Coding Vibe · CEO</div>
+    <div class="in-reason" id="in-reason">You have an incoming call</div>
+    <div class="in-actions">
+      <button class="in-decline" id="btn-decline" aria-label="Decline">
+        <!-- phone-off small -->
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45
+                   12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2
+                   19.79 19.79 0 0 1-8.63-3.07A19.42 19.42 0 0 1 4.69 13.72a19.79 19.79 0 0 1-3.07-8.67
+                   A2 2 0 0 1 3.6 2.92h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81
+                   2 2 0 0 1-.45 2.11L8.09 9.91"/>
+          <line x1="23" y1="1" x2="1" y2="23" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="in-accept" id="btn-accept" aria-label="Accept call">
+        <!-- phone handset -->
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07
+                   A19.5 19.5 0 0 1 4.69 13.72a19.79 19.79 0 0 1-3.07-8.67
+                   A2 2 0 0 1 3.6 2.92h3a2 2 0 0 1 2 1.72
+                   12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91
+                   a16 16 0 0 0 6.18 6.18l.94-.94a2 2 0 0 1 2.11-.45
+                   12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+        </svg>
+      </button>
+    </div>
+    <div style="display:flex;gap:56px;margin-top:10px">
+      <div class="in-label">Decline</div>
+      <div class="in-label">Accept</div>
+    </div>
+  </div><!-- /incoming -->
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       5 · ENDED
+  ═══════════════════════════════════════════════════════════════════ -->
+  <div class="view" id="view-ended">
+    <div class="ended-icon">📵</div>
+    <div class="ended-title">Call ended</div>
+    <div class="ended-dur" id="ended-dur">0:00</div>
+    <button class="call-btn" id="btn-ended-back"
+            style="width:88px;height:88px;font-size:40px;margin-top:18px"
+            aria-label="Back to idle">
+      ←
+    </button>
+  </div>
+
+</div><!-- /app -->
+
+<script src="call.js"></script>
+</body>
+</html>

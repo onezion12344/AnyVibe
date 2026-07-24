@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Display Name (shown on the home screen / lock screen caller ID) -->
+    <key>CFBundleName</key>
+    <string>VoIP Agent</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!--  BACKGROUND MODES — must match Background Modes capability   -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <!-- Enables PKPushRegistry VoIP push delivery -->
+        <string>voip</string>
+        <!-- Keeps app alive for bidirectional audio during a call -->
+        <string>audio</string>
+    </array>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!--  PRIVACY PERMISSIONS                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- Microphone — required to capture and transmit voice audio -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This app uses your microphone to transmit voice during calls.</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!--  iOS VERSION GUARD                                               -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <key>LSMinimumSystemVersion</key>
+    <string>17.0</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!--  DEFAULT CONFIGURATION                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
+</dict>
+</plist>

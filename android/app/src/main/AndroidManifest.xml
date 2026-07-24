@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml — Vibe VoIP app.
+
+    Key decisions
+    ─────────────
+    • CAPABILITY_SELF_MANAGED in the PhoneAccount (registered in AppInitializer) means
+      this app does NOT need ROLE_DIALER or to be the system default dialer.
+    • MANAGE_OWN_CALLS is a normal permission (no runtime prompt) but requires
+      minSdkVersion >= 26 (Nougat).
+    • FOREGROUND_SERVICE_PHONE_CALL (Android 14+) grants the phoneCall foreground
+      service type.  On older versions the system ignores the missing permission but
+      the <service> android:foregroundServiceType attribute is still required there too.
+    • USE_FULL_SCREEN_INTENT must be the FSI permission — ContextCompat.checkSelfPermission
+      always returns GRANTED (a known Android bug); use
+      NotificationManager.canUseFullScreenIntent() at runtime instead.
+    • All components with <intent-filter> must declare android:exported on targetSdk >= 31.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.vibe.voip">
+
+    <!-- ── Minimum / target SDK ─────────────────────────────────────────────── -->
+    <!--
+         minSdk 23  : ConnectionService / PhoneAccount added (API 26 guards are OK)
+         targetSdk 34: Android 14 — requires FOREGROUND_SERVICE_PHONE_CALL + FSI grant
+    -->
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="34" />
+
+    <!-- ── Permissions ──────────────────────────────────────────────────────── -->
+    <!-- MANAGE_OWN_CALLS — normal (non-dangerous); no runtime request needed -->
+    <uses-permission
+        android:name="android.permission.MANAGE_OWN_CALLS" />
+
+    <!-- Foreground service type for calls (Android 14+) -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+
+    <!-- General foreground service declaration (Android 9+) -->
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <!-- Full-screen intent for incoming-call overlay (Android 14+) -->
+    <!--
+         WARNING: Google Play auto-revokes FSI for non-calling apps at install time.
+         Android 14 auto-grants it only if the app's core functionality is calling
+         or alarm.  Programmatically check with:
+             NotificationManager.canUseFullScreenIntent()
+         (Do NOT use ContextCompat.checkSelfPermission() — it always returns GRANTED.)
+    -->
+    <uses-permission
+        android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- Runtime permission on Android 13+; request before posting any notification -->
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Network / wake-lock for FCM delivery and WebSocket keep-alive -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Audio capture for VoIP — runtime permission on Android 6+ -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <!-- ── Application ──────────────────────────────────────────────────────── -->
+    <application
+        android:name=".AppInitializer"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VibeVoip"
+        android:usesCleartextTraffic="false">
+
+        <!-- ── FirebaseMessagingService ─────────────────────────────────────── -->
+        <!--
+             android:stopWithTask="false  — service survives task removal so that
+             FCM data messages still arrive and trigger incoming calls after the
+             user swipes the app away from recents.
+             android:exported="false"         — only Firebase's internal binder can
+             invoke it; not accessible from other apps.
+        -->
+        <service
+            android:name=".MyFirebaseMessagingService"
+            android:exported="false"
+            android:stopWithTask="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- ── Call foreground service ───────────────────────────────────────── -->
+        <!--
+             android:foregroundServiceType="phoneCall" — required on API 28+.
+             FOREGROUND_SERVICE_PHONE_CALL permission in manifest covers API 34+.
+             The service must call startForeground() within 5 s of onCreate()
+             to avoid ForegroundServiceDidNotStartInTimeException.
+        -->
+        <service
+            android:name=".CallForegroundService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="phoneCall" />
+
+        <!-- ── ConnectionService ─────────────────────────────────────────────── -->
+        <!--
+             android:permission="android.permission.BIND_CONNECTION_SERVICE" ensures
+             only the system Telecom process can bind to this service.
+             android:exported="true" is required because the system Telecom process
+             is a different app; the BIND_CONNECTION_SERVICE permission protects it.
+        -->
+        <service
+            android:name=".MyConnectionService"
+            android:permission="android.permission.BIND_CONNECTION_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
+
+        <!-- ── Main / outgoing-call activity ────────────────────────────────── -->
+        <activity
+            android:name=".OutgoingCallActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.VibeVoip">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+
+</manifest>
