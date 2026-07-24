@@ -51,3 +51,10 @@ Context → options → decision → rationale. Includes rejected options.
   - **Qoder SDK** — desirable (competition track) IF it supports persistent sessions + multi-agent orchestration (research pending → [[qoder-sdk-research]]).
 - **Team roles = presets**, user-selectable on the web kanban (pick which team/roles staff the company).
 - Requirement in one line: **inject into the same main agent every turn; that agent orchestrates a preset role team.**
+
+## D10a: Qoder SDK CAN realize the persistent-company (D10) — and fits the competition
+- **Verdict (research):** Qoder Agent SDK supports all D10 needs: persistent/resumable sessions (`QoderSDKClient` + `resume`/`continue`/`forkSession`), multi-agent orchestration (`AgentDefinition` subagents + `Agent` tool; Cloud Managed Agents coordinator with create_agent/send_to_agent/mailbox), custom per-agent role prompts (`AgentDefinition.prompt`), tools/MCP/streaming. API is Claude-Agent-SDK-shaped.
+- **Mapping:** `QoderSDKClient` = persistent main/CEO session (inject transcript each turn); `agents={}` = preset role team (user-selectable on the kanban).
+- **Competition:** "Alibaba Cloud × Qoder Hackathon Singapore 2026" (Spec-Driven + Quest Mode) — building on Qoder SDK enters the track. Ref: luma.com/92h6pyl1.
+- **Caveats:** SDK delegation is per-task (orchestration logic lives in the main prompt); cross-restart persistence = manage session IDs; Cloud Managed Agents coordinator needs a Qoder account.
+- **Fallback:** OpenOPC (zero external dep, local control) if Qoder cloud/account is a blocker or the track doesn't require the SDK. Full report: docs/research/qoder-sdk-persistent-company.md.
