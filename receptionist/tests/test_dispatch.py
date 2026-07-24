@@ -12,7 +12,7 @@ import pytest
 
 from receptionist.adapters.base import StatusEvent, TaskResult
 from receptionist.adapters.mock import MockAdapter
-from receptionist.core import Receptionist
+from receptionist.core import Receptionist, DEFAULT_ENGINEER_DIRECTIVE
 from receptionist.registry import get_adapter, list_adapters, register_adapter, discover_adapters
 from receptionist.state import load_state, append_checkpoint, reset_state, _get_state_file
 
@@ -795,3 +795,123 @@ register_adapter(QuickAdapter)
         import receptionist.adapters as adapters_pkg
         # The package itself must not be a registered adapter name
         assert adapters_pkg.__name__ not in _REGISTRY
+
+
+# ---------------------------------------------------------------------------
+# Engineer directive (fan-out) tests
+# ---------------------------------------------------------------------------
+
+class _SpyAdapter(MockAdapter):
+    """MockAdapter that records the exact task string handed to spawn().
+
+    ``core`` instantiates adapters via ``get_adapter(backend)()`` (no args), so
+    the receptionist creates a *fresh* instance we cannot reach directly.  We
+    record onto a class-level list so the test can inspect what spawn() saw.
+    """
+
+    name = "spy"
+    received_tasks: list[str] = []
+
+    async def spawn(self, task: str, *, repo_path: str, context: dict | None = None) -> str:
+        type(self).received_tasks.append(task)
+        return await super().spawn(task, repo_path=repo_path, context=context)
+
+
+@pytest.fixture
+def spy_backend():
+    """Register the spy adapter under "spy" and clear its recording buffer."""
+    register_adapter(_SpyAdapter)
+    _SpyAdapter.received_tasks = []
+    yield _SpyAdapter
+    _SpyAdapter.received_tasks = []
+
+
+class TestEngineerDirective:
+    """The receptionist prepends a fan-out directive to the task by default."""
+
+    async def test_default_directive_prepended(self, isolated_state_dir, spy_backend):
+        """By default, the task handed to the adapter includes the fan-out directive."""
+        await Receptionist().dispatch(
+            "add a /health endpoint", backend="spy", repo_path="/tmp/x"
+        )
+        assert len(spy_backend.received_tasks) == 1
+        sent = spy_backend.received_tasks[0]
+        assert sent.startswith(DEFAULT_ENGINEER_DIRECTIVE)
+        assert sent.endswith("add a /health endpoint")
+        assert "add a /health endpoint" in sent
+        # The directive is separated from the task by the "---" fence.
+        assert "\n\n---\n\n" in sent
+
+    async def test_directive_mentions_parallel_subagents(self):
+        """Sanity: the built-in directive actually pushes for parallel subagents."""
+        low = DEFAULT_ENGINEER_DIRECTIVE.lower()
+        assert "subagent" in low
+        assert "parallel" in low or "concurrent" in low or "concurrently" in low
+
+    async def test_disable_with_empty_string(self, isolated_state_dir, spy_backend):
+        """An empty-string directive disables augmentation — task passes unchanged."""
+        await Receptionist(engineer_directive="").dispatch(
+            "verbatim task", backend="spy", repo_path="/tmp/x"
+        )
+        assert spy_backend.received_tasks == ["verbatim task"]
+
+    async def test_constructor_override(self, isolated_state_dir, spy_backend):
+        """A custom instance directive is used verbatim."""
+        await Receptionist(engineer_directive="CUSTOM PREAMBLE").dispatch(
+            "the task", backend="spy", repo_path="/tmp/x"
+        )
+        assert spy_backend.received_tasks == ["CUSTOM PREAMBLE\n\n---\n\nthe task"]
+
+    async def test_per_dispatch_override(self, isolated_state_dir, spy_backend):
+        """A per-dispatch directive overrides the instance default."""
+        r = Receptionist(engineer_directive="INSTANCE")
+        await r.dispatch(
+            "t", backend="spy", repo_path="/tmp/x", engineer_directive="PERCALL"
+        )
+        assert spy_backend.received_tasks == ["PERCALL\n\n---\n\nt"]
+
+    async def test_per_dispatch_disable(self, isolated_state_dir, spy_backend):
+        """Passing engineer_directive="" to dispatch disables for that call only."""
+        r = Receptionist()  # default directive active
+        await r.dispatch("t", backend="spy", repo_path="/tmp/x", engineer_directive="")
+        assert spy_backend.received_tasks == ["t"]
+
+    async def test_env_override(self, isolated_state_dir, spy_backend, monkeypatch):
+        """CV_ENGINEER_DIRECTIVE overrides the built-in default when instance dir is None."""
+        monkeypatch.setenv("CV_ENGINEER_DIRECTIVE", "ENV DIRECTIVE")
+        await Receptionist().dispatch("t", backend="spy", repo_path="/tmp/x")
+        assert spy_backend.received_tasks == ["ENV DIRECTIVE\n\n---\n\nt"]
+
+    async def test_constructor_beats_env(self, isolated_state_dir, spy_backend, monkeypatch):
+        """An explicit constructor directive wins over the env var."""
+        monkeypatch.setenv("CV_ENGINEER_DIRECTIVE", "ENV DIRECTIVE")
+        await Receptionist(engineer_directive="CTOR").dispatch(
+            "t", backend="spy", repo_path="/tmp/x"
+        )
+        assert spy_backend.received_tasks == ["CTOR\n\n---\n\nt"]
+
+    async def test_dispatch_async_applies_directive(self, isolated_state_dir, spy_backend):
+        """dispatch_async augments the task exactly like dispatch."""
+        await Receptionist(engineer_directive="ASYNC PREAMBLE").dispatch_async(
+            "async task", backend="spy", repo_path="/tmp/x"
+        )
+        await asyncio.sleep(0.2)
+        assert spy_backend.received_tasks == ["ASYNC PREAMBLE\n\n---\n\nasync task"]
+
+    async def test_dispatch_async_default_directive(self, isolated_state_dir, spy_backend):
+        """dispatch_async uses the built-in default when none is configured."""
+        await Receptionist().dispatch_async(
+            "async default", backend="spy", repo_path="/tmp/x"
+        )
+        await asyncio.sleep(0.2)
+        assert len(spy_backend.received_tasks) == 1
+        assert spy_backend.received_tasks[0].startswith(DEFAULT_ENGINEER_DIRECTIVE)
+        assert spy_backend.received_tasks[0].endswith("async default")
+
+    async def test_dispatch_async_per_call_disable(self, isolated_state_dir, spy_backend):
+        """dispatch_async honours a per-call empty-string disable."""
+        await Receptionist().dispatch_async(
+            "raw", backend="spy", repo_path="/tmp/x", engineer_directive=""
+        )
+        await asyncio.sleep(0.2)
+        assert spy_backend.received_tasks == ["raw"]

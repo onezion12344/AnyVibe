@@ -3,12 +3,66 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from typing import Any
 
 from receptionist.adapters.base import HarnessAdapter, StatusEvent, TaskResult
 from receptionist.registry import get_adapter
 from receptionist.state import load_state, save_state
+
+
+# ---------------------------------------------------------------------------
+# Engineer directive — the default "fan out into many parallel subagents"
+# preamble prepended to every task before it reaches the harness adapter.
+# ---------------------------------------------------------------------------
+
+#: Built-in default directive. Worded harness-neutrally, but lands well for
+#: claude-code (which exposes a Task/subagent tool). The receptionist prepends
+#: this to the task so the engineer treats parallel decomposition — not a single
+#: sequential pass — as the default working mode.
+DEFAULT_ENGINEER_DIRECTIVE = (
+    "You are the engineer for this task. By DEFAULT, do NOT attempt it in a single "
+    "sequential pass. First decompose the work into independent, parallelizable "
+    "workstreams. Then deploy MULTIPLE subagents concurrently — roughly one per "
+    "workstream — using your harness's parallel-agent capability (for example, the "
+    "Task / subagent tool if your harness provides one), so the workstreams run at "
+    "the same time rather than one after another. Give each subagent a self-contained "
+    "brief and a clearly scoped deliverable. When the subagents return, converge their "
+    "outputs, resolve conflicts, and independently verify the combined result (build, "
+    "tests, and a review pass) before reporting done. Prefer this fan-out-then-converge "
+    "approach; fall back to a single sequential pass only when the task is genuinely "
+    "atomic and cannot be meaningfully parallelized."
+)
+
+#: Environment variable that overrides the built-in default directive.
+_DIRECTIVE_ENV_VAR = "CV_ENGINEER_DIRECTIVE"
+
+#: Separator placed between the directive and the original task.
+_DIRECTIVE_SEP = "\n\n---\n\n"
+
+#: Sentinel marking "no per-dispatch override supplied" — distinct from an
+#: explicit ``None`` (use built-in default) or ``""`` (disable the directive).
+_UNSET: Any = object()
+
+
+def _coerce_directive(value: str | None) -> str:
+    """Resolve a raw directive value to the actual directive text.
+
+    ``None`` → the ``CV_ENGINEER_DIRECTIVE`` env var if set, else the built-in
+    default. Any string (including ``""`` to disable) is used verbatim.
+    """
+    if value is None:
+        env = os.environ.get(_DIRECTIVE_ENV_VAR)
+        return env if env is not None else DEFAULT_ENGINEER_DIRECTIVE
+    return value
+
+
+def _compose_task(task: str, directive: str) -> str:
+    """Prepend *directive* to *task*. Empty/blank directive → *task* unchanged."""
+    if not directive:
+        return task
+    return f"{directive}{_DIRECTIVE_SEP}{task}"
 
 
 def _progress_from_kind(kind: str) -> int:
@@ -38,8 +92,32 @@ class Receptionist:
     goes through :class:`~receptionist.adapters.base.HarnessAdapter`.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, engineer_directive: str | None = None) -> None:
+        """Create a Receptionist.
+
+        Args:
+            engineer_directive: Default fan-out preamble prepended to every task
+                before it reaches the adapter.
+
+                * ``None`` (default) — resolve at dispatch time to the
+                  ``CV_ENGINEER_DIRECTIVE`` env var if set, else the built-in
+                  :data:`DEFAULT_ENGINEER_DIRECTIVE`.
+                * ``""`` (empty string) — disable the directive; tasks pass
+                  through unchanged.
+                * any other string — use it verbatim as the directive.
+        """
         self._async_tasks: dict[str, asyncio.Task[TaskResult]] = {}
+        self._engineer_directive = engineer_directive
+
+    def _resolve_directive(self, override: str | None) -> str:
+        """Pick the effective directive text for a dispatch.
+
+        Precedence: per-dispatch *override* (if supplied, i.e. not ``_UNSET``)
+        beats the instance default, which in turn resolves ``None`` via
+        ``CV_ENGINEER_DIRECTIVE`` / the built-in default.
+        """
+        raw = self._engineer_directive if override is _UNSET else override
+        return _coerce_directive(raw)
 
     async def dispatch(
         self,
@@ -48,6 +126,7 @@ class Receptionist:
         backend: str = "mock",
         repo_path: str,
         context: dict[str, Any] | None = None,
+        engineer_directive: str | None = _UNSET,
     ) -> TaskResult:
         """Run *task* in *backend* and return its final :class:`TaskResult`.
 
@@ -56,10 +135,16 @@ class Receptionist:
             backend:   Registered adapter name (e.g. ``"mock"``, ``"claude-code"``).
             repo_path: Absolute path to the project directory.
             context:   Optional metadata dict (``task_id``, ``priority``, …).
+            engineer_directive: Per-dispatch override of the fan-out directive.
+                Omit to use the instance default; pass ``""`` to disable for
+                this call; pass a string to override for this call.
         """
         adapter: HarnessAdapter = get_adapter(backend)()
 
-        handle = await adapter.spawn(task, repo_path=repo_path, context=context)
+        directive = self._resolve_directive(engineer_directive)
+        composed_task = _compose_task(task, directive)
+
+        handle = await adapter.spawn(composed_task, repo_path=repo_path, context=context)
 
         # Step 2: consume every status event and checkpoint it
         async for event in adapter.stream_status(handle):
@@ -93,6 +178,7 @@ class Receptionist:
         context: dict[str, Any] | None = None,
         on_status: Any = None,
         on_complete: Any = None,
+        engineer_directive: str | None = _UNSET,
     ) -> str:
         """Fire-and-return. Returns a task_id immediately; runs the dispatch in a
         background asyncio task. Invokes on_status per StatusEvent and on_complete
@@ -111,6 +197,9 @@ class Receptionist:
                          :class:`TaskResult` when the task finishes.  May be a
                          plain callable or an async function.  Exceptions raised
                          by the callback are logged and swallowed.
+            engineer_directive: Per-dispatch override of the fan-out directive.
+                Omit to use the instance default; pass ``""`` to disable for
+                this call; pass a string to override for this call.
 
         Returns:
             A short task-id string (UUID4 fragment).  Use :meth:`result` to
@@ -120,11 +209,14 @@ class Receptionist:
         full_context = dict(context) if context else {}
         full_context.setdefault("task_id", task_id)
 
+        directive = self._resolve_directive(engineer_directive)
+        composed_task = _compose_task(task, directive)
+
         async def _run() -> None:
             try:
                 adapter: HarnessAdapter = get_adapter(backend)()
 
-                handle = await adapter.spawn(task, repo_path=repo_path, context=full_context)
+                handle = await adapter.spawn(composed_task, repo_path=repo_path, context=full_context)
 
                 # Stream status events — checkpoint each one, then fire on_status
                 async for event in adapter.stream_status(handle):

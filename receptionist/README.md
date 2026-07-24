@@ -89,7 +89,7 @@ existing MCP tooling picks up progress checkpoints transparently.
 pip install pytest pytest-asyncio
 
 # Run
-pytest receptionist/tests/test_dispatch.py -v   # 26 tests
+pytest receptionist/tests/test_dispatch.py -v   # 61 tests
 ```
 
 ## State reuse
@@ -100,6 +100,59 @@ a final `"task-complete"` checkpoint — the MCP hook reads exactly this file.
 
 Do **not** import or depend on `cv_mcp` inside receptionist. The state helpers
 stand alone.
+
+## Engineer directive (default fan-out)
+
+By default the Receptionist prepends a **fan-out directive** to every task
+before it reaches the adapter. The directive instructs the engineer (the CEO)
+to, by default, decompose the work into independent parallel workstreams and
+deploy **multiple subagents concurrently** (using its harness's parallel-agent
+/ Task-tool capability), then converge and verify the combined result — rather
+than doing a single sequential pass.
+
+The composed task is:
+
+```
+<directive>
+
+---
+
+<original task>
+```
+
+This is pure string composition inside `core.py` — the Receptionist still only
+ever calls the `HarnessAdapter` interface. No CLI/subprocess logic lives in
+core.
+
+### Configuring / overriding / disabling
+
+Precedence (highest first): per-dispatch arg → instance default → env var →
+built-in default.
+
+```python
+from receptionist.core import Receptionist, DEFAULT_ENGINEER_DIRECTIVE
+
+# 1. Built-in default (fan-out) — nothing to configure
+await Receptionist().dispatch(task, backend="claude-code", repo_path=repo)
+
+# 2. Instance-level custom directive
+r = Receptionist(engineer_directive="Focus on a single careful pass.")
+
+# 3. Disable entirely — task passes through verbatim
+r = Receptionist(engineer_directive="")
+
+# 4. Per-dispatch override (falls back to the instance default when omitted)
+await r.dispatch(task, backend="mock", repo_path=repo,
+                 engineer_directive="one-off directive")
+await r.dispatch(task, backend="mock", repo_path=repo,
+                 engineer_directive="")   # disable for this call only
+```
+
+- Constructor param `engineer_directive`: `None` (default) resolves at dispatch
+  time; `""` disables; any other string is used verbatim.
+- Env override `CV_ENGINEER_DIRECTIVE`: used when the instance directive is
+  `None`. An explicit constructor value beats the env var.
+- Both `dispatch()` and `dispatch_async()` apply the directive identically.
 
 ## Upgrade path
 
