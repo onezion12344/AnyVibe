@@ -36,3 +36,8 @@ Context → options → decision → rationale. Includes rejected options.
 - **Cloudflare named tunnel for the call UI** — edge blocked; abandoned for now.
 - **Making it a Claude Code plugin** — owner explicitly said NOT a CC plugin; it's a standalone pluggable proxy layer.
 - **Deleting/resetting corrupted OpenOPC DBs** — vetoed pending owner consent.
+
+## D9: Realtime audio tool-calling is unreliable everywhere → decouple (text LLM decides)
+- **Evidence:** empirical 2/10 fire rate on stepaudio-2.5-realtime with tool_choice=auto (worse with stronger prompts); StepFun engineer (Step-Audio #31) confirms "a probability of triggering toolcall"; OpenAI Realtime community reports the identical ~50% problem. Universal realtime-S2S limitation, not tunable.
+- **Decision:** the realtime model does VOICE only; a text LLM (step-3.7-flash) reads the transcript and makes the dispatch decision (reliable text tool-calling). This is our live classifier AND Pipecat's cascaded design.
+- **Implication:** adopt Pipecat cascaded (STT → text-LLM+tools → TTS), NOT a realtime S2S brain for dispatch.
