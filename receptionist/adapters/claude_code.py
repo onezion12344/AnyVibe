@@ -47,10 +47,15 @@ class ClaudeCodeAdapter(HarnessAdapter):
         return handle
 
     async def _run(self, handle: str, task: str, repo_path: str, context: dict | None) -> None:
+        # `--` sentinel: claude's -p/--print is a boolean flag and the prompt
+        # is a positional arg, so a task starting with "-" would otherwise be
+        # parsed as a flag (argv flag smuggling). Everything after "--" is
+        # treated as positional.
         cmd = [
-            "claude", "-p", task,
+            "claude", "-p",
             "--verbose",
             "--output-format", "stream-json",
+            "--", task,
         ]
 
         _handles[handle]["status"] = "running"

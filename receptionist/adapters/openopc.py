@@ -61,6 +61,11 @@ class OpenOPCAdapter(HarnessAdapter):
         _handles[handle] = {"status": "pending", "events": [], "_stream_idx": 0}
 
         project = context.get("project", "demo") if context else "demo"
+        # Guard against argv flag smuggling: `project` is the value of opc's
+        # -p flag, so a leading dash could be parsed as a flag.
+        if not project or project.startswith("-"):
+            _store_failure(handle, f"Invalid project name: {project!r}")
+            return handle
         asyncio.create_task(self._run(handle, task, repo_path, project))
         return handle
 
