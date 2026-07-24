@@ -795,3 +795,173 @@ register_adapter(QuickAdapter)
         import receptionist.adapters as adapters_pkg
         # The package itself must not be a registered adapter name
         assert adapters_pkg.__name__ not in _REGISTRY
+
+
+# ---------------------------------------------------------------------------
+# OpenOPC staffing pre-flight unit tests
+# ---------------------------------------------------------------------------
+
+class TestOpenOPCPresetSessionIdParsing:
+    """Unit tests for the _parse_session_id_from_stdout helper."""
+
+    def test_uuid_on_last_line(self):
+        from receptionist.adapters.openopc import _parse_session_id_from_stdout
+        out = "Staffing defaults: /tmp/foo.json\nabc12345-1234-5678-90ab-cdef01234567\n"
+        result = _parse_session_id_from_stdout(out)
+        assert result == "abc12345-1234-5678-90ab-cdef01234567"
+
+    def test_uuid_embedded_in_line(self):
+        from receptionist.adapters.openopc import _parse_session_id_from_stdout
+        out = "Preset ready. Session: abc12345-1234-5678-90ab-cdef01234567"
+        result = _parse_session_id_from_stdout(out)
+        assert result == "abc12345-1234-5678-90ab-cdef01234567"
+
+    def test_no_uuid_returns_none(self):
+        from receptionist.adapters.openopc import _parse_session_id_from_stdout
+        assert _parse_session_id_from_stdout("no uuid here") is None
+
+    def test_empty_stdout_returns_none(self):
+        from receptionist.adapters.openopc import _parse_session_id_from_stdout
+        assert _parse_session_id_from_stdout("") is None
+
+    def test_multiple_uuids_picks_last(self):
+        from receptionist.adapters.openopc import _parse_session_id_from_stdout
+        out = "first-abc12345-1234-5678-90ab-cdef01234567\nsecond-aabbccdd-1234-5678-90ab-cdef01234567\n"
+        result = _parse_session_id_from_stdout(out)
+        assert result == "aabbccdd-1234-5678-90ab-cdef01234567"
+
+
+class TestOpenOPCAdapterSpawn:
+    """Unit tests for OpenOPCAdapter.spawn() with all subprocess calls mocked.
+
+    We point OPC_ROOT at a temp directory with a stub preset script, and
+    monkey-patch asyncio.create_subprocess_exec so that *no real process*
+    (neither the preset nor opc exec) is ever spawned.
+    """
+
+    class _MockProcess:
+        """Minimal stub that satisfies ``proc.communicate()`` and ``proc.wait()``."""
+
+        def __init__(self, *, returncode=0, stdout=b"", stderr=b""):
+            self.returncode = returncode
+            self.stdout = _FakeStream(stdout)
+            self.stderr = _FakeStream(stderr)
+
+        async def communicate(self):
+            return self.stdout._data, self.stderr._data
+
+        async def wait(self):
+            return self.returncode
+
+        def kill(self):
+            pass
+
+    class _FakeStream:
+        def __init__(self, data: bytes):
+            self._data = data
+            self._pos = 0
+
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            if self._pos >= len(self._data):
+                raise StopAsyncIteration
+            chunk = self._data[self._pos : self._pos + 1]
+            self._pos += 1
+            return chunk
+
+    @pytest.fixture(autouse=True)
+    def _mock_subprocess(self, monkeypatch):
+        """Replace asyncio.create_subprocess_exec with a deterministic stub."""
+
+        async def _fake_create(*args, **kwargs):
+            # args is the flat positional argument list to create_subprocess_exec:
+            #   ("uv", "run", "opc", "--help")          — pre-flight check
+            #   ("uv", "run", "python3", ..., "--project", <p>)  — preset
+            #   ("uv", "run", "opc", "exec", ..., "--", <task>)  — main call
+            arg_str = " ".join(str(a) for a in args)
+
+            if "opc" in args and "--help" in args:
+                return _FakeCompletedProc(returncode=0, stdout=b"", stderr=b"")
+
+            if "coding-vibe-preset.py" in args:
+                return _FakeCompletedProc(
+                    returncode=0,
+                    stdout=b"abc12345-1234-5678-90ab-cdef01234567\n",
+                    stderr=b"",
+                )
+
+            # opc exec — simulate a final JSON event then exit cleanly
+            return _FakeCompletedProc(
+                returncode=0,
+                stdout=b'{"type":"final","payload":{"response":"done"}}\n',
+                stderr=b"",
+            )
+
+        class _FakeCompletedProc:
+            def __init__(self, *, returncode=0, stdout=b"", stderr=b""):
+                self.returncode = returncode
+                self._stdout = stdout
+                self._stderr = stderr
+
+            async def communicate(self):
+                return self._stdout, self._stderr
+
+            async def wait(self):
+                return self.returncode
+
+            def kill(self):
+                pass
+
+        monkeypatch.setattr(
+            asyncio, "create_subprocess_exec", _fake_create, raising=True
+        )
+
+    @pytest.fixture(autouse=True)
+    def _fake_opc_root(self, tmp_path, monkeypatch):
+        """Point OPC_ROOT at a temp dir with a stub preset script."""
+        root = tmp_path / "fake-opc"
+        (root / "scripts").mkdir(parents=True)
+        monkeypatch.setenv("OPC_ROOT", str(root))
+
+    @pytest.fixture
+    def adapter(self):
+        from receptionist.adapters.openopc import OpenOPCAdapter
+        return OpenOPCAdapter()
+
+    async def test_spawn_returns_handle(self, adapter):
+        handle = await adapter.spawn("hello", repo_path="/tmp/r")
+        assert isinstance(handle, str)
+        assert len(handle) > 0
+
+    async def test_spawn_defaults_project_to_demo(self, adapter):
+        handle = await adapter.spawn("hello", repo_path="/tmp/r")
+        assert isinstance(handle, str)
+        result = await adapter.result(handle)
+        assert result is not None
+
+    async def test_spawn_with_explicit_project(self, adapter):
+        handle = await adapter.spawn(
+            "hello", repo_path="/tmp/r", context={"project": "alpha"}
+        )
+        assert isinstance(handle, str)
+        result = await adapter.result(handle)
+        assert result is not None
+
+    async def test_invalid_project_name_stores_failed_handle(self, adapter):
+        from receptionist.adapters.openopc import _handles
+        handle = await adapter.spawn(
+            "hello", repo_path="/tmp/r", context={"project": "-bad"}
+        )
+        store = _handles.get(handle)
+        assert store["status"] == "failed"
+
+    async def test_skip_staffing_env_bypasses_preset(self, monkeypatch):
+        """CV_OPENOPC_SKIP_STAFFING=1 skips the preset; exec runs without --session-id."""
+        monkeypatch.setenv("CV_OPENOPC_SKIP_STAFFING", "1")
+        from receptionist.adapters.openopc import OpenOPCAdapter, _handles
+        adapter = OpenOPCAdapter()
+        handle = await adapter.spawn("hello", repo_path="/tmp/r")
+        assert isinstance(handle, str)
+        assert _handles[handle]["status"] != "failed"

@@ -2,6 +2,27 @@
 
 Wraps the ``opc exec … --stream-json`` invocation from ``agent.py`` behind
 the standard :class:`~receptionist.adapters.base.HarnessAdapter` interface.
+
+Staffing pre-flight
+-------------------
+Before each ``opc exec`` call, ``spawn()`` runs
+``uv run python3 scripts/coding-vibe-preset.py --project <project>`` in
+``OPC_ROOT``.  The preset script:
+
+1. Writes ``.opc/projects/<project>/company_staffing_defaults.json`` so
+   the engine can resolve saved staffing defaults.
+2. Creates a pre-confirmed session/task row in
+   ``.opc/projects/<project>/tasks.db`` (``recruitment_confirmation_completed:
+   True``), thereby bypassing the interactive staffing selection loop.
+3. Emits the ``session_id`` as a single UUID line on stdout (exit 0).
+
+``spawn()`` parses that session_id and passes ``--session-id <id>`` to
+``opc exec``.  This makes every ``opc exec`` call pick up the already-
+confirmed session so company-mode execution proceeds without any manual
+staffing prompt.
+
+The pre-step is idempotent (safe if already run) and can be skipped by
+setting ``CV_OPENOPC_SKIP_STAFFING=1``.
 """
 
 from __future__ import annotations
@@ -9,6 +30,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import AsyncIterator
@@ -21,6 +43,17 @@ OPC_ROOT = os.environ.get("OPC_ROOT") or str(Path.home() / "Projects" / "OpenOPC
 # Module-level handle store (per-process, shared across instances)
 _handles: dict[str, dict] = {}
 
+# Subprocess timeouts (seconds)
+_PRESET_TIMEOUT = 120
+_HELP_TIMEOUT = 30
+
+# Magic stdout marker that the preset emits to communicate session_id back.
+# coding-vibe-preset.py prints all human-readable output to stdout; the
+# session_id UUID appears as its own line so we can reliably parse it.
+_SESSION_ID_RE = re.compile(
+    r"\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b"
+)
+
 
 def _store_failure(handle: str, error: str) -> None:
     _handles[handle] = {
@@ -28,6 +61,81 @@ def _store_failure(handle: str, error: str) -> None:
         "events": [StatusEvent(kind="error", text=error)],
         "_error": error,
     }
+
+
+def _parse_session_id_from_stdout(stdout: str) -> str | None:
+    """Extract the session_id UUID emitted by coding-vibe-preset.py on stdout.
+
+    The preset's main() runs a sync helper via ``loop.run_in_executor`` and
+    returns the ``(session_id, task_id)`` tuple — both are UUIDs.  We look
+    for UUID-like tokens on the last line of stdout, which is the last-printed
+    value in the ``print()`` sequence.
+    """
+    lines = stdout.strip().splitlines()
+    # Prefer the last non-empty line (the most recently-printed output).
+    for line in reversed(lines):
+        stripped = line.strip()
+        if stripped:
+            m = _SESSION_ID_RE.search(stripped)
+            if m:
+                return m.group(1)
+    return None
+
+
+async def _run_preset(
+    opc_root: str,
+    project: str,
+    timeout: float = _PRESET_TIMEOUT,
+) -> tuple[bool, str, str]:
+    """Run ``coding-vibe-preset.py`` and return ``(ok, session_id_or_empty, reason)``.
+
+    The preset writes ``company_staffing_defaults.json`` into ``.opc/projects/``
+    and seeds ``tasks.db`` with a confirmed session.  Success is signalled by
+    exit code 0 with at least one UUID-like token on stdout.
+    """
+    script = str(Path(opc_root) / "scripts" / "coding-vibe-preset.py")
+    cmd = ["uv", "run", "python3", script, "--project", project]
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=opc_root,
+        )
+    except FileNotFoundError:
+        return False, "", "`uv` not found — cannot run coding-vibe-preset.py"
+
+    try:
+        stdout, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=timeout
+        )
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+        except OSError:
+            pass
+        return (
+            False,
+            "",
+            f"Preset timed out after {timeout}s "
+            f"(uv run python3 scripts/coding-vibe-preset.py --project {project})",
+        )
+
+    stdout_s = stdout.decode(errors="replace").strip()
+    stderr_s = stderr.decode(errors="replace").strip()
+
+    if proc.returncode != 0:
+        err = stderr_s or f"preset exited {proc.returncode}"
+        return False, "", f"Preset failed (exit {proc.returncode}): {err}"
+
+    session_id = _parse_session_id_from_stdout(stdout_s)
+    reason = (
+        f"Preset OK — session_id={session_id[:8]}…"
+        if session_id
+        else "Preset OK but no session_id found in stdout"
+    )
+    return True, session_id or "", reason
 
 
 class OpenOPCAdapter(HarnessAdapter):
@@ -46,9 +154,7 @@ class OpenOPCAdapter(HarnessAdapter):
     async def spawn(self, task: str, *, repo_path: str, context: dict | None = None) -> str:
         handle = str(uuid.uuid4())
 
-        # Pre-flight: can we run opc via uv in the OpenOPC project root?
-        # (opc has no --version; `--help` always exits 0. Must run in OPC_ROOT
-        # so `uv run` resolves the OpenOPC project/venv, not the target repo.)
+        # ── Pre-flight: can we run opc via uv in the OpenOPC project root? ──
         try:
             proc = await asyncio.create_subprocess_exec(
                 "uv", "run", "opc", "--help",
@@ -56,37 +162,60 @@ class OpenOPCAdapter(HarnessAdapter):
                 stderr=asyncio.subprocess.DEVNULL,
                 cwd=str(self._opc_root),
             )
-            await asyncio.wait_for(proc.communicate(), timeout=30)
+            await asyncio.wait_for(proc.communicate(), timeout=_HELP_TIMEOUT)
             if proc.returncode != 0:
                 raise RuntimeError("`uv run opc --help` returned non-zero")
         except (FileNotFoundError, TimeoutError, RuntimeError) as exc:
             _store_failure(handle, f"OpenOPC pre-flight failed: {exc}")
             return handle
 
-        # Pre-flight passed — create the handle entry before handing to _run
-        _handles[handle] = {"status": "pending", "events": [], "_stream_idx": 0}
-
         project = context.get("project", "demo") if context else "demo"
-        # Guard against argv flag smuggling: `project` is the value of opc's
-        # -p flag, so a leading dash could be parsed as a flag.
         if not project or project.startswith("-"):
             _store_failure(handle, f"Invalid project name: {project!r}")
             return handle
-        asyncio.create_task(self._run(handle, task, repo_path, project))
-        return handle
 
-    async def _run(self, handle: str, task: str, repo_path: str, project: str) -> None:
-        cmd = [
+        # ── Staffing pre-step: run coding-vibe-preset.py ───────────────────
+        # Ensures the org is confirmed-staffed before opc exec so the engine
+        # skips the interactive staffing-selection loop.  Skip with
+        #   CV_OPENOPC_SKIP_STAFFING=1
+        # if already handled externally.
+        skip_staffing = os.environ.get("CV_OPENOPC_SKIP_STAFFING", "") == "1"
+        confirmed_session_id = ""
+
+        if not skip_staffing:
+            preset_ok, confirmed_session_id, preset_reason = await _run_preset(
+                str(self._opc_root), project
+            )
+            if not preset_ok:
+                _store_failure(
+                    handle,
+                    f"OpenOPC staffing pre-step failed: {preset_reason}",
+                )
+                return handle
+            # confirmed_session_id may be empty if stdout parsing failed but
+            # the preset itself succeeded — continue without session_id (will
+            # still hit staffing loop, but we won't crash here).
+        # else: skip_staffing=True — run opc exec without --session-id
+
+        # ── Build the opc exec command ─────────────────────────────────────
+        cmd: list[str] = [
             "uv", "run", "opc", "exec",
             "-p", project,
             "--mode", "org",
             "--org", "coding-vibe",
             "--agent", "claude_code",
             "--stream-json",
-            "--",
-            task,
         ]
+        if confirmed_session_id:
+            cmd += ["--session-id", confirmed_session_id]
+        cmd += ["--", task]
 
+        # ── Pre-flight passed — create the handle entry before handing to _run
+        _handles[handle] = {"status": "pending", "events": [], "_stream_idx": 0}
+        asyncio.create_task(self._run(handle, cmd))
+        return handle
+
+    async def _run(self, handle: str, cmd: list[str]) -> None:
         _handles[handle]["status"] = "running"
         stderr_drainer: asyncio.Task[None] | None = None
 
@@ -98,8 +227,6 @@ class OpenOPCAdapter(HarnessAdapter):
                 cwd=str(self._opc_root),
             )
 
-            # Drain stderr concurrently to prevent the child from blocking on a
-            # full ~64 KB pipe buffer.
             async def _drain_stderr() -> None:
                 async for _ in proc.stderr:
                     pass
@@ -142,7 +269,6 @@ class OpenOPCAdapter(HarnessAdapter):
             )
         finally:
             _handles[handle]["status"] = "done"
-            # Ensure the stderr drainer finishes cleanly
             if stderr_drainer is not None:
                 try:
                     await asyncio.wait_for(stderr_drainer, timeout=1.0)
