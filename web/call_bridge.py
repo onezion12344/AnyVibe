@@ -523,7 +523,11 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
         # ── User's turn transcribed → decide dispatch via the text brain ────────
         elif evt_type == "conversation.item.input_audio_transcription.completed":
             tx = evt.get("transcript", "") or ""
-            _log("OUT", f"user transcript received ({len(tx)} chars)")
+            # Content redacted by default (PII); set CV_LOG_TRANSCRIPTS=1 for local debug.
+            if os.environ.get("CV_LOG_TRANSCRIPTS") == "1":
+                _log("OUT", f"user transcript: {tx}")
+            else:
+                _log("OUT", f"user transcript received ({len(tx)} chars)")
             asyncio.create_task(_classify_and_dispatch(tx, browser_ws))
 
         # ── Session confirmed ───────────────────────────────────────────────────
