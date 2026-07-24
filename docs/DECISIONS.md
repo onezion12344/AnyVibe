@@ -41,3 +41,13 @@ Context → options → decision → rationale. Includes rejected options.
 - **Evidence:** empirical 2/10 fire rate on stepaudio-2.5-realtime with tool_choice=auto (worse with stronger prompts); StepFun engineer (Step-Audio #31) confirms "a probability of triggering toolcall"; OpenAI Realtime community reports the identical ~50% problem. Universal realtime-S2S limitation, not tunable.
 - **Decision:** the realtime model does VOICE only; a text LLM (step-3.7-flash) reads the transcript and makes the dispatch decision (reliable text tool-calling). This is our live classifier AND Pipecat's cascaded design.
 - **Implication:** adopt Pipecat cascaded (STT → text-LLM+tools → TTS), NOT a realtime S2S brain for dispatch.
+
+## D10: Persistent orchestrator session (not spawn-per-task) + preset role team
+- **Insight (owner):** the real requirement isn't a specific framework — it's that we DON'T open a new session per task. Keep a **persistent main/CEO agent session** and inject the transcript stream into it (~every 10s or per new sentence). The main agent orchestrates an **agent team of preset roles** (each role = a system prompt); the realtime voice model meanwhile keeps the user company (clarify, soothe, chat from its own knowledge) while the CEO does async work + delegates to its org.
+- **This subsumes the separate step-3.7-flash classifier** — a persistent CEO reads the stream and decides itself (the classifier only existed because claude-code is spawn-per-task). Tiered/async feedback (D-notes §5) rides on this.
+- **How to realize:**
+  - **OpenOPC** — persistent org (boss→team), natural fit. Default fallback.
+  - **claude-code** — works too IF we reuse ONE session (`--resume`/same session id) and inject, instead of spawning per task. Main agent + Task subagent team.
+  - **Qoder SDK** — desirable (competition track) IF it supports persistent sessions + multi-agent orchestration (research pending → [[qoder-sdk-research]]).
+- **Team roles = presets**, user-selectable on the web kanban (pick which team/roles staff the company).
+- Requirement in one line: **inject into the same main agent every turn; that agent orchestrates a preset role team.**
