@@ -39,6 +39,9 @@
   @keyframes pet-spark { 0%,100%{opacity:.45;transform:scale(.9) rotate(0)} 50%{opacity:1;transform:scale(1.15) rotate(12deg)} }
   .voice-title { margin-top:11px; font-size:16px; font-weight:700; }
   .voice-sub { color:var(--muted); font-size:11px; margin-top:3px; text-align:center; }
+  .caller-identity { display:flex; align-items:center; gap:7px; margin-top:10px; padding:4px 8px 4px 10px; border:1px solid rgba(111,154,173,.52); border-radius:999px; color:var(--muted); background:rgba(10,22,40,.32); font-size:10px; }
+  .caller-name-input { width:70px; padding:1px 2px 2px; border:0; border-bottom:1px solid rgba(227,174,69,.62); outline:0; color:var(--white); background:transparent; font:700 11px inherit; text-align:center; }
+  .caller-name-input:focus { border-bottom-color:var(--accent2); }
   .voice-controls { width:100%; display:flex; gap:8px; margin-top:18px; }
   .voice-btn { flex:1; min-height:40px; border:1px solid var(--border); border-radius:9px; color:var(--white); background:var(--surface); font:600 12px inherit; cursor:pointer; }
   .voice-btn:hover:not(:disabled) { border-color:var(--accent); }
@@ -125,6 +128,7 @@
       </div>
       <div class="voice-title" data-i18n="yellow_sheep_cs">Yellow Sheep · CS</div>
       <div class="voice-sub" data-i18n="voice_subtitle">Your digital teammate is listening. Call, then watch the crew move.</div>
+      <label class="caller-identity" for="caller-name"><span data-i18n="calling_as">Speaking as</span><input class="caller-name-input" id="caller-name" type="text" value="Harry" maxlength="40" autocomplete="name" data-i18n-aria-label="caller_name" aria-label="Your name" /></label>
       <div class="voice-controls">
         <button class="voice-btn primary" id="voice-call" data-i18n="call">Call</button>
         <button class="voice-btn" id="voice-mute" disabled data-i18n="mute">Mute</button>
@@ -161,6 +165,7 @@ window.CV_I18N = {
   back_to_index: { en: 'Back to index', zh: '返回首页' }, workspace_title: { en: 'Coding Vibe Company', zh: 'Coding Vibe 公司空间' },
   workspace_subtitle: { en: 'Voice Control · AI Role Team · Live Kanban', zh: '语音控制 · AI 角色团队 · 实时看板' }, board_connecting: { en: 'Board connecting', zh: '看板连接中' },
   yellow_sheep_cs: { en: 'Yellow Sheep · CS', zh: '黄羊 · 客户成功' }, voice_subtitle: { en: 'Your digital teammate is listening. Call, then watch the crew move.', zh: '你的数字队友正在待命。呼叫后，看看团队如何协作。' },
+  calling_as: { en: 'Speaking as', zh: '当前说话人' }, caller_name: { en: 'Your name', zh: '你的名字' },
   call: { en: 'Call', zh: '呼叫' }, mute: { en: 'Mute', zh: '静音' }, unmute: { en: 'Unmute', zh: '取消静音' }, hang_up: { en: 'Hang up', zh: '挂断' },
   ready_to_call: { en: 'Ready — tap Call to start', zh: '准备就绪 — 点击呼叫开始' }, latest_handoff: { en: 'Latest handoff', zh: '最新交接' }, no_task_dispatched: { en: 'No task dispatched yet.', zh: '尚未分派任务。' },
   live_company_kanban: { en: 'Live Company Kanban', zh: '实时公司看板' }, board_subtitle: { en: 'Every voice request becomes a role-team card.', zh: '每一次语音需求都会进入团队角色看板。' },

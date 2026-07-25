@@ -60,19 +60,23 @@ class _BrowserSocket:
 @pytest.mark.asyncio
 async def test_transcript_event_is_visible_and_reaches_dispatch(monkeypatch):
     """A completed ASR turn must reach the cascaded decision + reply stage."""
-    received: list[str] = []
+    received: list[tuple[str, str]] = []
 
-    async def fake_route(transcript: str, browser_ws) -> None:
-        received.append(transcript)
+    async def fake_route(transcript: str, browser_ws, *, caller_name: str) -> None:
+        received.append((transcript, caller_name))
 
     monkeypatch.setattr(call_bridge, "_route_and_respond", fake_route)
     browser = _BrowserSocket()
 
-    await call_bridge._pump_stepfun_to_browser(_StepFunTranscript(), browser)
+    await call_bridge._pump_stepfun_to_browser(
+        _StepFunTranscript(), browser, caller_name="Harry"
+    )
     await asyncio.sleep(0)
 
-    assert browser.messages == [{"type": "transcript", "text": "Build a timer app"}]
-    assert received == ["Build a timer app"]
+    assert browser.messages == [
+        {"type": "transcript", "speaker": "Harry", "text": "Build a timer app"}
+    ]
+    assert received == [("Build a timer app", "Harry")]
 
 
 class _StepFunSpeechStopped:
@@ -106,7 +110,8 @@ async def test_goodbye_is_voiced_then_ends_the_browser_call(monkeypatch):
     """The backend controls goodbye rather than waiting for a UI button click."""
     spoken: list[str] = []
 
-    async def fake_plan(_transcript: str) -> CallTurn:
+    async def fake_plan(_transcript: str, *, caller_name: str) -> CallTurn:
+        assert caller_name == "Harry"
         return CallTurn(action="end_call", reply="好，那我先挂了。下次见。")
 
     async def fake_speak(_browser, text: str) -> float:
@@ -117,7 +122,7 @@ async def test_goodbye_is_voiced_then_ends_the_browser_call(monkeypatch):
     monkeypatch.setattr(call_bridge, "_speak_text", fake_speak)
     browser = _BrowserSocket()
 
-    await call_bridge._route_and_respond("再见", browser)
+    await call_bridge._route_and_respond("再见", browser, caller_name="Harry")
 
     assert spoken == ["好，那我先挂了。下次见。"]
     assert browser.messages == [
@@ -130,7 +135,8 @@ async def test_model_authored_opening_is_the_only_call_opening_audio(monkeypatch
     """New calls use the LLM's fresh greeting instead of a fixed script."""
     spoken: list[str] = []
 
-    async def fake_opening() -> str:
+    async def fake_opening(*, caller_name: str) -> str:
+        assert caller_name == "Harry"
         return "你好，我是黄羊。你今天最想推进什么？"
 
     async def fake_speak(_browser, text: str) -> float:
@@ -141,6 +147,6 @@ async def test_model_authored_opening_is_the_only_call_opening_audio(monkeypatch
     monkeypatch.setattr(call_bridge, "_speak_text", fake_speak)
     browser = _BrowserSocket()
 
-    await call_bridge._open_call_conversation(browser)
+    await call_bridge._open_call_conversation(browser, caller_name="Harry")
 
     assert spoken == ["你好，我是黄羊。你今天最想推进什么？"]

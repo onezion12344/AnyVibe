@@ -75,13 +75,17 @@ class _CallPlanningResponse:
 
 
 class _CallPlanningClient:
+    def __init__(self) -> None:
+        self.payload: dict | None = None
+
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, *_args):
         return False
 
-    async def post(self, *_args, **_kwargs):
+    async def post(self, *_args, **kwargs):
+        self.payload = kwargs["json"]
         return _CallPlanningResponse()
 
 
@@ -199,17 +203,22 @@ async def test_status_report_is_not_sent_to_triage_or_engineers(monkeypatch):
 async def test_call_planner_uses_explicit_text_tool_for_software_work(monkeypatch):
     """The cascaded call brain receives both its tool schema and reply text."""
     monkeypatch.setattr(engineer_dispatch, "STEPFUN_API_KEY", "test-key")
+    client = _CallPlanningClient()
     monkeypatch.setattr(
         engineer_dispatch.httpx,
         "AsyncClient",
-        lambda **_kwargs: _CallPlanningClient(),
+        lambda **_kwargs: client,
     )
 
-    decision = await engineer_dispatch.plan_call_turn("请给网站添加登录功能")
+    decision = await engineer_dispatch.plan_call_turn(
+        "请给网站添加登录功能", caller_name="Harry"
+    )
 
     assert decision.action == "dispatch"
     assert decision.task == "给网站添加登录功能"
     assert decision.reply == "我已经把需求交给团队了。"
+    assert client.payload is not None
+    assert "preferred name is 'Harry'" in client.payload["messages"][0]["content"]
 
 
 @pytest.mark.asyncio
@@ -258,13 +267,14 @@ async def test_call_opening_is_generated_from_fresh_call_context(monkeypatch):
         lambda **_kwargs: client,
     )
 
-    opening = await engineer_dispatch.plan_call_opening()
+    opening = await engineer_dispatch.plan_call_opening(caller_name="Harry")
 
     assert opening == "你好，我是黄羊。今天想一起推进什么？"
     assert client.payload is not None
     instructions = client.payload["messages"][0]["content"]
     assert "new voice call" in instructions
     assert "Never list capabilities" in instructions
+    assert "preferred name is 'Harry'" in instructions
     assert client.payload["max_tokens"] == 512
     assert "tools" not in client.payload
 

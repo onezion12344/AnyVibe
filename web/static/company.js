@@ -23,6 +23,16 @@ const COMPANY = (() => {
     }
   }
 
+  const CALLER_NAME_STORAGE_KEY = 'coding-vibe-caller-name';
+  function cleanCallerName(value) {
+    const cleaned = String(value || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+    return cleaned || 'Harry';
+  }
+  function savedCallerName() {
+    try { return cleanCallerName(localStorage.getItem(CALLER_NAME_STORAGE_KEY)); } catch { return 'Harry'; }
+  }
+  let callerName = savedCallerName();
+
   function wsUrl(path) {
     const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
     return scheme + '://' + location.host + path;
@@ -278,16 +288,17 @@ const COMPANY = (() => {
       const el = document.createElement('div');
       el.className = `network-node kind-${node.kind || 'agent'} ${node.status || 'idle'}`;
       el.style.left = p[0] + '%'; el.style.top = p[1] + '%';
+      const displayName = node.id === 'user' ? callerName : (node.label || node.id);
       const avatar = document.createElement('div'); avatar.className = 'nn-avatar';
       const avatarSrc = node.avatar || (node.kind === 'user' ? networkState.user_avatar : node.kind === 'cs' ? '/static/assets/yellow-sheep-meditating.png' : '');
       if (avatarSrc) {
-        const img = document.createElement('img'); img.alt = node.label || node.id; img.src = avatarSrc;
-        img.onerror = () => { avatar.textContent = (node.label || node.id).slice(0, 2).toUpperCase(); };
+        const img = document.createElement('img'); img.alt = displayName; img.src = avatarSrc;
+        img.onerror = () => { avatar.textContent = displayName.slice(0, 2).toUpperCase(); };
         avatar.appendChild(img);
       } else {
-        avatar.textContent = (node.label || node.id).split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase();
+        avatar.textContent = displayName.split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase();
       }
-      const label = document.createElement('div'); label.className = 'nn-label'; label.textContent = node.label || node.id;
+      const label = document.createElement('div'); label.className = 'nn-label'; label.textContent = displayName;
       const status = document.createElement('div'); status.className = 'nn-status'; status.textContent = t(node.status || 'idle', node.status || 'idle');
       const summary = document.createElement('div'); summary.className = 'nn-summary'; summary.textContent = node.summary || '';
       el.append(avatar, label, status, summary); graph.appendChild(el);
@@ -298,7 +309,7 @@ const COMPANY = (() => {
       activity.replaceChildren();
       const items = (networkState.activity || []).slice(-5).reverse();
       if (!items.length) { const e = document.createElement('div'); e.className = 'network-empty'; e.textContent = t('activity_empty'); activity.appendChild(e); }
-      const activityName = id => id === 'ceo' ? 'CEO' : id === 'cs' ? 'CS' : id === 'user' ? t('you', 'You') : String(id || '?').replaceAll('_', ' ');
+      const activityName = id => id === 'ceo' ? 'CEO' : id === 'cs' ? 'CS' : id === 'user' ? callerName : String(id || '?').replaceAll('_', ' ');
       items.forEach(item => { const row = document.createElement('div'); row.className = 'na-row'; const arrow = document.createElement('span'); arrow.className = 'na-arrow'; const from = item.from || '?'; const to = item.to || '?'; const kind = t(item.kind || 'work', item.kind || t('work')); arrow.textContent = from === to ? `${activityName(from)} · ${kind}` : `${activityName(from)} → ${activityName(to)}`; row.appendChild(arrow); const text = document.createElement('span'); text.className = 'na-text'; text.textContent = item.text || item.kind || ''; row.appendChild(text); activity.appendChild(row); });
     }
   }
@@ -514,7 +525,10 @@ const COMPANY = (() => {
       const hangupBtn = $('voice-hangup');
       const transcriptEl = $('voice-transcript-text');
       const logEl = $('voice-log');
+      const callerNameInput = $('caller-name');
+      if (callerNameInput) callerNameInput.value = callerName;
       const voice = new VoiceControl({
+        callerName,
         token,
         onStatus: (state, text) => {
           statusEl.className = `voice-status ${state}`;
@@ -561,6 +575,15 @@ const COMPANY = (() => {
       });
       muteBtn.addEventListener('click', () => voice.toggleMute());
       hangupBtn.addEventListener('click', () => voice.hangUp());
+      if (callerNameInput) {
+        callerNameInput.addEventListener('change', () => {
+          callerName = cleanCallerName(callerNameInput.value);
+          callerNameInput.value = callerName;
+          try { localStorage.setItem(CALLER_NAME_STORAGE_KEY, callerName); } catch {}
+          voice.setCallerName(callerName);
+          renderNetwork();
+        });
+      }
       voice.onLog(t('voice_ready'));
     }
 

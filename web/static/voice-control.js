@@ -7,8 +7,9 @@
   const CHUNK = 960; // 20 ms of PCM16 at 24 kHz
 
   class VoiceControl {
-    constructor({ token = '', onStatus, onTranscript, onLog, onDispatched, onAgentState } = {}) {
+    constructor({ callerName = 'Harry', token = '', onStatus, onTranscript, onLog, onDispatched, onAgentState } = {}) {
       this.token = token;
+      this.callerName = this._cleanCallerName(callerName);
       this.onStatus = onStatus || (() => {});
       this.onTranscript = onTranscript || (() => {});
       this.onLog = onLog || (() => {});
@@ -30,7 +31,17 @@
 
     _wsUrl() {
       const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-      return `${scheme}://${location.host}/api/call`;
+      return `${scheme}://${location.host}/api/call?caller_name=${encodeURIComponent(this.callerName)}`;
+    }
+
+    _cleanCallerName(name) {
+      const cleaned = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      return cleaned || 'Harry';
+    }
+
+    setCallerName(name) {
+      this.callerName = this._cleanCallerName(name);
+      return this.callerName;
     }
 
     async connect() {
@@ -155,8 +166,9 @@
           } else if (data.type === 'transcript') {
             const transcript = String(data.text || '').trim();
             if (transcript) {
-              this.onTranscript(`You said: ${transcript}`);
-              this.onLog(`Heard: ${transcript}`);
+              const speaker = this._cleanCallerName(data.speaker || this.callerName);
+              this.onTranscript(`${speaker}: ${transcript}`);
+              this.onLog(`${speaker}: ${transcript}`);
             }
           } else if (data.type === 'barge-in') {
             this._flushPlayback();

@@ -47,7 +47,9 @@ from web.engineer_dispatch import (  # noqa: E402
     CS_VOICE_PERSONA,
     STEPFUN_BASE_URL,
     CV_API_TOKEN,
+    DEFAULT_CALLER_NAME,
     STEPFUN_API_KEY,      # re-exported for StepFun WS auth
+    normalize_caller_name,
     plan_call_opening,
     plan_call_turn,
     dispatch_to_engineer,
@@ -165,21 +167,25 @@ async def _speak_text(browser_ws: Any, text: str) -> float:
         return 0.0
 
 
-async def _open_call_conversation(browser_ws: Any) -> None:
+async def _open_call_conversation(
+    browser_ws: Any, *, caller_name: str = DEFAULT_CALLER_NAME
+) -> None:
     """Ask the model to initiate a newly connected call in its own words."""
-    opening = await plan_call_opening()
+    opening = await plan_call_opening(caller_name=caller_name)
     if opening:
         await _speak_text(browser_ws, opening)
 
 
-async def _route_and_respond(transcript: str, browser_ws: Any) -> None:
+async def _route_and_respond(
+    transcript: str, browser_ws: Any, *, caller_name: str = DEFAULT_CALLER_NAME
+) -> None:
     """Run the call control plane and voice its result.
 
     Only model-authored replies are spoken.  There is deliberately no canned
     “thinking” clip, so the caller never hears a script overlap a real answer.
     """
     try:
-        decision = await plan_call_turn(transcript)
+        decision = await plan_call_turn(transcript, caller_name=caller_name)
     except Exception as exc:
         _log("PLAN", f"planner task failed: {exc}")
         decision = None
@@ -237,7 +243,11 @@ async def _route_and_respond(transcript: str, browser_ws: Any) -> None:
 
 
 @router.websocket("/api/call")
-async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
+async def voice_call(
+    websocket: WebSocket,
+    token: str | None = Query(None),
+    caller_name: str | None = Query(None),
+):
     """Full-duplex WebSocket voice bridge between the browser and StepFun realtime.
 
     *Browser → StepFun*: binary PCM16 frames are base64-encoded and forwarded as
@@ -251,6 +261,7 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     """
     # ── Auth gate ──────────────────────────────────────────────────────────
     await websocket.accept()
+    caller_name = normalize_caller_name(caller_name or DEFAULT_CALLER_NAME)
 
     if CV_API_TOKEN:
         ok = is_valid_token(token)
@@ -328,7 +339,7 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     # prerecorded script.  It is sent before normal audio pumps take over so
     # Yellow Sheep politely starts the conversation after the connection.
     try:
-        await _open_call_conversation(websocket)
+        await _open_call_conversation(websocket, caller_name=caller_name)
     except Exception as exc:
         _log("OPENING", f"opening turn failed: {exc}")
 
@@ -338,7 +349,7 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     try:
         await asyncio.gather(
             _pump_browser_to_stepfun(websocket, step_ws),
-            _pump_stepfun_to_browser(step_ws, websocket),
+            _pump_stepfun_to_browser(step_ws, websocket, caller_name=caller_name),
         )
     except asyncio.CancelledError:
         pass
@@ -395,7 +406,12 @@ async def _pump_browser_to_stepfun(browser_ws: WebSocket, step_ws: Any) -> None:
 # ── Pump: StepFun → browser ─────────────────────────────────────────────────────
 
 
-async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
+async def _pump_stepfun_to_browser(
+    step_ws: Any,
+    browser_ws: WebSocket,
+    *,
+    caller_name: str = DEFAULT_CALLER_NAME,
+) -> None:
     """Receive StepFun server events and relay audio deltas to the browser as raw
     binary PCM16 frames.
 
@@ -489,12 +505,16 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
                 _log("OUT", f"user transcript received ({len(tx)} chars)")
                 if tx.strip():
                     try:
-                        await browser_ws.send_json({"type": "transcript", "text": tx})
+                        await browser_ws.send_json(
+                            {"type": "transcript", "speaker": caller_name, "text": tx}
+                        )
                     except Exception:
                         pass
                     if active_turn and not active_turn.done():
                         active_turn.cancel()
-                    active_turn = asyncio.create_task(_route_and_respond(tx, browser_ws))
+                    active_turn = asyncio.create_task(
+                        _route_and_respond(tx, browser_ws, caller_name=caller_name)
+                    )
 
             # ── Session confirmed ───────────────────────────────────────────────
             elif evt_type == "session.updated":
