@@ -259,6 +259,15 @@ async def call_page():
     raise HTTPException(500, "call.html not found")
 
 
+@app.get("/company")
+async def company_page():
+    """Serve the company kanban UI."""
+    company_html = STATIC_DIR / "company.html"
+    if company_html.exists():
+        return FileResponse(str(company_html))
+    raise HTTPException(500, "company.html not found")
+
+
 @app.post("/api/dispatch")
 async def dispatch(body: dict[str, Any], request: Request):
     """Dispatch a text task. Returns {task_id}."""

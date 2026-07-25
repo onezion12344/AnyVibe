@@ -14,16 +14,19 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import time
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from receptionist.adapters.qoder import QoderAdapter
 from qoder_company.observer import CompanyObserver, CEO_ROLE
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="", tags=["company"])
 
@@ -31,8 +34,18 @@ router = APIRouter(prefix="", tags=["company"])
 _runs: dict[str, dict[str, Any]] = {}
 
 
+def _check_auth(request: Request) -> None:
+    """Enforce CV_API_TOKEN if configured; mirrors server._check_auth."""
+    from web.server import CV_API_TOKEN  # avoid circular at module level  # noqa: PLC0415
+    import hmac as _hmac
+    if CV_API_TOKEN:
+        token = request.headers.get("x-cv-token") or request.query_params.get("token")
+        if not token or not _hmac.compare_digest(token, CV_API_TOKEN):
+            raise HTTPException(401, "Missing or invalid API token")
+
+
 @router.post("/api/company/run")
-async def company_run(background_tasks: BackgroundTasks, body: dict[str, Any] | None = None):
+async def company_run(request: Request, background_tasks: BackgroundTasks, body: dict[str, Any] | None = None):
     """Spawn a fixture-mode QoderAdapter run and drive the observer.
 
     Request body (all optional)::
@@ -47,6 +60,7 @@ async def company_run(background_tasks: BackgroundTasks, body: dict[str, Any] | 
     Returns immediately with a ``run_id``; the observer drives in the background.
     Card-ops are pushed to connected board clients via the signaling WS.
     """
+    _check_auth(request)
     body = body or {}
     task: str = body.get("task") or "Write a quick_sort function in Python (with docstring, type hints, tests)"
     repo_path: str = body.get("repo_path") or "/tmp/cv-demo"
@@ -91,21 +105,9 @@ async def company_run(background_tasks: BackgroundTasks, body: dict[str, Any] | 
 
 
 @router.get("/api/company")
-async def company_status(run_id: str | None = None):
-    """Return company status for a given *run_id* (or the latest run).
-
-    Response::
-
-        {
-            "run_id": "...",
-            "status": "running|done",
-            "task": "...",
-            "roles": ["ceo", "researcher", ...],
-            "card_count": 3,
-            "last_op": {...} | null,
-            "emitted_ops": [...]
-        }
-    """
+async def company_status(request: Request, run_id: str | None = None):
+    """Return company status for a given *run_id* (or the latest run)."""
+    _check_auth(request)
     if run_id and run_id not in _runs:
         return JSONResponse({"error": f"run_id {run_id!r} not found"}, status_code=404)
 
