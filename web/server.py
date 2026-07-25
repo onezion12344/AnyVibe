@@ -62,6 +62,7 @@ from receptionist.state import load_state  # noqa: E402
 from web.call_bridge import router as call_bridge_router  # noqa: E402
 from web.signaling   import router as signaling_router    # noqa: E402
 from web.push_server import router as push_server_router  # noqa: E402
+from web.qoder_company_routes import router as company_router  # noqa: E402
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 STATE_DIR = Path(os.environ.get("CODING_VIBE_STATE_DIR", Path.home() / ".coding-vibe"))
@@ -186,9 +187,12 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # push_server  → POST /api/devices/register  (register push device)
 #               → GET  /api/devices          (list registered devices)
 #               → POST /api/devices/ring     (native push ring)
+# company      → POST /api/company/run  (Qoder company demo)
+#               → GET  /api/company        (company status)
 app.include_router(call_bridge_router)
 app.include_router(signaling_router)
 app.include_router(push_server_router)
+app.include_router(company_router)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
