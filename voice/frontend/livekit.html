@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coding Vibe — Voice Agent (LiveKit Backup)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0b;
+      color: #e4e4e7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+      max-width: 400px;
+      width: 100%;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #fff; }
+    .subtitle { color: #888; font-size: 0.875rem; margin-bottom: 2rem; }
+    .status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      margin-bottom: 1.5rem;
+      background: #1a1a1e;
+      color: #888;
+    }
+    .status.connected { background: #064e3b; color: #6ee7b7; }
+    .status.connecting { background: #422006; color: #fbbf24; }
+    .status.error { background: #450a0a; color: #fca5a5; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-connect { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; }
+    .btn-connect:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-connect:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-disconnect { background: #27272a; color: #f87171; }
+    .btn-disconnect:hover { background: #3f3f46; }
+    .transcript-box {
+      margin-top: 1.5rem;
+      background: #1a1a1e;
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 80px;
+      max-height: 200px;
+      overflow-y: auto;
+      text-align: left;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    .transcript-box .user { color: #818cf8; margin-bottom: 0.25rem; }
+    .transcript-box .agent { color: #34d399; margin-bottom: 0.25rem; }
+    .transcript-box .empty { color: #555; font-style: italic; }
+    .log {
+      margin-top: 1rem;
+      font-size: 0.75rem;
+      color: #555;
+      text-align: left;
+    }
+    .log .line { padding: 0.125rem 0; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Coding Vibe Voice</h1>
+  <p class="subtitle">LiveKit backup -- StepFun ASR + LLM + TTS</p>
+
+  <div id="status" class="status">Disconnected</div>
+  <br>
+
+  <button id="connectBtn" class="btn btn-connect" onclick="toggleConnection()">
+    Start Call
+  </button>
+
+  <div id="transcript" class="transcript-box">
+    <div class="empty">Transcripts will appear here...</div>
+  </div>
+
+  <div id="log" class="log"></div>
+</div>
+
+<script type="module">
+// ── DOM helpers ───────────────────────────────────────────────────────────
+const _logEl = document.getElementById('log');
+function log(msg) {
+  const line = document.createElement('div');
+  line.className = 'line';
+  line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  _logEl.appendChild(line);
+  _logEl.scrollTop = _logEl.scrollHeight;
+}
+
+const _transcript = document.getElementById('transcript');
+function addTranscript(role, text) {
+  const empty = _transcript.querySelector('.empty');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.className = role;
+  div.textContent = (role === 'user' ? 'You: ' : 'Agent: ') + text;
+  _transcript.appendChild(div);
+  _transcript.scrollTop = _transcript.scrollHeight;
+}
+
+const _status = document.getElementById('status');
+function setStatus(state) {
+  _status.textContent = state;
+  _status.className = 'status';
+  if (state === 'Connected') _status.classList.add('connected');
+  else if (state.includes('Connecting')) _status.classList.add('connecting');
+  else if (state.includes('Error') || state.includes('Failed'))
+    _status.classList.add('error');
+}
+
+// ── Config ────────────────────────────────────────────────────────────────
+const LIVEKIT_URL = 'ws://localhost:7880';
+const ROOM_NAME = 'coding-vibe-voice';
+const TOKEN_URL = 'http://localhost:7888';
+
+// ── Load livekit-client from CDN (ESM) ────────────────────────────────────
+const { default: livekit } = await import(
+  'https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.esm.mjs'
+);
+const { Room, RoomEvent, ConnectionState, Track, LocalAudioTrack } = livekit;
+
+let _room = null;
+
+// ── Unique identity per tab ───────────────────────────────────────────────
+const _identity = 'browser-' + Math.random().toString(36).slice(2, 8);
+
+// ── Fetch a token from our token server ───────────────────────────────────
+async function getToken(identity) {
+  try {
+    const resp = await fetch(
+      TOKEN_URL + '/token?identity=' + encodeURIComponent(identity) +
+      '&room=' + encodeURIComponent(ROOM_NAME)
+    );
+    if (resp.ok) {
+      const data = await resp.json();
+      return data.token;
+    }
+    log('Token endpoint returned ' + resp.status);
+    return '';
+  } catch (e) {
+    log('Token fetch error: ' + e.message);
+    return '';
+  }
+}
+
+// ── Connection control ────────────────────────────────────────────────────
+const _btn = document.getElementById('connectBtn');
+let _connecting = false;
+
+window.toggleConnection = async function () {
+  if (_connecting) return;
+  if (_room && _room.state === ConnectionState.Connected) {
+    await disconnect();
+    return;
+  }
+  await connect();
+};
+
+async function connect() {
+  _connecting = true;
+  _btn.disabled = true;
+  _btn.textContent = 'Connecting...';
+  setStatus('Connecting...');
+  log('Connecting to LiveKit as ' + _identity);
+
+  try {
+    _room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+    });
+
+    // ── Event handlers ──────────────────────────────────────────────────
+    _room.on(RoomEvent.Connected, () => {
+      log('Room connected: ' + _room.name);
+      setStatus('Connected');
+      _btn.textContent = 'End Call';
+      _btn.className = 'btn btn-disconnect';
+      _btn.disabled = false;
+      _connecting = false;
+    });
+
+    _room.on(RoomEvent.Disconnected, (reason) => {
+      log('Disconnected: ' + (reason ? reason.message || reason : 'unknown'));
+      setStatus('Disconnected');
+      _btn.textContent = 'Start Call';
+      _btn.className = 'btn btn-connect';
+      _btn.disabled = false;
+      _connecting = false;
+      _room = null;
+    });
+
+    _room.on(RoomEvent.ConnectionStateChanged, (state) => {
+      log('Connection: ' + state);
+    });
+
+    _room.on(RoomEvent.TrackSubscribed, (track, publication, participant) => {
+      log('Track: ' + track.kind + ' from ' + participant.identity);
+      if (track.kind === 'audio') {
+        const audioEl = track.attach();
+        document.body.appendChild(audioEl);
+        audioEl.play().catch(function (e) {
+          log('Audio play error: ' + e);
+        });
+      }
+    });
+
+    _room.on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+      log('Track unsubscribed: ' + track.kind);
+    });
+
+    // ── Get token ───────────────────────────────────────────────────────
+    const token = await getToken(_identity);
+    if (!token) {
+      log('WARNING: No token -- relying on dev mode (no auth)');
+    }
+
+    // ── Connect to LiveKit ──────────────────────────────────────────────
+    await _room.connect(LIVEKIT_URL, token, {
+      autoSubscribe: true,
+      publishDefaults: {
+        audioBitrate: 32000,
+        dtx: true,
+      },
+    });
+
+    // ── Get microphone and publish ──────────────────────────────────────
+    const micStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+
+    const audioTrack = micStream.getAudioTracks()[0];
+    await _room.localParticipant.publishTrack(audioTrack, {
+      name: 'microphone',
+    });
+    _room.localParticipant.setMicrophoneEnabled(true);
+    log('Microphone published');
+
+  } catch (err) {
+    log('Connection error: ' + err.message);
+    setStatus('Error: ' + err.message);
+    _btn.textContent = 'Start Call';
+    _btn.className = 'btn btn-connect';
+    _btn.disabled = false;
+    _connecting = false;
+    _room = null;
+  }
+}
+
+async function disconnect() {
+  if (_room) {
+    _room.disconnect();
+    _room = null;
+  }
+  _btn.textContent = 'Start Call';
+  _btn.className = 'btn btn-connect';
+}
+
+log('Ready. Click "Start Call" to connect.');
+</script>
+</body>
+</html>

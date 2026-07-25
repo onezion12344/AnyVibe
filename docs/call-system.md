@@ -37,10 +37,12 @@ Full-duplex audio relay between the browser and StepFun realtime.
 - StepFun audio deltas are streamed back to the browser as binary frames for playback.
 - **Barge-in:** when StepFun's server-VAD reports the user started speaking, cancel the
   in-flight response and stop playback (protocol details from `stepfun-realtime-research`).
-- **Tool hook:** the CS persona exposes one realtime tool → `dispatch_to_engineer(task)`,
-  which calls `receptionist.dispatch_async(task, backend=<allowlisted>, ...)`. This is
-  how a spoken request becomes a real coding task. Goes through the existing
-  `_guard_dispatch` + `_check_auth`.
+- **Tool hook:** Yellow Sheep is a customer-success receptionist first. It opens an
+  engineering handoff only for an explicit, actionable software deliverable; greetings,
+  wellbeing, status/progress/report requests, capability questions, and ambiguous asks
+  stay in the conversation. A real handoff calls `dispatch_to_engineer(task)`, which
+  calls `receptionist.dispatch_async(task, backend=<allowlisted>, ...)`. The CS does not
+  end the call merely because work was handed off.
 - Emits call/task status onto the control channel (below) so the UI kanban updates live.
 
 ### 2. Call UI (frontend)  — `web/static/call.html` (+ assets)
@@ -68,8 +70,9 @@ The mechanism that lets the agent call the user.
 
 ### Integration with the receptionist
 - The CS receptionist persona is the voice on the line. Its realtime `instructions`
-  make it a fast, friendly dispatcher: understand the ask → confirm → call
-  `dispatch_to_engineer` → narrate progress from the board.
+  make it a calm customer-success partner: respond and clarify first → hand off only a
+  clear software request → remain available for follow-up. The operational contract is
+  in `docs/CS-RECEPTIONIST-SKILL.md`.
 - The engineer (CEO) runs behind the token-gated `claude-code`/`openopc` backend, fans
   out subagents (the `feat/ceo-fanout` directive), and — when done or blocked — hits
   `POST /api/call/ring` to call the user back.

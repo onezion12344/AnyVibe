@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coding Vibe — Voice-first AI Coding Companion</title>
+<meta name="description" content="Call in. Speak naturally. An AI engineering team works for you — and calls you back when done. Voice-first, bidirectional, always on.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Yellow Sheep Brand System — Coding Vibe Landing Page
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg:       #182735;
+  --surface:  #213546;
+  --card:     #294255;
+  --border:   #3a5968;
+  --accent:   #d9824f;
+  --accent2:  #e3ae45;
+  --accent3:  #6f9aad;
+  --white:    #f7edd4;
+  --muted:    #a8b8bd;
+  --glow:     0 0 40px rgba(224, 122, 95, 0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Space Grotesk', 'Noto Sans SC', -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Starfield Background ──────────────────────────────────────────────── */
+.stars {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%,  rgba(224,122,95,0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 40% at 80% 25%, rgba(212,168,67,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 45% 40% at 20% 65%, rgba(58,138,138,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 35% at 75% 85%, rgba(224,122,95,0.04) 0%, transparent 50%);
+}
+
+/* ── Container ──────────────────────────────────────────────────────────── */
+.container {
+  position: relative; z-index: 1;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 20px 60px;
+}
+
+/* ── Nav ────────────────────────────────────────────────────────────────── */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(13, 27, 42, 0.85);
+  border-bottom: 1px solid rgba(30, 48, 80, 0.5);
+  padding: 12px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-brand {
+  font-size: 17px; font-weight: 700;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+}
+.nav-links {
+  display: flex; gap: 18px; align-items: center;
+}
+.nav-links a {
+  font-size: 12px; font-weight: 500;
+  color: var(--muted); text-decoration: none;
+  letter-spacing: 0.04em;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--accent2); }
+.nav-cta {
+  padding: 6px 14px; border-radius: 20px;
+  background: rgba(224,122,95,0.12);
+  border: 1px solid rgba(224,122,95,0.3);
+  color: var(--accent) !important;
+  font-weight: 600;
+  transition: background 0.2s, border-color 0.2s;
+}
+.nav-cta:hover { background: rgba(224,122,95,0.2); border-color: var(--accent); }
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+.hero {
+  text-align: center;
+  padding: 48px 0 40px;
+}
+.hero-badge {
+  display: inline-block;
+  padding: 5px 14px; border-radius: 20px;
+  background: rgba(224,122,95,0.08);
+  border: 1px solid rgba(224,122,95,0.18);
+  font-size: 11px; font-weight: 500;
+  color: var(--accent2);
+  letter-spacing: 0.08em;
+  margin-bottom: 24px;
+}
+.hero-sheep { width:118px; height:138px; margin:0 auto 20px; overflow:hidden; border:2px solid rgba(227,174,69,.6); border-radius:48% 48% 18% 18%; box-shadow:0 16px 34px rgba(0,0,0,.26),0 0 28px rgba(227,174,69,.16); }
+.hero-sheep img { width:100%; height:100%; object-fit:cover; object-position:50% 56%; display:block; filter:saturate(.94); }
+.hero h1 {
+  font-size: 32px; font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+.hero h1 .gradient {
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero .subtitle {
+  font-size: 18px; font-weight: 400;
+  color: var(--muted);
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.hero .subtitle em {
+  font-style: normal;
+  color: var(--accent2);
+  font-weight: 500;
+}
+.hero .tagline-block {
+  margin: 20px auto 28px;
+  max-width: 420px;
+}
+.hero .tagline-quote {
+  font-size: 13px; font-style: italic;
+  color: var(--white); opacity: 0.8;
+  border-left: 2px solid rgba(58,138,138,0.5);
+  background: rgba(58,138,138,0.04);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+  text-align: left;
+  line-height: 1.6;
+}
+.hero-cta-row {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border-radius: 14px;
+  background: linear-gradient(135deg, #d4a843, #e07a5f);
+  color: #fff; font-size: 15px; font-weight: 700;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 32px rgba(224,122,95,0.25), 0 8px 24px rgba(0,0,0,0.4);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 48px rgba(224,122,95,0.35); }
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 14px 24px; border-radius: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--white); font-size: 14px; font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.btn-secondary:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+/* ── Section ────────────────────────────────────────────────────────────── */
+.section { margin-bottom: 48px; }
+.section h2 {
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+.section h2::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, rgba(224,122,95,0.2), transparent);
+}
+
+/* ── Flow Steps ─────────────────────────────────────────────────────────── */
+.flow-steps {
+  display: flex; flex-direction: column; gap: 14px;
+}
+.flow-step {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 16px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.flow-step:hover {
+  border-color: rgba(224,122,95,0.3);
+  transform: translateX(4px);
+}
+.flow-step::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+.flow-step:nth-child(1)::before { background: linear-gradient(180deg, #e07a5f, #d4a843); }
+.flow-step:nth-child(2)::before { background: linear-gradient(180deg, #d4a843, #3a8a8a); }
+.flow-step:nth-child(3)::before { background: linear-gradient(180deg, #3a8a8a, #e07a5f); }
+.flow-step:nth-child(4)::before { background: linear-gradient(180deg, #e07a5f, #d4a843); }
+.flow-step-icon {
+  flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 12px;
+  background: rgba(224,122,95,0.08);
+  border: 1px solid rgba(224,122,95,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.flow-step-body { flex: 1; }
+.flow-step-num {
+  font-size: 10px; font-weight: 600;
+  color: var(--accent2);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.flow-step-title {
+  font-size: 15px; font-weight: 600;
+  color: var(--white);
+  margin-bottom: 4px;
+}
+.flow-step-desc {
+  font-size: 12px; color: var(--muted);
+  line-height: 1.55;
+}
+
+/* ── Architecture Diagram ───────────────────────────────────────────────── */
+.arch-diagram {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 14px;
+  overflow-x: auto;
+}
+.arch-diagram svg { display: block; margin: 0 auto; width: 100%; max-width: 500px; }
+
+/* ── Features Grid ──────────────────────────────────────────────────────── */
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.feature-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 16px;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.feature-card:hover {
+  border-color: rgba(224,122,95,0.3);
+  transform: translateY(-2px);
+}
+.feature-icon {
+  font-size: 28px; margin-bottom: 10px;
+}
+.feature-card h3 {
+  font-size: 13px; font-weight: 600;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+.feature-card p {
+  font-size: 11px; color: var(--muted);
+  line-height: 1.55;
+}
+
+/* ── Comparison Table ───────────────────────────────────────────────────── */
+.compare-table {
+  width: 100%; border-collapse: separate; border-spacing: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  font-size: 12px;
+}
+.compare-table thead th {
+  padding: 12px 14px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.compare-table thead th:last-child {
+  color: var(--accent2);
+  background: rgba(224,122,95,0.05);
+}
+.compare-table tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(30,48,80,0.5);
+  color: var(--white);
+}
+.compare-table tbody td:last-child {
+  background: rgba(224,122,95,0.03);
+  font-weight: 500;
+}
+.compare-table tbody tr:last-child td { border-bottom: none; }
+.compare-table .check { color: var(--accent3); font-weight: 700; }
+.compare-table .cross { color: var(--muted); opacity: 0.5; }
+.compare-table .star  { color: var(--accent2); }
+
+/* ── Partners ───────────────────────────────────────────────────────────── */
+.partners {
+  display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+}
+.partner-card {
+  flex: 1; min-width: 130px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 12px;
+  transition: border-color 0.3s;
+}
+.partner-card:hover { border-color: rgba(224,122,95,0.3); }
+.partner-logo {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(224,122,95,0.15), rgba(212,168,67,0.1));
+  border: 1px solid rgba(224,122,95,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  margin: 0 auto 10px;
+}
+.partner-name {
+  font-size: 13px; font-weight: 600;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+.partner-role {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.05em;
+  line-height: 1.4;
+}
+
+/* ── Try Section ────────────────────────────────────────────────────────── */
+.try-links {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.try-link {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  text-decoration: none;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.try-link:hover {
+  border-color: rgba(224,122,95,0.3);
+  transform: translateX(4px);
+}
+.try-link-icon {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: rgba(224,122,95,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.try-link-body { flex: 1; }
+.try-link-title {
+  font-size: 14px; font-weight: 600; color: var(--white);
+  margin-bottom: 2px;
+}
+.try-link-desc {
+  font-size: 11px; color: var(--muted);
+}
+.try-link-arrow {
+  font-size: 18px; color: var(--muted);
+  transition: color 0.2s, transform 0.2s;
+}
+.try-link:hover .try-link-arrow { color: var(--accent); transform: translateX(3px); }
+
+/* ── Pull Quote ─────────────────────────────────────────────────────────── */
+.pull-quote {
+  text-align: center; padding: 24px 0 8px;
+}
+.pull-quote .pq-mark {
+  font-size: 36px; line-height: 0.6;
+  color: rgba(139, 92, 246, 0.35);
+  font-family: Georgia, serif;
+}
+.pull-quote .pq-text {
+  font-size: 16px; font-weight: 600;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.5;
+  margin: 8px 0;
+}
+.pull-quote .pq-attrib {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: 40px 20px 32px;
+  border-top: 1px solid var(--border);
+}
+.footer-tagline {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #c084fc, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.footer-meta {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+.footer-meta a {
+  color: var(--accent2); text-decoration: none;
+  transition: opacity 0.2s;
+}
+.footer-meta a:hover { opacity: 0.8; }
+
+/* ── Product Screenshots ────────────────────────────────────────────────── */
+.product-showcase {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.product-shot {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.product-shot:hover { border-color: rgba(224,122,95,0.3); }
+.product-shot img {
+  width: 100%; height: auto; display: block;
+}
+.product-shot .shot-caption {
+  padding: 10px 14px;
+  font-size: 11px; color: var(--muted);
+  border-top: 1px solid rgba(30,48,80,0.4);
+  letter-spacing: 0.03em;
+}
+.product-shot .shot-caption strong {
+  color: var(--accent2); font-weight: 600;
+}
+
+/* Image expand on click */
+.img-expandable { cursor: pointer; transition: opacity 0.2s; }
+.img-expandable:hover { opacity: 0.9; }
+
+/* Lightbox */
+.lightbox {
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(13,27,42,0.96);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  align-items: center; justify-content: center;
+  cursor: pointer;
+}
+.lightbox.open { display: flex; }
+.lightbox img {
+  max-width: 92vw; max-height: 88vh;
+  border-radius: 8px;
+  box-shadow: 0 0 60px rgba(224,122,95,0.2);
+}
+
+/* Scroll Reveal ──────────────────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(18px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ── Signal Divider ─────────────────────────────────────────────────────── */
+.signal-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 40px 0 36px;
+}
+.signal-divider .line {
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(224,122,95,0.25), transparent);
+}
+.signal-divider span {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.2em; white-space: nowrap;
+}
+
+/* ── Stats Row ──────────────────────────────────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 36px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 8px;
+  text-align: center;
+}
+.stat-num {
+  font-size: 22px; font-weight: 700;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-label {
+  font-size: 9px; color: var(--muted);
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .container { max-width: 1000px; padding: 28px 32px 80px; }
+  .nav { padding-left: 32px; padding-right: 32px; }
+  .hero { padding: 72px 40px 56px; }
+  .hero h1 { font-size: 46px; }
+  .hero .subtitle { font-size: 21px; }
+  .flow-steps { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .flow-step { min-height: 170px; }
+  .try-links { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stats-row { gap:14px; }
+}
+@media (max-width: 400px) {
+  .hero h1 { font-size: 26px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .partners { flex-direction: column; }
+  .compare-table { font-size: 10px; }
+  .compare-table thead th, .compare-table tbody td { padding: 8px 10px; }
+}
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  NAV -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<nav class="nav reveal">
+  <div class="nav-brand">Coding Vibe</div>
+  <div class="nav-links">
+    <a href="#how">How</a>
+    <a href="#features">Features</a>
+    <a href="#try">Try</a>
+    <a href="https://github.com/onezion12344/coding-vibe" class="nav-cta" target="_blank" rel="noopener">GitHub</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  HERO -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="container">
+
+<section class="hero reveal">
+  <div class="hero-badge">AdventureX 2026 · Track #04</div>
+  <div class="hero-sheep"><img src="/static/assets/yellow-sheep-hero.png" alt="Yellow Sheep in a boat beneath a lighthouse" /></div>
+  <h1>
+    <span class="gradient">Voice-First</span><br>
+    AI Coding Companion
+  </h1>
+  <p class="subtitle">
+    Call in. Speak naturally. An AI engineering team<br>
+    works for you — and <em>calls you back</em> when done.
+  </p>
+  <div class="tagline-block">
+    <p class="tagline-quote">
+      "Yesterday we brought Vibe into Coding.<br>
+      Today we merge Coding into Vibe."
+    </p>
+  </div>
+  <div class="hero-cta-row">
+    <a href="#try" class="btn-primary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.72a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.92h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l.94-.94a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      Try the Demo
+    </a>
+    <a href="https://github.com/onezion12344/coding-vibe" class="btn-secondary" target="_blank" rel="noopener">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+      View on GitHub
+    </a>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  STATS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="stats-row reveal">
+  <div class="stat-card">
+    <div class="stat-num">5</div>
+    <div class="stat-label">CEO + 4 Role Agents</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">24/7</div>
+    <div class="stat-label">Always Listening</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num">2-Way</div>
+    <div class="stat-label">Bidirectional Call</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  HOW IT WORKS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal" id="how">
+  <h2>How It Works</h2>
+  <div class="flow-steps">
+
+    <div class="flow-step">
+      <div class="flow-step-icon">📞</div>
+      <div class="flow-step-body">
+        <div class="flow-step-num">Step 1</div>
+        <div class="flow-step-title">You Call the Yellow Sheep</div>
+        <div class="flow-step-desc">Put on your earphones. Tap call. Speak your task in natural language — like calling a colleague. The CS receptionist (黄羊) listens, powered by StepFun realtime voice AI.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-step-icon">🧠</div>
+      <div class="flow-step-body">
+        <div class="flow-step-num">Step 2</div>
+        <div class="flow-step-title">The Brain Decides &amp; Dispatches</div>
+        <div class="flow-step-desc">A fast text LLM reads your transcript, classifies intent, and dispatches the work to a Qoder CEO — a persistent AI boss that assembles the right role team for the job.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-step-icon">👥</div>
+      <div class="flow-step-body">
+        <div class="flow-step-num">Step 3</div>
+        <div class="flow-step-title">The Role Team Gets to Work</div>
+        <div class="flow-step-desc">Architect plans. Builder codes. Reviewer checks. Tester validates. Every agent's progress streams onto a live kanban board — you can watch the company work in real time.</div>
+      </div>
+    </div>
+
+    <div class="flow-step">
+      <div class="flow-step-icon">📲</div>
+      <div class="flow-step-body">
+        <div class="flow-step-num">Step 4</div>
+        <div class="flow-step-title">The Agent Calls YOU Back</div>
+        <div class="flow-step-desc">When the work is done, the CEO calls you back — directly to your phone. Accept the call, hear the summary. No screen-checking. No polling. The differentiator Codex doesn't have.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  ARCHITECTURE -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <h2>Architecture</h2>
+  <div class="arch-diagram">
+    <svg viewBox="0 0 500 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="g-accent" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#d4a843"/>
+          <stop offset="100%" stop-color="#e07a5f"/>
+        </linearGradient>
+        <linearGradient id="g-teal" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#3a8a8a"/>
+          <stop offset="100%" stop-color="#2a6a6a"/>
+        </linearGradient>
+        <filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        <marker id="arrow-coral" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#e07a5f"/>
+        </marker>
+        <marker id="arrow-teal" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <path d="M0,0 L8,3 L0,6 Z" fill="#3a8a8a"/>
+        </marker>
+      </defs>
+
+      <!-- User Icon -->
+      <rect x="185" y="15" width="130" height="42" rx="21" fill="#162236" stroke="#1e3050" stroke-width="1"/>
+      <text x="250" y="42" text-anchor="middle" fill="#f0e6d8" font-size="13" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="600">You (Voice)</text>
+
+      <!-- Arrow: User -> CS -->
+      <line x1="250" y1="57" x2="250" y2="82" stroke="#e07a5f" stroke-width="1.5" marker-end="url(#arrow-coral)"/>
+
+      <!-- CS Receptionist -->
+      <rect x="160" y="85" width="180" height="46" rx="12" fill="#162236" stroke="rgba(224,122,95,0.4)" stroke-width="1.5"/>
+      <text x="250" y="106" text-anchor="middle" fill="#f0e6d8" font-size="12" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="600">CS Receptionist</text>
+      <text x="250" y="122" text-anchor="middle" fill="#8a9ab0" font-size="10" font-family="Space Grotesk,Noto Sans SC,sans-serif">黄羊 · StepFun Realtime</text>
+
+      <!-- Arrow: CS -> Brain -->
+      <line x1="250" y1="131" x2="250" y2="156" stroke="#d4a843" stroke-width="1.5" marker-end="url(#arrow-coral)"/>
+
+      <!-- Text LLM Brain -->
+      <rect x="170" y="159" width="160" height="40" rx="10" fill="#162236" stroke="rgba(212,168,67,0.35)" stroke-width="1.5"/>
+      <text x="250" y="178" text-anchor="middle" fill="#d4a843" font-size="11" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="600">Text LLM Brain</text>
+      <text x="250" y="192" text-anchor="middle" fill="#8a9ab0" font-size="9" font-family="Space Grotesk,Noto Sans SC,sans-serif">Intent Classifier + Dispatch</text>
+
+      <!-- Arrow: Brain -> CEO -->
+      <line x1="250" y1="199" x2="250" y2="224" stroke="#e07a5f" stroke-width="1.5" marker-end="url(#arrow-coral)"/>
+
+      <!-- Qoder CEO -->
+      <rect x="170" y="227" width="160" height="40" rx="10" fill="#162236" stroke="rgba(224,122,95,0.5)" stroke-width="1.5"/>
+      <text x="250" y="246" text-anchor="middle" fill="#e07a5f" font-size="12" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="700">Qoder CEO</text>
+      <text x="250" y="260" text-anchor="middle" fill="#8a9ab0" font-size="9" font-family="Space Grotesk,Noto Sans SC,sans-serif">Persistent Agent · Boss</text>
+
+      <!-- Fan-out arrows: CEO -> Roles -->
+      <line x1="220" y1="267" x2="105" y2="300" stroke="#3a8a8a" stroke-width="1.2" marker-end="url(#arrow-teal)"/>
+      <line x1="250" y1="267" x2="250" y2="300" stroke="#3a8a8a" stroke-width="1.2" marker-end="url(#arrow-teal)"/>
+      <line x1="280" y1="267" x2="395" y2="300" stroke="#3a8a8a" stroke-width="1.2" marker-end="url(#arrow-teal)"/>
+
+      <!-- Role boxes -->
+      <rect x="40" y="303" width="130" height="36" rx="8" fill="#162236" stroke="rgba(58,138,138,0.3)" stroke-width="1"/>
+      <text x="105" y="320" text-anchor="middle" fill="#3a8a8a" font-size="10" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="600">Architect</text>
+      <text x="105" y="333" text-anchor="middle" fill="#8a9ab0" font-size="8" font-family="Space Grotesk,Noto Sans SC,sans-serif">Plans approach</text>
+
+      <rect x="185" y="303" width="130" height="36" rx="8" fill="#162236" stroke="rgba(58,138,138,0.3)" stroke-width="1"/>
+      <text x="250" y="320" text-anchor="middle" fill="#3a8a8a" font-size="10" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="600">Builder</text>
+      <text x="250" y="333" text-anchor="middle" fill="#8a9ab0" font-size="8" font-family="Space Grotesk,Noto Sans SC,sans-serif">Writes code</text>
+
+      <rect x="330" y="303" width="130" height="36" rx="8" fill="#162236" stroke="rgba(58,138,138,0.3)" stroke-width="1"/>
+      <text x="395" y="320" text-anchor="middle" fill="#3a8a8a" font-size="10" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="600">Reviewer</text>
+      <text x="395" y="333" text-anchor="middle" fill="#8a9ab0" font-size="8" font-family="Space Grotesk,Noto Sans SC,sans-serif">Checks quality</text>
+
+      <!-- Summary arrow from roles -> Kanban -->
+      <line x1="250" y1="339" x2="250" y2="355" stroke="#d4a843" stroke-width="1" stroke-dasharray="4,3"/>
+
+      <!-- Kanban -->
+      <rect x="175" y="355" width="150" height="20" rx="6" fill="rgba(58,138,138,0.08)" stroke="rgba(58,138,138,0.25)" stroke-width="1"/>
+      <text x="250" y="369" text-anchor="middle" fill="#3a8a8a" font-size="10" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="500">Live Kanban Board</text>
+
+      <!-- Callback arrow (back to User) -->
+      <path d="M380,365 C440,365 440,36 380,36" fill="none" stroke="#e07a5f" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrow-coral)"/>
+      <text x="455" y="200" fill="#e07a5f" font-size="9" font-family="Space Grotesk,Noto Sans SC,sans-serif" font-weight="500">Callback</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  PRODUCT SHOWCASE — Real screenshots from the build -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <h2>See It In Action</h2>
+  <div class="product-showcase">
+
+    <div class="product-shot">
+      <img src="img/openopc-kanban.png" alt="OpenOPC kanban board showing AI agent work in progress" class="img-expandable" onclick="openLightbox(this.src)" loading="lazy">
+      <div class="shot-caption"><strong>Kanban Board</strong> — 4-column company view: Backlog, Running, Needs-Approval, Done. Every agent's progress is LLM-summarized and streamed live.</div>
+    </div>
+
+    <div class="product-shot">
+      <img src="img/arch-overview.png" alt="Coding Vibe architecture overview — voice to kanban flow" class="img-expandable" onclick="openLightbox(this.src)" loading="lazy">
+      <div class="shot-caption"><strong>Architecture Overview</strong> — Full system: voice in, CS receptionist, Qoder CEO fan-out to role team, kanban, and callback to user.</div>
+    </div>
+
+    <div class="product-shot">
+      <img src="img/always-on.png" alt="Always-on coding companion concept" class="img-expandable" onclick="openLightbox(this.src)" loading="lazy">
+      <div class="shot-caption"><strong>Always-On Companion</strong> — Cycling, walking, driving. No keyboard. No screen. Just your earphones and your voice. Code anywhere.</div>
+    </div>
+
+    <div class="product-shot">
+      <img src="img/qoder-backend.png" alt="Qoder backend architecture — CEO to role team fan-out" class="img-expandable" onclick="openLightbox(this.src)" loading="lazy">
+      <div class="shot-caption"><strong>Qoder Backend</strong> — Persistent CEO agent manages a preset role team (Architect, Builder, Reviewer, Tester). Fan-out via Qoder Agent SDK.</div>
+    </div>
+
+    <div class="product-shot">
+      <img src="img/viaim-sdk.png" alt="Viaim SDK integration — earphone voice pipeline" class="img-expandable" onclick="openLightbox(this.src)" loading="lazy">
+      <div class="shot-caption"><strong>Viaim SDK Integration</strong> — 科大讯飞 headset SDK provides the always-on earphone voice input pipeline.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  LIGHTBOX -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  WHY US (Comparison) -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <h2>Why Coding Vibe?</h2>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Codex / Cursor</th>
+        <th>Coding Vibe</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Voice Input</td>
+        <td><span class="check">Yes</span></td>
+        <td><span class="star">Full-duplex, always-on</span></td>
+      </tr>
+      <tr>
+        <td>Agent Calls You Back</td>
+        <td><span class="cross">No</span></td>
+        <td><span class="star">Yes — bidirectional</span></td>
+      </tr>
+      <tr>
+        <td>Multi-Agent Team</td>
+        <td><span class="cross">Single agent</span></td>
+        <td><span class="star">CEO + preset role team</span></td>
+      </tr>
+      <tr>
+        <td>Live Work Visibility</td>
+        <td><span class="cross">Terminal only</span></td>
+        <td><span class="star">Live kanban with summaries</span></td>
+      </tr>
+      <tr>
+        <td>Hands-Free (cycling, walking)</td>
+        <td><span class="cross">Screen required</span></td>
+        <td><span class="star">Earphones-only</span></td>
+      </tr>
+      <tr>
+        <td>Persistent Company</td>
+        <td><span class="cross">Ephemeral session</span></td>
+        <td><span class="star">Survives tasks, self-evolves</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  FEATURES -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal" id="features">
+  <h2>Core Features</h2>
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon">🎙️</div>
+      <h3>Voice-First Interface</h3>
+      <p>Call in from your earphones. Speak naturally in English or Chinese. The Yellow Sheep receptionist listens and understands.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">📲</div>
+      <h3>Bidirectional Calling</h3>
+      <p>The agent calls YOU back when work is done. No screen. No polling. This is the feature Codex doesn't have.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <h3>AI Role Team</h3>
+      <p>CEO dispatches to a preset team: Architect, Builder, Reviewer, Tester. Like having an engineering company in your ear.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <h3>Live Kanban Board</h3>
+      <p>Every agent's progress streams to a kanban. Inter-agent comms are LLM-summarized. Full transparency on what the company is doing.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">🚴</div>
+      <h3>Anywhere, Hands-Free</h3>
+      <p>Cycling, walking, driving. No keyboard. No screen. Just your voice and your earphones. Code on the go.</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">🏢</div>
+      <h3>Persistent Company</h3>
+      <p>The AI company survives across tasks. It remembers context, learns preferences, and can recruit new roles. Your one-person engineering org.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  SIGNAL DIVIDER -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="signal-divider reveal">
+  <div class="line"></div>
+  <span>BUILT WITH</span>
+  <div class="line"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  PARTNERS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal">
+  <div class="partners">
+    <div class="partner-card">
+      <div class="partner-logo">🎧</div>
+      <div class="partner-name">Viaim</div>
+      <div class="partner-role">科大讯飞 headset SDK<br>Voice input hardware</div>
+    </div>
+    <div class="partner-card">
+      <div class="partner-logo">⚙️</div>
+      <div class="partner-name">Qoder</div>
+      <div class="partner-role">Multi-agent orchestration<br>CEO + role team backend</div>
+    </div>
+    <div class="partner-card">
+      <div class="partner-logo">🌟</div>
+      <div class="partner-name">StepFun 阶跃星辰</div>
+      <div class="partner-role">Voice AI models<br>STT + LLM + TTS</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  QUOTE -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="pull-quote reveal">
+  <div class="pq-mark">"</div>
+  <p class="pq-text">Not your personal assistant —<br>the CEO of the Company for everything in your life,<br>and you just vibe it.</p>
+  <p class="pq-attrib">— Coding Vibe Manifesto</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  TRY IT -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<section class="section reveal" id="try">
+  <h2>Try It</h2>
+  <div class="try-links">
+    <a href="http://localhost:7860" class="try-link" target="_blank" rel="noopener">
+      <div class="try-link-icon">📞</div>
+      <div class="try-link-body">
+        <div class="try-link-title">Call the Yellow Sheep</div>
+        <div class="try-link-desc">Live voice demo — talk to the CS receptionist</div>
+      </div>
+      <span class="try-link-arrow">→</span>
+    </a>
+    <a href="http://localhost:5091/company" class="try-link" target="_blank" rel="noopener">
+      <div class="try-link-icon">📋</div>
+      <div class="try-link-body">
+        <div class="try-link-title">Company Kanban</div>
+        <div class="try-link-desc">Watch the AI role team work in real time</div>
+      </div>
+      <span class="try-link-arrow">→</span>
+    </a>
+    <a href="https://github.com/onezion12344/coding-vibe" class="try-link" target="_blank" rel="noopener">
+      <div class="try-link-icon">💻</div>
+      <div class="try-link-body">
+        <div class="try-link-title">Source Code</div>
+        <div class="try-link-desc">GitHub repo — MIT licensed, open source</div>
+      </div>
+      <span class="try-link-arrow">→</span>
+    </a>
+    <a href="http://localhost:5091/docs/success-narrative-vs-mechanism.html" class="try-link" target="_blank" rel="noopener">
+      <div class="try-link-icon">📐</div>
+      <div class="try-link-body">
+        <div class="try-link-title">Architecture Docs</div>
+        <div class="try-link-desc">Deep dive into the system design and decisions</div>
+      </div>
+      <span class="try-link-arrow">→</span>
+    </a>
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  FOOTER -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<footer class="footer reveal">
+  <div class="footer-tagline">为创造，再一次信仰之跃</div>
+  <div class="footer-meta">
+    AdventureX 2026 · Track #04 Qoder「一个人=一支工程团队」<br>
+    Built by <a href="https://github.com/onezion12344" target="_blank" rel="noopener">Harry Huang</a>
+    with Viaim, Qoder &amp; StepFun 阶跃星辰<br>
+    <a href="https://github.com/onezion12344/coding-vibe" target="_blank" rel="noopener">github.com/onezion12344/coding-vibe</a>
+  </div>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!--  SCROLL REVEAL -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Also trigger on load for above-the-fold elements
+  setTimeout(() => {
+    document.querySelectorAll('.reveal').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) {
+        el.classList.add('visible');
+      }
+    });
+  }, 100);
+
+  // Lightbox
+  window.openLightbox = function(src) {
+    document.getElementById('lightbox-img').src = src;
+    document.getElementById('lightbox').classList.add('open');
+  };
+  window.closeLightbox = function() {
+    document.getElementById('lightbox').classList.remove('open');
+  };
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeLightbox();
+  });
+})();
+</script>
+
+</body>
+</html>

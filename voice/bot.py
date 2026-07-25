@@ -72,12 +72,17 @@ except ImportError as exc:
 # Local imports (wrapped to allow module import without full deps)
 try:
     from voice.stepfun_tts import StepFunTTSService
-    from web.engineer_dispatch import dispatch_to_engineer, TOOLS
+    from web.engineer_dispatch import (
+        CS_VOICE_PERSONA,
+        TOOLS,
+        dispatch_to_engineer,
+    )
 except ImportError as exc:
     print(f"[bot] local import error: {exc}", flush=True)
     dispatch_to_engineer = None  # type: ignore[assignment]
     TOOLS = []  # type: ignore[assignment]
     StepFunTTSService = None  # type: ignore[assignment]
+    CS_VOICE_PERSONA = "你是 Yellow Sheep，一名自然、友好的客户成功伙伴。"
 
 
 # ── Config ────────────────────────────────────────────────────────────────────────
@@ -91,12 +96,7 @@ CS_BRAIN_MODEL: str = os.environ.get("CV_CS_BRAIN_MODEL", "step-3.7-flash")
 
 # ── CS persona ───────────────────────────────────────────────────────────────────
 
-_SYSTEM_INSTRUCTIONS = (
-    "你是 Coding Vibe 工作室的电话接线员（CS）。说话简短、自然、口语化，像在打电话。"
-    "如果来电者想做/写/改某个代码或功能，就热情、简短地回应：『好的，我马上安排工程师处理，"
-    "忙完打给你哈。』然后就好——不要自己写代码、不要解释实现细节。"
-    "如果只是闲聊或问进度，就自然地聊。始终友好。"
-)
+_SYSTEM_INSTRUCTIONS = CS_VOICE_PERSONA
 
 
 # ── Function-tool handler ────────────────────────────────────────────────────────
@@ -121,9 +121,9 @@ async def _dispatch_handler(task: str) -> str:
 
     task_id = result.get("task_id", "?")
     return (
-        f"Task dispatched (id={task_id}). "
-        "Give the user a short, warm Chinese confirmation, then stop — "
-        "do not keep talking about the task details."
+        f"Task dispatched (id={task_id}). Give the user a short, warm Chinese "
+        "confirmation that they may keep talking and add details. Do not say "
+        "you are hanging up or promise an immediate callback."
     )
 
 

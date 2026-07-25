@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Coding Vibe — Project Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0d1b2a;
+  --surface:  #111d33;
+  --card:     #162236;
+  --border:   #1e3050;
+  --accent:   #e07a5f;
+  --accent2:  #d4a843;
+  --accent3:  #3a8a8a;
+  --white:    #f0e6d8;
+  --muted:    #8a9ab0;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Space Grotesk', 'Noto Sans SC', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Starfield background */
+.stars {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%,  rgba(224,122,95,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 25%, rgba(212,168,67,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 40% at 15% 75%, rgba(58,138,138,0.05) 0%, transparent 55%);
+}
+
+.container {
+  position: relative; z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+  padding-top: 16px;
+}
+.header h1 {
+  font-size: 28px; font-weight: 700;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.header .sub {
+  font-size: 12px; color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* Section labels */
+.section-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+  margin-top: 28px;
+}
+.section-label::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: rgba(224,122,95,0.12);
+}
+
+/* Link cards */
+.links {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.link-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 15px 16px;
+  text-decoration: none;
+  color: var(--white);
+  transition: border-color 0.3s, transform 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.link-card:hover {
+  border-color: rgba(224,122,95,0.35);
+  transform: translateX(4px);
+}
+.link-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+
+/* Alternate gradient stripes */
+.link-card:nth-child(5n+1)::before { background: linear-gradient(180deg, #e07a5f, #d4a843); }
+.link-card:nth-child(5n+2)::before { background: linear-gradient(180deg, #d4a843, #e07a5f); }
+.link-card:nth-child(5n+3)::before { background: linear-gradient(180deg, #3a8a8a, #e07a5f); }
+.link-card:nth-child(5n+4)::before { background: linear-gradient(180deg, #e07a5f, #3a8a8a); }
+.link-card:nth-child(5n+5)::before { background: linear-gradient(180deg, #d4a843, #3a8a8a); }
+
+.link-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: rgba(224,122,95,0.08);
+  border: 1px solid rgba(224,122,95,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+
+.link-body { flex: 1; min-width: 0; }
+.link-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--white);
+  margin-bottom: 2px;
+}
+.link-desc {
+  font-size: 11px; color: var(--muted);
+  line-height: 1.4;
+}
+
+.link-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: 10px;
+  background: rgba(224,122,95,0.08);
+  border: 1px solid rgba(224,122,95,0.15);
+  color: var(--accent2);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.link-badge.local {
+  background: rgba(58,138,138,0.08);
+  border-color: rgba(58,138,138,0.15);
+  color: var(--accent3);
+}
+
+.link-arrow {
+  font-size: 16px; color: var(--muted);
+  transition: color 0.2s, transform 0.2s;
+}
+.link-card:hover .link-arrow { color: var(--accent); transform: translateX(3px); }
+
+/* Status dot */
+.status-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  margin-right: 4px;
+}
+.status-dot.online { background: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.5); }
+.status-dot.offline { background: #e74c3c; }
+
+/* Divider */
+.divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 32px 0 28px;
+}
+.divider .line {
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(224,122,95,0.2), transparent);
+}
+.divider span {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.2em;
+}
+
+/* Footer */
+.footer {
+  text-align: center; padding-top: 28px;
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+}
+.footer-tagline {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #c084fc, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.footer-meta {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.footer-meta a { color: var(--accent2); text-decoration: none; }
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<div class="stars"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header reveal">
+    <h1>Coding Vibe</h1>
+    <p class="sub">AdventureX 2026 · Demo Day 2026-07-26</p>
+  </div>
+
+  <!-- Live Demos -->
+  <div class="section-label reveal">Live Demos</div>
+  <div class="links reveal">
+    <a href="/call" class="link-card">
+      <div class="link-icon">📞</div>
+      <div class="link-body">
+        <div class="link-title">Call the Yellow Sheep</div>
+        <div class="link-desc">Voice UI — call CS receptionist, speak naturally, watch kanban update</div>
+      </div>
+      <span class="link-badge">Live</span>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="/company" class="link-card">
+      <div class="link-icon">📋</div>
+      <div class="link-body">
+        <div class="link-title">Company Kanban</div>
+        <div class="link-desc">4-column board: Backlog · Running · Needs-Approval · Done. Watch the AI role team work.</div>
+      </div>
+      <span class="link-badge">Live</span>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="http://localhost:7860" class="link-card" target="_blank">
+      <div class="link-icon">🎙️</div>
+      <div class="link-body">
+        <div class="link-title">Voice Server</div>
+        <div class="link-desc">StepFun WebSocket bridge — realtime audio pipeline. Being rebuilt now.</div>
+      </div>
+      <span class="link-badge local">local:7860</span>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- Docs & Resources -->
+  <div class="section-label reveal">Docs & Resources</div>
+  <div class="links reveal">
+    <a href="docs/landing.html" class="link-card">
+      <div class="link-icon">🌐</div>
+      <div class="link-body">
+        <div class="link-title">Landing Page</div>
+        <div class="link-desc">Marketing landing page — architecture diagram, features, partners, try-it links</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="docs/success-narrative-vs-mechanism.html" class="link-card">
+      <div class="link-icon">📖</div>
+      <div class="link-body">
+        <div class="link-title">Architecture Docs</div>
+        <div class="link-desc">Success Narratives vs Success Mechanisms — the full pitch deck / narrative doc</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="docs/MARKETING.md" class="link-card">
+      <div class="link-icon">📢</div>
+      <div class="link-body">
+        <div class="link-title">Marketing Plan</div>
+        <div class="link-desc">GitHub README polish, 90s demo video script, 5-min pitch outline, booth materials</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="docs/DECISIONS.md" class="link-card">
+      <div class="link-icon">📝</div>
+      <div class="link-body">
+        <div class="link-title">Design Decisions</div>
+        <div class="link-desc">ADR-style — why CS+CEO, why bidirectional, why Pipecat cascaded, why fixture-first</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="docs/RUNBOOK.md" class="link-card">
+      <div class="link-icon">🔧</div>
+      <div class="link-body">
+        <div class="link-title">Runbook</div>
+        <div class="link-desc">How to start/stop/reach the system. Local, LAN, Oracle tunnel URLs.</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="docs/PITFALLS.md" class="link-card">
+      <div class="link-icon">⚠️</div>
+      <div class="link-body">
+        <div class="link-title">Pitfalls</div>
+        <div class="link-desc">Known issues, gotchas, and workarounds. Read before hacking.</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- External -->
+  <div class="section-label reveal">External</div>
+  <div class="links reveal">
+    <a href="https://github.com/onezion12344/coding-vibe" class="link-card" target="_blank" rel="noopener">
+      <div class="link-icon">💻</div>
+      <div class="link-body">
+        <div class="link-title">GitHub Repository</div>
+        <div class="link-desc">Source code, README, MCP server, voice bridge, agents. MIT licensed.</div>
+      </div>
+      <span class="link-badge">Open Source</span>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="https://onezion12344.github.io/projects/coding-vibe/" class="link-card" target="_blank" rel="noopener">
+      <div class="link-icon">🚀</div>
+      <div class="link-body">
+        <div class="link-title">Deployed Landing Page</div>
+        <div class="link-desc">GitHub Pages deployment of the landing page — share this with judges and visitors.</div>
+      </div>
+      <span class="link-badge">GitHub Pages</span>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="section-label reveal">Quick Start</div>
+  <div class="links reveal">
+    <a href="docs/QODER-COMPANY-PLAN.md" class="link-card">
+      <div class="link-icon">🏗️</div>
+      <div class="link-body">
+        <div class="link-title">Qoder Company Plan</div>
+        <div class="link-desc">SDD plan for persistent AI company backend. Tasks T1-T5, demo-critical slice.</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="HANDOFF.md" class="link-card">
+      <div class="link-icon">📋</div>
+      <div class="link-body">
+        <div class="link-title">HANDOFF</div>
+        <div class="link-desc">Code map, what works/doesn't, how to run, priority TODO. Read this first.</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer reveal">
+    <div class="footer-tagline">为创造，再一次信仰之跃</div>
+    <div class="footer-meta">
+      AdventureX 2026 · Track #04<br>
+      <a href="https://github.com/onezion12344" target="_blank" rel="noopener">Harry Huang</a> ·
+      Built with Viaim · Qoder · StepFun 阶跃星辰
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  setTimeout(() => {
+    document.querySelectorAll('.reveal').forEach(el => {
+      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('visible');
+    });
+  }, 100);
+
+  // Quick server status check (non-blocking)
+  fetch('/api/board').then(r => r.ok).catch(() => false);
+})();
+</script>
+
+</body>
+</html>

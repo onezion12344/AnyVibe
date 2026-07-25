@@ -16,6 +16,7 @@ from collections import defaultdict
 from typing import Any, AsyncIterator, Callable
 
 from receptionist.adapters.base import StatusEvent
+from qoder_company.network import NetworkGraph
 from qoder_company.summarizer import summarize
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,8 @@ class CompanyObserver:
         self,
         adapter: Any,
         board_emit: Callable[[dict[str, Any]], None] | None = None,
+        network_emit: Callable[[dict[str, Any]], None] | None = None,
+        network: NetworkGraph | None = None,
     ) -> None:
         self._adapter = adapter
         # card state: role -> {"column": str, "title": str, "subtitle": str, "edges": [...]}
@@ -88,12 +91,15 @@ class CompanyObserver:
 
         # Ordered queue of emitted card-ops (for tests / replay)
         self.emitted: list[dict[str, Any]] = []
+        self.network = network or NetworkGraph()
+        self.network_emitted: list[dict[str, Any]] = []
 
         # Resolve board_emit
         if board_emit is not None:
             self._emit = board_emit
         else:
             self._emit = self._default_emit
+        self._network_emit = network_emit or self._default_network_emit
 
     # ── Internal emit ────────────────────────────────────────────────────────
 
@@ -115,6 +121,33 @@ class CompanyObserver:
         """Record + emit one card-op."""
         self.emitted.append(card_op)
         self._emit(card_op)
+
+    def _default_network_emit(self, payload: dict[str, Any]) -> None:
+        """Broadcast a network snapshot over the same live events socket."""
+        try:
+            from web.signaling import _clients  # noqa: PLC0415
+
+            asyncio.create_task(_clients.broadcast({"type": "network_update", **payload}))
+        except Exception as exc:
+            logger.debug("[observer] network broadcast failed: %s", exc)
+
+    async def _push_network(self, event: StatusEvent) -> None:
+        activity = await self.network.apply_event(event.kind, event.text)
+        payload = {"snapshot": self.network.snapshot(), "activity": activity}
+        self.network_emitted.append(payload)
+        del self.network_emitted[:-24]
+        self._network_emit(payload)
+
+    def set_user_avatar(self, avatar_url: str) -> None:
+        self.network.set_user_avatar(avatar_url)
+        payload = {"snapshot": self.network.snapshot(), "activity": None}
+        self.network_emitted.append(payload)
+        del self.network_emitted[:-24]
+        self._network_emit(payload)
+
+    @property
+    def network_snapshot(self) -> dict[str, Any]:
+        return self.network.snapshot()
 
     # ── Card management ───────────────────────────────────────────────────────
 
@@ -287,6 +320,9 @@ class CompanyObserver:
 
         async for event in self._adapter.stream_status(handle):
             try:
+                # Keep the graph in lockstep with the card stream.  A failure
+                # in the optional side summarizer must never stop the run.
+                await self._push_network(event)
                 if event.kind == "tool":
                     await self._on_tool(event)
                 elif event.kind == "message":

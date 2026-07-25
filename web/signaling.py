@@ -19,7 +19,6 @@ Server.py must mount this router, e.g.:
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import os
 import uuid
@@ -27,6 +26,7 @@ from typing import Any
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from web.auth import is_valid_token
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -35,7 +35,7 @@ from fastapi.responses import JSONResponse
 EXPECTED_TOKEN = os.environ.get("CV_API_TOKEN", "")  # empty → auth disabled
 
 EVENT_TYPES = frozenset(
-    {"incoming_call", "call_state", "task_update", "board_update"}
+    {"incoming_call", "call_state", "task_update", "board_update", "network_update"}
 )
 
 router = APIRouter(prefix="", tags=["signaling"])
@@ -86,9 +86,7 @@ _clients = _ClientRegistry()
 
 def _check_token(raw: str) -> bool:
     """Return True if *raw* matches CV_API_TOKEN (constant-time)."""
-    if not EXPECTED_TOKEN:
-        return True  # auth disabled
-    return hmac.compare_digest(raw, EXPECTED_TOKEN)
+    return is_valid_token(raw)
 
 
 def _reject(msg: str) -> JSONResponse:

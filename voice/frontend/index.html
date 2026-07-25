@@ -19,6 +19,10 @@
     .btn-hangup{background:#c0392b;color:#fff;flex:1}
     .btn-hangup:hover{background:#a93226}
     .btn-hangup:disabled{background:#4a3040;cursor:not-allowed}
+    .btn-mute{background:#2a3a4a;color:var(--muted);flex:0.5}
+    .btn-mute:hover{background:#3a4a5a}
+    .btn-mute.muted{background:#c0392b;color:#fff}
+    .btn-mute:disabled{background:#1a1a2a;cursor:not-allowed}
     .status{margin-top:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.85rem;line-height:1.4}
     .status.idle{background:#0a1628;border:1px solid var(--border);color:var(--muted)}
     .status.connecting,.status.connected{background:#12241c;border:1px solid var(--teal);color:#7ae0c0}
@@ -40,9 +44,10 @@
   <div class="card">
     <div class="btn-row">
       <button id="callBtn" class="btn btn-connect">Call</button>
+      <button id="muteBtn" class="btn btn-mute" disabled title="Toggle microphone mute">Mute</button>
       <button id="hangupBtn" class="btn btn-hangup" disabled>Hang up</button>
     </div>
-    <div id="status" class="status idle">Ready — click Call to start the voice conversation.</div>
+    <div id="status" class="status idle"><span class="mic-indicator" id="micDot"></span>Ready — click Call to start the voice conversation.</div>
     <div class="transcript-bar" id="transcript">
       <span class="label">Bot:</span><span id="transcriptText"></span>
     </div>
@@ -77,6 +82,7 @@ const WS_URL = (() => {
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────────
 const callBtn   = document.getElementById("callBtn");
+const muteBtn   = document.getElementById("muteBtn");
 const hangupBtn = document.getElementById("hangupBtn");
 const statusEl  = document.getElementById("status");
 const logEl     = document.getElementById("log");
@@ -102,6 +108,7 @@ let micStream     = null;
 let scriptNode    = null;
 let isCallActive  = false;
 let isSpeaking    = false;
+let isMuted       = false;
 let botTranscript = "";
 let audioBuffer   = [];   // Float32 buffer for accumulating mic samples
 
@@ -258,6 +265,7 @@ function connect() {
       await startMic();
       isCallActive = true;
       callBtn.disabled = true;
+      muteBtn.disabled = false;
       hangupBtn.disabled = false;
       setStatus("connected", "Connected — start speaking!");
 
@@ -267,7 +275,7 @@ function connect() {
         session: {
           model: "step-1o-audio",
           modalities: ["text", "audio"],
-          instructions: "你是 Coding Vibe 工作室的电话接线员（CS）。说话简短、自然、口语化，像在打电话。如果来电者想做/写/改某个代码或功能，就热情、简短地回应：『好的，我马上安排工程师处理，忙完打给你哈。』然后就好——不要自己写代码、不要解释实现细节。如果只是闲聊或问进度，就自然地聊。始终友好。用中文回答。",
+          instructions: "你是 Yellow Sheep（黄羊），Coding Vibe 的客户成功伙伴（CS）。先自然回应用户，而不是急着转单或挂电话。问候、近况、进度、汇报、能力问题和闲聊都不是新任务：诚实聊天，不说‘已安排’、‘马上处理’或‘忙完回电’。只有用户明确要求一个可执行的软件交付或改动时，才简短复述后交给团队；交接后仍可继续通话和补充细节。模糊请求先问一个澄清问题；不要编造进展或主动结束通话。用中文回答。",
           voice: "alloy",
           input_audio_format: "pcm16",
           output_audio_format: "pcm16",
@@ -305,11 +313,13 @@ function connect() {
 
       case "input_audio_buffer.speech_started":
         isSpeaking = true;
+        document.getElementById("micDot").classList.add("active");
         log("Speech detected", "asr");
         break;
 
       case "input_audio_buffer.speech_stopped":
         isSpeaking = false;
+        document.getElementById("micDot").classList.remove("active");
         log("Speech ended", "asr");
         // Auto-commit and create response on speech stop
         if (ws && ws.readyState === WebSocket.OPEN) {
@@ -386,6 +396,26 @@ function hangup() {
   cleanup();
 }
 
+function toggleMute() {
+  isMuted = !isMuted;
+  if (isMuted) {
+    muteBtn.textContent = "Unmute";
+    muteBtn.classList.add("muted");
+    // Mute the mic track
+    if (micStream) {
+      micStream.getAudioTracks().forEach(t => t.enabled = false);
+    }
+    log("Microphone muted");
+  } else {
+    muteBtn.textContent = "Mute";
+    muteBtn.classList.remove("muted");
+    if (micStream) {
+      micStream.getAudioTracks().forEach(t => t.enabled = true);
+    }
+    log("Microphone unmuted");
+  }
+}
+
 function cleanup() {
   isCallActive = false;
   isSpeaking = false;
@@ -402,6 +432,10 @@ function cleanup() {
   }
 
   callBtn.disabled = false;
+  muteBtn.disabled = true;
+  muteBtn.textContent = "Mute";
+  muteBtn.classList.remove("muted");
+  isMuted = false;
   hangupBtn.disabled = true;
   setStatus("idle", "Ready — click Call to start the voice conversation.");
 }
@@ -415,6 +449,10 @@ callBtn.addEventListener("click", () => {
 
 hangupBtn.addEventListener("click", () => {
   if (isCallActive) hangup();
+});
+
+muteBtn.addEventListener("click", () => {
+  if (isCallActive) toggleMute();
 });
 
 // ── Cleanup on page unload ───────────────────────────────────────────────────────

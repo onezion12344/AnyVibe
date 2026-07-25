@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import sys
 import tempfile
@@ -20,6 +21,7 @@ if str(_ROOT) not in sys.path:
 
 from receptionist.adapters.base import StatusEvent, TaskResult
 from receptionist.adapters.qoder import QoderAdapter
+import receptionist.adapters.qoder as qoder_module
 
 # ---------------------------------------------------------------------------
 # Path to the sample fixture that ships with this repo
@@ -223,6 +225,102 @@ class TestQoderAdapterNoBackend:
         """spawn must not raise even when both SDK and fixture are unavailable."""
         handle = await adapter.spawn("test", repo_path="/tmp/x")
         assert handle is not None
+
+
+# ---------------------------------------------------------------------------
+# Explicit qodercli stream mode (local fake executable; no network)
+# ---------------------------------------------------------------------------
+
+class TestQoderCliStreamMode:
+    """The qodercli fallback is opt-in and translates stream-json records."""
+
+    @pytest.fixture(autouse=True)
+    def strip_fixture_and_sdk(self, monkeypatch):
+        monkeypatch.delenv("CV_QODER_FIXTURE", raising=False)
+        monkeypatch.setattr(qoder_module, "_SDK_AVAILABLE", False)
+
+    async def test_cli_stream_translates_messages_tools_and_result(self, tmp_path):
+        fake_cli = tmp_path / "fake-qodercli"
+        fake_cli.write_text(
+            f"#!{sys.executable}\n"
+            "import json\n"
+            "import sys\n"
+            "args = sys.argv[1:]\n"
+            "assert '--print' in args\n"
+            "assert args[args.index('--output-format') + 1] == 'stream-json'\n"
+            "assert '--cwd' in args\n"
+            "assert '--agents' in args\n"
+            "print(json.dumps({'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': 'CEO: plan approved'}, {'type': 'tool_use', 'name': 'Agent', 'input': {'agent': 'engineer', 'prompt': 'Implement the feature'}}]}}))\n"
+            "print(json.dumps({'type': 'tool_result', 'content': 'engineer completed implementation'}))\n"
+            "print(json.dumps({'type': 'result', 'is_error': False}))\n",
+            encoding="utf-8",
+        )
+        fake_cli.chmod(0o755)
+
+        adapter = QoderAdapter(fixture_path="", cli_enabled=True, cli_path=str(fake_cli))
+        handle = await adapter.spawn(
+            "Build the demo feature",
+            repo_path=str(tmp_path),
+            context={"roles": {"engineer": "Implement code"}},
+        )
+        events: list[StatusEvent] = []
+        async for event in adapter.stream_status(handle):
+            events.append(event)
+
+        assert any(event.kind == "message" and "plan approved" in event.text for event in events)
+        assert any(event.kind == "tool" and event.text.startswith("engineer:") for event in events)
+        assert any(event.kind == "progress" and "completed implementation" in event.text for event in events)
+        assert events[-1].kind == "done"
+        result = await adapter.result(handle)
+        assert result.ok is True
+        assert "plan approved" in result.summary
+
+    async def test_company_cli_context_persists_session_and_injects_ceo_prompt(self, tmp_path, monkeypatch):
+        """A selected company can opt into CLI + resume without a global flag."""
+        args_log = tmp_path / "qoder-args.jsonl"
+        fake_cli = tmp_path / "fake-qodercli"
+        fake_cli.write_text(
+            f"#!{sys.executable}\n"
+            "import json\n"
+            "import sys\n"
+            f"with open({str(args_log)!r}, 'a', encoding='utf-8') as output:\n"
+            "    output.write(json.dumps(sys.argv[1:]) + '\\n')\n"
+            "print(json.dumps({'type': 'assistant', 'message': {'content': [{'type': 'text', 'text': 'CEO: working'}]}}))\n"
+            "print(json.dumps({'type': 'result', 'is_error': False}))\n",
+            encoding="utf-8",
+        )
+        fake_cli.chmod(0o755)
+        monkeypatch.setenv("CV_QODER_CONFIG_ROOT", str(tmp_path / "company-config"))
+
+        # ``cli_enabled=False`` deliberately proves trusted company context
+        # enables qodercli without requiring CV_QODER_CLI for the whole app.
+        adapter = QoderAdapter(fixture_path="", cli_enabled=False, cli_path=str(fake_cli))
+        context = {
+            "mode": "company",
+            "company_id": "blue-team",
+            "persistent_cli": True,
+            "session_id": "30ac9dbe-49db-4ef5-a264-71991fdd4fc2",
+            "use_cli": True,
+            "permission_mode": "accept_edits",
+            "ceo_prompt": "Delegate and verify the work.",
+            "roles": {"frontend": {"description": "Build UI", "prompt": "Implement accessibly."}},
+        }
+
+        first = await adapter.spawn("Build the landing page", repo_path=str(tmp_path), context=context)
+        async for _ in adapter.stream_status(first):
+            pass
+        second = await adapter.spawn("Verify the landing page", repo_path=str(tmp_path), context=context)
+        async for _ in adapter.stream_status(second):
+            pass
+
+        first_args, second_args = [json.loads(line) for line in args_log.read_text(encoding="utf-8").splitlines()]
+        assert "--no-session-persistence" not in first_args
+        assert first_args[first_args.index("--permission-mode") + 1] == "accept_edits"
+        assert first_args[first_args.index("--session-id") + 1] == "30ac9dbe-49db-4ef5-a264-71991fdd4fc2"
+        assert first_args[first_args.index("--config-dir") + 1] == str((tmp_path / "company-config" / "blue-team").resolve())
+        assert first_args[first_args.index("--append-system-prompt") + 1] == "Delegate and verify the work."
+        assert "--agents" in first_args
+        assert second_args[second_args.index("--resume") + 1] == "30ac9dbe-49db-4ef5-a264-71991fdd4fc2"
 
 
 # ---------------------------------------------------------------------------

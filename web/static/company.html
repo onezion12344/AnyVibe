@@ -2,188 +2,170 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Coding Vibe · Company Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="cv-company-capability" content="">
+<title>Coding Vibe · Voice Control + Company Kanban</title>
 <link rel="stylesheet" href="/static/call.css">
 <style>
-/* ── Company kanban (extends call.css tokens) ──────────────────────── */
-#company-app {
-  position: relative; z-index: 1; height: 100%;
-  display: flex; flex-direction: column;
-}
-
-/* Header row */
-.cmp-hd {
-  padding: 14px 18px 10px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.cmp-hd-title {
-  font-size: 17px; font-weight: 700;
-  background: linear-gradient(135deg, #f0c87a, var(--accent));
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.cmp-hd-badge {
-  font-size: 11px; font-weight: 500; letter-spacing: 0.06em;
-  color: var(--muted); background: var(--surface);
-  border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px;
-}
-
-/* Controls bar */
-.cmp-ctrl {
-  padding: 0 18px 10px; display: flex; gap: 10px; align-items: center;
-}
-.cmp-btn {
-  font-family: inherit; font-size: 12px; font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--white); background: var(--surface);
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 7px 16px; cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-.cmp-btn:hover { border-color: var(--accent); }
-.cmp-btn.accent { background: var(--accent); border-color: var(--accent); }
-.cmp-btn.accent:hover { background: #c9584a; }
-
-/* Status line */
-.cmp-status {
-  padding: 0 18px 4px; font-size: 11px; color: var(--muted);
-  display: flex; gap: 16px; align-items: center;
-}
-.cmp-status .live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--accent3);
-}
-.cmp-status .live-dot.connected { background: #2ecc71; }
-
-/* Kanban grid — 4 columns for Company mode */
-.cmp-cols {
-  flex: 1; padding: 8px 12px 12px;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 8px; overflow: hidden;
-}
-.cmp-col {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 8px 6px;
-  display: flex; flex-direction: column; gap: 5px;
-  overflow-y: auto;
-}
-.cmp-col-hd {
-  font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
-  text-transform: uppercase; padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center;
-}
-.cmp-col-hd.n1 { color: var(--muted); }
-.cmp-col-hd.n2 { color: var(--accent2); }
-.cmp-col-hd.n3 { color: #e67e22; }
-.cmp-col-hd.n4 { color: var(--accent3); }
-.cmp-col-badge {
-  background: var(--surface); border-radius: 8px;
-  padding: 1px 6px; font-size: 10px;
-}
-
-/* Role card */
-.role-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px; padding: 7px 8px;
-  font-size: 11px;
-  transition: border-color 0.2s, transform 0.2s;
-  cursor: default;
-}
-.role-card:hover {
-  border-color: var(--accent);
-  transform: translateX(3px);
-}
-.role-card .rc-role {
-  font-size: 12px; font-weight: 600; color: var(--accent2);
-  margin-bottom: 2px;
-}
-.role-card .rc-role.ceo { color: var(--accent); }
-.role-card .rc-subtitle {
-  color: var(--white); line-height: 1.4; font-size: 10px;
-}
-.role-card .rc-edges {
-  margin-top: 4px; display: flex; flex-wrap: wrap; gap: 3px;
-}
-.role-card .rc-edge {
-  font-size: 8px; color: var(--accent3); background: rgba(58,138,138,0.15);
-  border: 1px solid rgba(58,138,138,0.3);
-  border-radius: 4px; padding: 1px 5px;
-}
-.role-card.done { opacity: 0.65; border-color: var(--accent3); }
-.role-card.done .rc-role { color: var(--accent3); }
-
-.cmp-col-empty {
-  text-align: center; color: var(--muted); font-size: 11px; padding: 8px 0;
-}
-
-/* Toast / run notification */
-.cmp-toast {
-  position: fixed; top: 18px; right: 18px; z-index: 999;
-  background: var(--surface); border: 1px solid var(--accent);
-  border-radius: 10px; padding: 10px 16px;
-  font-size: 12px; color: var(--white);
-  box-shadow: 0 0 24px rgba(224,122,95,0.2);
-  opacity: 0; transform: translateY(-8px);
-  transition: opacity 0.3s, transform 0.3s;
-  pointer-events: none;
-}
-.cmp-toast.show { opacity: 1; transform: translateY(0); }
+  :root { --bg:#182735; --surface:#213546; --card:#294255; --border:#3a5968; --accent:#d9824f; --accent2:#e3ae45; --accent3:#6f9aad; --white:#f7edd4; --muted:#a8b8bd; }
+  #star-bg { background:radial-gradient(ellipse 70% 60% at 12% 6%,rgba(227,174,69,.15),transparent 60%),radial-gradient(ellipse 62% 55% at 88% 3%,rgba(111,154,173,.15),transparent 58%),radial-gradient(ellipse 52% 45% at 20% 96%,rgba(217,130,79,.12),transparent 60%),var(--bg); }
+  #company-app { position:relative; z-index:1; min-height:100%; display:flex; flex-direction:column; }
+  .cmp-hd { padding:14px 22px 10px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .cmp-brand { display:flex; align-items:center; gap:10px; }
+  .cmp-back { color:var(--muted); text-decoration:none; font-size:18px; }
+  .cmp-back:hover { color:var(--accent); }
+  .cmp-hd-title { font-size:17px; font-weight:700; background:linear-gradient(135deg,#f0c87a,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+  .cmp-hd-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+  .company-picker-wrap { display:flex; align-items:center; gap:7px; min-width:0; padding:4px 8px; border:1px solid var(--border); border-radius:11px; background:rgba(33,53,70,.76); }
+  .company-picker-label { color:var(--accent2); font-size:9px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; white-space:nowrap; }
+  .company-picker { min-width:146px; max-width:214px; overflow:hidden; border:0; outline:0; color:var(--white); background:transparent; font:600 11px inherit; text-overflow:ellipsis; cursor:pointer; }
+  .company-picker option { color:#182735; background:#f7edd4; }
+  .company-team-summary { display:none; color:var(--muted); font-size:9px; white-space:nowrap; }
+  .cmp-hd-badge { font-size:11px; font-weight:500; letter-spacing:.06em; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 10px; white-space:nowrap; }
+  .cmp-layout { flex:1; min-height:0; display:grid; grid-template-columns:minmax(250px,.75fr) minmax(0,1.8fr); gap:12px; padding:0 14px 14px; }
+  .workspace-stack { min-height:0; display:flex; flex-direction:column; gap:12px; }
+  .workspace-stack > .board-panel { flex:1 1 auto; min-height:260px; }
+  .workspace-stack > .network-panel { flex:0 0 356px; }
+  .voice-panel, .board-panel { min-height:0; background:rgba(17,29,51,.72); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .voice-panel { display:flex; flex-direction:column; align-items:center; padding:20px 18px 16px; background:linear-gradient(180deg,rgba(32,45,58,.9),rgba(22,33,47,.9)); }
+  .pet-stage { position:relative; width:100%; min-height:228px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
+  .pet-halo { position:absolute; top:13px; width:188px; height:188px; border-radius:50%; background:radial-gradient(circle,rgba(227,174,69,.28),rgba(91,137,157,.1) 54%,transparent 72%); filter:blur(2px); }
+  .pet-button { position:relative; z-index:1; width:172px; height:190px; overflow:hidden; border:2px solid rgba(227,174,69,.65); border-radius:48% 48% 18% 18%; background:#c8934e; box-shadow:0 18px 34px rgba(0,0,0,.35),0 0 26px rgba(227,174,69,.18); cursor:pointer; transform:translateY(0); transition:transform .2s,box-shadow .2s; }
+  .pet-button:hover { transform:translateY(-5px) rotate(-1deg); box-shadow:0 24px 42px rgba(0,0,0,.4),0 0 34px rgba(227,174,69,.28); }
+  .pet-button:active { transform:translateY(-1px) scale(.98); }
+  .pet-button.pet-bounce { animation:pet-bounce .7s ease; }
+  .pet-button img { width:100%; height:100%; object-fit:cover; object-position:50% 56%; display:block; filter:saturate(.96) contrast(1.03); }
+  .pet-spark { position:absolute; right:16px; top:15px; color:#fff3bd; font-size:20px; text-shadow:0 0 12px #e3ae45; animation:pet-spark 2.4s ease-in-out infinite; }
+  .pet-name { position:relative; z-index:2; margin-top:-2px; padding:3px 12px; border:1px solid rgba(227,174,69,.45); border-radius:999px; background:rgba(31,43,55,.92); color:#f4d58b; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+  .pet-mood { margin-top:7px; color:#b7c9c7; font:italic 11px/1.35 Georgia,serif; text-align:center; }
+  @keyframes pet-bounce { 0%,100%{transform:translateY(0)} 35%{transform:translateY(-9px) rotate(1deg)} 70%{transform:translateY(-3px) rotate(-1deg)} }
+  @keyframes pet-spark { 0%,100%{opacity:.45;transform:scale(.9) rotate(0)} 50%{opacity:1;transform:scale(1.15) rotate(12deg)} }
+  .voice-title { margin-top:11px; font-size:16px; font-weight:700; }
+  .voice-sub { color:var(--muted); font-size:11px; margin-top:3px; text-align:center; }
+  .voice-controls { width:100%; display:flex; gap:8px; margin-top:18px; }
+  .voice-btn { flex:1; min-height:40px; border:1px solid var(--border); border-radius:9px; color:var(--white); background:var(--surface); font:600 12px inherit; cursor:pointer; }
+  .voice-btn:hover:not(:disabled) { border-color:var(--accent); }
+  .voice-btn.primary { background:var(--accent); border-color:var(--accent); }
+  .voice-btn.hang { background:#8e332b; border-color:#8e332b; }
+  .voice-btn:disabled { opacity:.45; cursor:not-allowed; }
+  .voice-status { width:100%; margin-top:12px; padding:9px 10px; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:11px; line-height:1.4; }
+  .voice-status.connected { border-color:var(--accent3); color:#7ae0c0; background:rgba(58,138,138,.08); }
+  .voice-status.connecting { border-color:var(--accent2); color:#f0c87a; }
+  .voice-status.error { border-color:#e05050; color:#f08080; }
+  .voice-status.muted { border-color:var(--accent); color:#f0b0a0; }
+  .voice-dot { display:inline-block; width:8px; height:8px; margin-right:6px; border-radius:50%; background:var(--muted); }
+  .voice-status.connected .voice-dot { background:#2ecc71; box-shadow:0 0 7px #2ecc71; }
+  .voice-status.connecting .voice-dot { background:var(--accent2); animation:pulse-dot 1s infinite; }
+  .voice-status.muted .voice-dot { background:var(--accent); }
+  .voice-transcript { width:100%; min-height:52px; margin-top:10px; padding:9px 10px; border-radius:8px; background:#0a1628; border:1px solid var(--border); color:var(--white); font-size:12px; }
+  .voice-transcript-label { display:block; color:var(--muted); font-size:9px; letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+  .voice-log { width:100%; flex:1; min-height:70px; margin-top:10px; overflow:auto; color:var(--muted); font:10px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; }
+  .voice-log div { padding:1px 0; }
+  .board-panel { display:flex; flex-direction:column; }
+  .board-head { padding:14px 16px 8px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .board-title { font-size:15px; font-weight:700; }
+  .board-subtitle { color:var(--muted); font-size:10px; margin-top:2px; }
+  .cmp-ctrl { display:flex; gap:8px; align-items:center; }
+  .cmp-btn { font:600 11px inherit; color:var(--white); background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:7px 12px; cursor:pointer; }
+  .cmp-btn:hover:not(:disabled) { border-color:var(--accent); }
+  .cmp-btn.accent { background:var(--accent); border-color:var(--accent); }
+  .cmp-btn:disabled { opacity:.5; cursor:not-allowed; }
+  .cmp-status { padding:0 16px 7px; font-size:10px; color:var(--muted); display:flex; gap:10px; align-items:center; }
+  .live-dot { width:8px; height:8px; border-radius:50%; background:var(--accent3); }
+  .live-dot.connected { background:#2ecc71; box-shadow:0 0 7px #2ecc71; }
+  .cmp-cols { flex:1; min-height:0; padding:7px 10px 10px; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; overflow:hidden; }
+  .cmp-col { min-width:0; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:8px 6px; display:flex; flex-direction:column; gap:5px; overflow-y:auto; }
+  .cmp-col-hd { font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; padding-bottom:4px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .cmp-col-hd.n1 { color:var(--muted); } .cmp-col-hd.n2 { color:var(--accent2); } .cmp-col-hd.n3 { color:#e67e22; } .cmp-col-hd.n4 { color:var(--accent3); }
+  .cmp-col-badge { background:var(--surface); border-radius:8px; padding:1px 6px; font-size:10px; }
+  .role-card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:7px 8px; font-size:11px; transition:border-color .2s,transform .2s; }
+  .role-card:hover { border-color:var(--accent); transform:translateX(2px); }
+  .role-card .rc-role { font-size:12px; font-weight:600; color:var(--accent2); margin-bottom:2px; }
+  .role-card .rc-role.ceo { color:var(--accent); } .role-card .rc-subtitle { color:var(--white); line-height:1.4; font-size:10px; }
+  .role-card .rc-edges { margin-top:4px; display:flex; flex-wrap:wrap; gap:3px; }
+  .role-card .rc-edge { font-size:8px; color:var(--accent3); background:rgba(58,138,138,.15); border:1px solid rgba(58,138,138,.3); border-radius:4px; padding:1px 5px; }
+  .role-card.done { opacity:.65; border-color:var(--accent3); } .role-card.done .rc-role { color:var(--accent3); }
+  .cmp-col-empty { text-align:center; color:var(--muted); font-size:11px; padding:8px 0; }
+  .cmp-toast { position:fixed; top:18px; right:18px; z-index:999; max-width:min(420px,calc(100vw - 36px)); background:var(--surface); border:1px solid var(--accent); border-radius:10px; padding:10px 16px; font-size:12px; color:var(--white); box-shadow:0 0 24px rgba(224,122,95,.2); opacity:0; transform:translateY(-8px); transition:opacity .3s,transform .3s; pointer-events:none; }
+  .cmp-toast.show { opacity:1; transform:translateY(0); }
+  .network-panel { min-height:356px; background:linear-gradient(145deg,rgba(22,41,57,.98),rgba(14,29,43,.98)); border:1px solid #41677a; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 18px 35px rgba(0,0,0,.18); }
+  .network-head { padding:12px 16px 9px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .network-eyebrow { color:#e3ae45; font-size:8px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+  .network-title { margin-top:2px; color:#f7edd4; font-size:15px; font-weight:750; letter-spacing:.01em; } .network-subtitle { color:#a8b8bd; font-size:10px; margin-top:2px; }
+  .network-tools { display:flex; flex:0 0 auto; gap:6px; align-items:center; } .network-tools input[type=file] { display:none; }
+  .network-tools .cmp-btn { min-height:30px; padding:6px 9px; white-space:nowrap; border-radius:8px; } .network-tools .network-generate { color:#172737; background:#f0c87a; border-color:#f0c87a; }
+  .network-graph { position:relative; min-height:224px; margin:0 10px; border:1px solid #b4ced5; border-radius:12px; overflow:hidden; background-color:#ecf1ee; background-image:radial-gradient(circle,rgba(46,78,94,.2) 1px,transparent 1.1px),linear-gradient(135deg,rgba(255,255,255,.82),rgba(226,238,235,.92)); background-size:13px 13px,100% 100%; box-shadow:inset 0 1px rgba(255,255,255,.9); }
+  .network-graph svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; } .network-edge-line { fill:none; stroke:#71909a; stroke-width:4; stroke-linecap:round; stroke-linejoin:round; opacity:.74; } .network-edge-line.edge-delegation { stroke:#7062bd; } .network-edge-line.active { stroke:#dd8b3d; stroke-width:5; opacity:1; filter:drop-shadow(0 0 3px rgba(221,139,61,.35)); }
+  .network-node { --node-accent:#5d8797; position:absolute; transform:translate(-50%,-50%); width:clamp(78px,12.5vw,118px); min-height:45px; box-sizing:border-box; padding:5px 6px; display:grid; grid-template-columns:22px minmax(0,1fr); column-gap:5px; align-items:center; text-align:left; border:1.5px solid var(--node-accent); border-radius:10px; color:#223949; background:rgba(255,255,255,.95); box-shadow:0 5px 12px rgba(31,61,72,.14); font-size:9px; transition:border-color .2s,box-shadow .2s,transform .2s; }
+  .network-node:hover { transform:translate(-50%,-50%) translateY(-2px); box-shadow:0 9px 18px rgba(31,61,72,.22); } .network-node.kind-user { --node-accent:#c58e3d; } .network-node.kind-cs { --node-accent:#3d9d88; } .network-node.kind-ceo { --node-accent:#df8641; } .network-node.kind-agent { --node-accent:#7162bd; }
+  .network-node.active { box-shadow:0 0 0 3px rgba(227,174,69,.26),0 8px 18px rgba(31,61,72,.2); } .network-node.done { border-color:#359b75; } .network-node.error { --node-accent:#d95c5c; }
+  .nn-avatar { width:22px; height:22px; grid-row:span 2; display:grid; place-items:center; overflow:hidden; border-radius:50%; color:#fff; background:var(--node-accent); font-size:8px; font-weight:800; letter-spacing:.02em; box-shadow:0 1px 3px rgba(0,0,0,.16); } .nn-avatar img { width:100%; height:100%; object-fit:cover; }
+  .network-node .nn-label { min-width:0; overflow:hidden; color:#213949; font-size:9px; font-weight:800; line-height:1.1; white-space:nowrap; text-overflow:ellipsis; } .network-node .nn-status { width:max-content; max-width:100%; margin-top:2px; padding:1px 4px; overflow:hidden; border-radius:4px; color:#55717e; background:#e7eff0; font-size:7px; font-weight:700; line-height:1.25; text-transform:uppercase; white-space:nowrap; text-overflow:ellipsis; } .network-node .nn-summary { display:none; }
+  .network-activity { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; max-height:70px; min-height:52px; padding:7px 10px 10px; overflow-y:auto; font:9px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace; color:#d7e1e0; }
+  .network-activity .na-row { min-width:0; padding:5px 6px; border:1px solid rgba(111,154,173,.28); border-radius:7px; background:rgba(10,22,40,.38); } .network-activity .na-arrow { display:block; margin-bottom:2px; overflow:hidden; color:#f0c87a; font-weight:800; white-space:nowrap; text-overflow:ellipsis; } .network-activity .na-text { display:-webkit-box; overflow:hidden; color:#b7c9c7; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+  .network-empty { color:#66808a; text-align:center; width:100%; padding:9px; } .network-activity .network-empty { grid-column:1 / -1; }
+  @media (max-width: 780px) { html, body { height:auto; min-height:100%; overflow:auto; } #company-app { min-height:100vh; } .cmp-layout { grid-template-columns:1fr; } .workspace-stack { min-height:1020px; } .voice-panel { min-height:380px; } .voice-log { max-height:90px; } .board-panel { min-height:470px; } .workspace-stack > .network-panel { flex-basis:395px; } .network-graph { min-height:258px; } .company-team-summary { display:block; } }
+  @media (max-width: 560px) { .cmp-hd { padding-left:14px; padding-right:14px; align-items:flex-start; } .cmp-hd-actions { flex-direction:column; align-items:flex-end; gap:5px; } .company-picker-wrap { max-width:184px; } .company-picker { min-width:0; max-width:128px; } .cmp-layout { padding:0 8px 8px; } .cmp-cols { grid-template-columns:repeat(2,minmax(0,1fr)); overflow-y:auto; } .cmp-ctrl { flex-wrap:wrap; } .board-head { align-items:flex-start; flex-direction:column; } .workspace-stack > .network-panel { flex-basis:565px; } .network-head { align-items:flex-start; flex-direction:column; } .network-tools { width:100%; } .network-tools .cmp-btn { flex:1; text-align:center; } .network-graph { min-height:335px; } .network-activity { grid-template-columns:1fr; max-height:88px; } }
 </style>
 </head>
 <body>
-
 <div id="star-bg"></div>
-
 <div id="company-app">
-  <!-- Header -->
-  <div class="cmp-hd">
-    <div class="cmp-hd-title">Company Dashboard</div>
-    <div class="cmp-hd-badge" id="cmp-hd-badge">Disconnected</div>
-  </div>
-
-  <!-- Controls -->
-  <div class="cmp-ctrl">
-    <button class="cmp-btn accent" id="btn-run" disabled>Run Demo</button>
-    <button class="cmp-btn" id="btn-reset">Reset Board</button>
-  </div>
-
-  <!-- Status -->
-  <div class="cmp-status">
-    <div class="live-dot" id="cmp-dot"></div>
-    <span id="cmp-status-text">Waiting for WebSocket...</span>
-    <span id="cmp-card-count" style="margin-left:auto">0 cards</span>
-  </div>
-
-  <!-- Kanban: 4 columns -->
-  <div class="cmp-cols">
-    <div class="cmp-col" id="col-backlog">
-      <div class="cmp-col-hd n1">Backlog <span class="cmp-col-badge">0</span></div>
-      <div id="col-backlog-cards" class="cmp-col-empty">—</div>
+  <header class="cmp-hd">
+    <div class="cmp-brand"><a class="cmp-back" href="/" aria-label="Back to index">←</a><div><div class="cmp-hd-title">Coding Vibe Company</div><div class="board-subtitle">Voice Control · AI Role Team · Live Kanban</div></div></div>
+    <div class="cmp-hd-actions">
+      <div class="company-picker-wrap">
+        <label class="company-picker-label" for="company-picker">Company</label>
+        <select class="company-picker" id="company-picker" aria-label="Active company preset" disabled><option>Loading teams…</option></select>
+        <span class="company-team-summary" id="company-team-summary"></span>
+      </div>
+      <div class="cmp-hd-badge" id="cmp-hd-badge">Board connecting</div>
     </div>
-    <div class="cmp-col" id="col-running">
-      <div class="cmp-col-hd n2">Running <span class="cmp-col-badge">0</span></div>
-      <div id="col-running-cards" class="cmp-col-empty">—</div>
+  </header>
+  <main class="cmp-layout">
+    <section class="voice-panel" aria-label="Voice control">
+      <div class="pet-stage" id="pet-stage">
+        <div class="pet-halo"></div>
+        <button class="pet-button" id="pet-button" aria-label="Interact with Yellow Sheep">
+          <img src="/static/assets/yellow-sheep-hero.png" alt="Yellow Sheep standing in a boat beneath the lighthouse" />
+          <span class="pet-spark">✦</span>
+        </button>
+        <div class="pet-name">黄羊 · Yellow Sheep</div>
+        <div class="pet-mood" id="pet-mood">waiting by the lighthouse</div>
+      </div>
+      <div class="voice-title">Yellow Sheep · CS</div>
+      <div class="voice-sub">Your digital teammate is listening. Call, then watch the crew move.</div>
+      <div class="voice-controls">
+        <button class="voice-btn primary" id="voice-call">Call</button>
+        <button class="voice-btn" id="voice-mute" disabled>Mute</button>
+        <button class="voice-btn hang" id="voice-hangup" disabled>Hang up</button>
+      </div>
+      <div class="voice-status" id="voice-status"><span class="voice-dot"></span><span id="voice-status-text">Ready — tap Call to start</span></div>
+      <div class="voice-transcript"><span class="voice-transcript-label">Latest handoff</span><span id="voice-transcript-text">No task dispatched yet.</span></div>
+      <div class="voice-log" id="voice-log" aria-live="polite"></div>
+    </section>
+    <div class="workspace-stack">
+    <section class="board-panel" aria-label="Company kanban">
+      <div class="board-head"><div><div class="board-title">Live Company Kanban</div><div class="board-subtitle" id="company-board-subtitle">Every voice request becomes a role-team card.</div></div><div class="cmp-ctrl"><button class="cmp-btn accent" id="btn-run">Run Team</button><button class="cmp-btn" id="btn-reset">Reset</button></div></div>
+      <div class="cmp-status"><div class="live-dot" id="cmp-dot"></div><span id="cmp-status-text">Connecting to live board…</span><span id="cmp-card-count" style="margin-left:auto">0 cards</span></div>
+      <div class="cmp-cols">
+        <div class="cmp-col" id="col-backlog"><div class="cmp-col-hd n1">Backlog <span class="cmp-col-badge">0</span></div><div id="col-backlog-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-running"><div class="cmp-col-hd n2">Running <span class="cmp-col-badge">0</span></div><div id="col-running-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-needs_approval"><div class="cmp-col-hd n3">Needs Approval <span class="cmp-col-badge">0</span></div><div id="col-needs_approval-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-done"><div class="cmp-col-hd n4">Done <span class="cmp-col-badge">0</span></div><div id="col-done-cards" class="cmp-col-empty">—</div></div>
+      </div>
+    </section>
+    <section class="network-panel" aria-label="Agent communication network">
+      <div class="network-head"><div><div class="network-eyebrow">Live org map</div><div class="network-title">Agent Network · 组织协作图</div><div class="network-subtitle">You → Yellow Sheep CS → CEO → specialist team</div></div><div class="network-tools"><label class="cmp-btn" for="network-avatar-upload">Upload avatar</label><input id="network-avatar-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><button class="cmp-btn network-generate" id="network-avatar-generate" type="button">Generate avatar</button></div></div>
+      <div class="network-graph" id="network-graph" aria-live="polite"><svg id="network-edges" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg><div class="network-empty" id="network-empty">Waiting for the first voice or company event…</div></div>
+      <div class="network-activity" id="network-activity"><div class="network-empty">Internal summaries will appear here as agents communicate.</div></div>
+    </section>
     </div>
-    <div class="cmp-col" id="col-needs-approval">
-      <div class="cmp-col-hd n3">Needs-Approval <span class="cmp-col-badge">0</span></div>
-      <div id="col-needs_approval-cards" class="cmp-col-empty">—</div>
-    </div>
-    <div class="cmp-col" id="col-done">
-      <div class="cmp-col-hd n4">Done <span class="cmp-col-badge">0</span></div>
-      <div id="col-done-cards" class="cmp-col-empty">—</div>
-    </div>
-  </div>
+  </main>
 </div>
-
-<!-- Toast -->
 <div class="cmp-toast" id="cmp-toast"></div>
-
+<script src="/static/voice-control.js"></script>
+<script>window.__CV_COMPANY_CAPABILITY__ = "";</script>
 <script src="/static/company.js"></script>
 </body>
 </html>

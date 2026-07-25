@@ -19,7 +19,6 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
 import os
 import time
@@ -60,6 +59,7 @@ from receptionist.state import load_state  # noqa: E402
 
 # ── Import routers (mounted below) ─────────────────────────────────────────────
 from web.call_bridge import router as call_bridge_router  # noqa: E402
+from web.auth import is_valid_token, mint_capability  # noqa: E402
 from web.signaling   import router as signaling_router    # noqa: E402
 from web.push_server import router as push_server_router  # noqa: E402
 from web.qoder_company_routes import router as company_router  # noqa: E402
@@ -68,6 +68,7 @@ from web.qoder_company_routes import router as company_router  # noqa: E402
 STATE_DIR = Path(os.environ.get("CODING_VIBE_STATE_DIR", Path.home() / ".coding-vibe"))
 SESSION_FILE = STATE_DIR / "session.json"
 STATIC_DIR = _THIS_DIR / "static"
+DOCS_DIR = _THIS_DIR.parent / "docs"
 
 # ── Security: network-facing dispatch controls ──────────────────────────────────
 # This server is reachable over the network (LAN / tunnel). Real backends such as
@@ -111,9 +112,8 @@ if (_ALLOWED_BACKENDS & _DANGEROUS_BACKENDS) and not CV_API_TOKEN:
 
 def _check_auth(token: str | None) -> None:
     """Enforce the bearer token on state-changing endpoints, if one is configured."""
-    if CV_API_TOKEN:
-        if not token or not hmac.compare_digest(token, CV_API_TOKEN):
-            raise HTTPException(401, "Missing or invalid API token")
+    if CV_API_TOKEN and not is_valid_token(token):
+        raise HTTPException(401, "Missing or invalid API token")
 
 
 def _guard_dispatch(task: str, backend: str, repo_path: str) -> None:
@@ -179,6 +179,7 @@ app.add_middleware(
 )
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/docs", StaticFiles(directory=str(DOCS_DIR)), name="docs")
 
 # ── Mount sub-routers ────────────────────────────────────────────────────────────
 # call_bridge  → WS  /api/call           (realtime voice bridge to StepFun)
@@ -250,22 +251,40 @@ async def root():
     raise HTTPException(500, "index.html not found")
 
 
+async def _company_page_response(request: Request) -> FileResponse | Response:
+    """Serve the unified page with a short-lived local browser capability."""
+    company_html = STATIC_DIR / "company.html"
+    if company_html.exists():
+        html = company_html.read_text(encoding="utf-8")
+        capability = ""
+        if CV_API_TOKEN and request.client and request.client.host in {"127.0.0.1", "::1"}:
+            capability = mint_capability()
+        html = html.replace(
+            'window.__CV_COMPANY_CAPABILITY__ = "";',
+            f"window.__CV_COMPANY_CAPABILITY__ = {json.dumps(capability)};",
+        )
+        html = html.replace(
+            'name="cv-company-capability" content=""',
+            f'name="cv-company-capability" content="{capability}"',
+        )
+        return Response(
+            content=html,
+            media_type="text/html",
+            headers={"Cache-Control": "no-store"},
+        )
+    raise HTTPException(500, "company.html not found")
+
+
 @app.get("/call")
-async def call_page():
-    """Serve the call UI."""
-    call_html = STATIC_DIR / "call.html"
-    if call_html.exists():
-        return FileResponse(str(call_html))
-    raise HTTPException(500, "call.html not found")
+async def call_page(request: Request):
+    """Compatibility alias for the unified voice + company dashboard."""
+    return await _company_page_response(request)
 
 
 @app.get("/company")
-async def company_page():
+async def company_page(request: Request):
     """Serve the company kanban UI."""
-    company_html = STATIC_DIR / "company.html"
-    if company_html.exists():
-        return FileResponse(str(company_html))
-    raise HTTPException(500, "company.html not found")
+    return await _company_page_response(request)
 
 
 @app.post("/api/dispatch")
