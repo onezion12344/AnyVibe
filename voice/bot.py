@@ -45,7 +45,7 @@ try:
     from pipecat.pipeline.task import PipelineParams, PipelineTask
     # SmallWebRTCTransport is in the submodule, not the package __init__
     from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
-    from pipecat.services.deepgram.stt import DeepgramSTTService
+    from voice.stepfun_stt import StepFunSTTService
     from pipecat.services.openai.llm import OpenAILLMService
     from pipecat.audio.vad.silero import SileroVADAnalyzer
     # LLM context / turn aggregation — Pipecat 1.6.0 uses LLMFullResponseAggregator
@@ -164,9 +164,11 @@ def build_pipeline(transport: SmallWebRTCTransport) -> Pipeline:
         )
 
     # ── STT ────────────────────────────────────────────────────────────────────
-    stt = DeepgramSTTService(
-        api_key=DEEPGRAM_API_KEY,
-        model="nova-3",
+    # StepFun step-asr (per-utterance) — we have a valid StepFun key, no Deepgram.
+    stt = StepFunSTTService(
+        api_key=os.environ.get("STEPFUN_API_KEY", ""),
+        base_url=os.environ.get("STEPFUN_BASE_URL", "https://api.stepfun.com/v1"),
+        model="step-asr",
         language="zh",
     )
 
@@ -262,8 +264,6 @@ async def main(transport: SmallWebRTCTransport) -> None:
 def _check_env() -> dict[str, str]:
     """Return a dict of missing env vars and why they are needed."""
     missing = {}
-    if not DEEPGRAM_API_KEY:
-        missing["DEEPGRAM_API_KEY"] = "Required for Deepgram STT (nova-3)"
     if not STEPFUN_API_KEY:
         missing["STEPFUN_API_KEY"] = "Required for StepFun LLM + TTS"
     return missing

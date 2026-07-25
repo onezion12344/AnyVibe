@@ -212,8 +212,6 @@ async def root() -> FileResponse:
 def _check_env() -> dict[str, str]:
     """Return missing env vars."""
     missing: dict[str, str] = {}
-    if not os.environ.get("DEEPGRAM_API_KEY"):
-        missing["DEEPGRAM_API_KEY"] = "Required for Deepgram STT (nova-3)"
     if not os.environ.get("STEPFUN_API_KEY"):
         missing["STEPFUN_API_KEY"] = "Required for StepFun LLM + TTS"
     return missing
