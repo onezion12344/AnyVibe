@@ -181,6 +181,38 @@ async def test_voice_dispatch_callback_receives_the_task_text(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_transport_route_is_bound_before_the_dispatch_ack(monkeypatch):
+    """A fast backend cannot complete before a transport knows its task id."""
+    monkeypatch.setattr(engineer_dispatch, "STEPFUN_API_KEY", "test-key")
+    monkeypatch.setattr(engineer_dispatch.httpx, "AsyncClient", lambda **_kwargs: _ClassificationClient())
+    order: list[str] = []
+
+    def bind_route(info: dict) -> None:
+        assert info["task_id"] == "task-early"
+        order.append("bound")
+
+    async def fake_dispatch(task: str, *, on_task_started) -> dict:
+        assert task == "Build a timer app"
+        # dispatch_to_engineer invokes this synchronously immediately after
+        # allocating its id, before yielding to an async task worker.
+        assert on_task_started is bind_route
+        on_task_started({"status": "dispatched", "task_id": "task-early", "backend": "mock", "task": task})
+        assert order == ["bound"]
+        return {"status": "dispatched", "task_id": "task-early", "backend": "mock"}
+
+    monkeypatch.setattr(engineer_dispatch, "dispatch_to_engineer", fake_dispatch)
+
+    def on_ack(_info: dict) -> None:
+        order.append("ack")
+
+    await engineer_dispatch.classify_and_dispatch(
+        "please make a timer", on_ack, on_task_started=bind_route
+    )
+
+    assert order == ["bound", "ack"]
+
+
+@pytest.mark.asyncio
 async def test_status_report_is_not_sent_to_triage_or_engineers(monkeypatch):
     """A friendly check-in must never silently create a coding ticket."""
     monkeypatch.setattr(engineer_dispatch, "STEPFUN_API_KEY", "test-key")
@@ -297,10 +329,13 @@ async def test_dispatch_runs_the_active_company_once_and_does_not_trigger_a_seco
     """Voice dispatch must use the observer-owned Qoder run, not duplicate it."""
     import qoder_company.company_state as company_state
     import web.qoder_company_routes as company_routes
+    import web.photon_send as photon_send
     import web.signaling as signaling
     import receptionist.state as receptionist_state
 
     calls: list[tuple[str, str]] = []
+    rings: list[dict] = []
+    photon_completions: list[tuple[str, str, object]] = []
     saved_states: list[dict] = []
     state = {"delegations": []}
     run_id = "qoder-123"
@@ -315,12 +350,18 @@ async def test_dispatch_runs_the_active_company_once_and_does_not_trigger_a_seco
         calls.append((task, repo_path))
         return {"run_id": run_id}
 
-    async def fake_ring(**_kwargs):
+    async def fake_ring(**kwargs):
+        rings.append(kwargs)
         return None
+
+    async def fake_photon_completion(task_id: str, summary: str, *, ok=None) -> bool:
+        photon_completions.append((task_id, summary, ok))
+        return False
 
     monkeypatch.setattr(company_routes, "start_company_run", fake_start)
     monkeypatch.setattr(company_routes, "_runs", {run_id: {"status": "done", "observer": None}})
     monkeypatch.setattr(signaling, "ring", fake_ring)
+    monkeypatch.setattr(photon_send, "notify_task_complete", fake_photon_completion)
     monkeypatch.setattr(receptionist_state, "load_state", lambda: state)
     monkeypatch.setattr(receptionist_state, "save_state", lambda state: saved_states.append(state))
 
@@ -330,3 +371,5 @@ async def test_dispatch_runs_the_active_company_once_and_does_not_trigger_a_seco
     assert result == {"status": "dispatched", "task_id": run_id, "backend": "qoder"}
     assert calls == [("Build a concise landing page", str(tmp_path))]
     assert state["delegations"][-1]["status"] == "completed"
+    assert rings == [{"reason": "Task complete: Qoder task complete", "frm": "CEO"}]
+    assert photon_completions == [(run_id, "Qoder task complete", None)]

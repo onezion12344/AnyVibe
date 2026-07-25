@@ -1,0 +1,15 @@
+{
+  "name": "coding-vibe-photon-sidecar",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "spectrum-ts": "^12.4.0"
+  },
+  "scripts": {
+    "start": "node send.mjs"
+  }
+}

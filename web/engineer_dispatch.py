@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import inspect
 import json
 import os
 import re
@@ -467,10 +468,43 @@ def _log(prefix: str, msg: str) -> None:
     print(f"[{prefix}] {msg}", flush=True)
 
 
+def _schedule_photon_completion(task_id: str, result: Any) -> None:
+    """Best-effort Photon completion reply without delaying task finalization.
+
+    Browser signaling remains the primary existing callback.  Photon is only a
+    second transport for a task that originated in a verified Photon space; a
+    missing sidecar or any send error must never change the task result.
+    """
+
+    async def _notify() -> None:
+        try:
+            from web.photon_send import notify_task_complete  # noqa: PLC0415
+
+            summary = (getattr(result, "summary", "") or "")[:1_600]
+            delivered = await notify_task_complete(
+                task_id,
+                summary,
+                ok=getattr(result, "ok", None),
+            )
+            if delivered:
+                _log("DISPATCH", f"photon completion delivered task_id={task_id}")
+        except Exception as exc:
+            _log("DISPATCH", f"photon notify failed (non-fatal): {exc}")
+
+    try:
+        asyncio.create_task(_notify())
+    except Exception as exc:
+        _log("DISPATCH", f"photon notify scheduling failed (non-fatal): {exc}")
+
+
 # ── Core dispatch ────────────────────────────────────────────────────────────────
 
 
-async def dispatch_to_engineer(task: str) -> dict[str, Any]:
+async def dispatch_to_engineer(
+    task: str,
+    *,
+    on_task_started: Callable[[dict[str, Any]], Any] | None = None,
+) -> dict[str, Any]:
     """Spawn *task* on the CEO backend and return immediately.
 
     The callback pattern lets the caller attach an *on_complete* hook before
@@ -479,6 +513,10 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
 
     Args:
         task: Natural-language description of the engineering work.
+        on_task_started: Optional synchronous hook called with the dispatch
+            acknowledgement immediately after a task id exists and before
+            control returns to the event loop.  Message transports use this to
+            bind a reply route before an exceptionally fast task can complete.
 
     Returns:
         Ack dict ``{"status": "dispatched", "task_id": ..., "backend": ...}``.
@@ -525,6 +563,10 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
             await ring(reason=f"Task complete: {summary}", frm="CEO")
         except Exception as exc:
             _log("DISPATCH", f"ring failed: {exc}")
+        # Keep Spectrum delivery independent from, and in addition to, the
+        # browser/phone ring.  It runs in its own guarded task so a local Node
+        # sidecar outage cannot delay or fail completion handling.
+        _schedule_photon_completion(tid, result)
 
     try:
         if backend == "qoder" and company_context is not None:
@@ -563,6 +605,19 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
         _log("DISPATCH", f"dispatch failed: {exc}")
         return {"status": "error", "error": str(exc)}
 
+    info = {"status": "dispatched", "task_id": tid, "backend": backend}
+    if on_task_started is not None:
+        try:
+            callback_result = on_task_started({**info, "task": task})
+            if inspect.isawaitable(callback_result):
+                # The built-in Photon transport is deliberately synchronous
+                # here.  Supporting async adapters remains convenient, but a
+                # custom adapter should avoid yielding in this tiny race-free
+                # registration window.
+                await callback_result
+        except Exception as exc:
+            _log("DISPATCH", f"on_task_started error (non-fatal): {exc}")
+
     # Record delegation so the kanban board shows it as in-progress right away.
     try:
         st = load_state()
@@ -585,7 +640,7 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
     if backend != "qoder":
         asyncio.create_task(_notify_company_board(task))
 
-    return {"status": "dispatched", "task_id": tid, "backend": backend}
+    return info
 
 
 # ── Intent classification ─────────────────────────────────────────────────────────
@@ -594,6 +649,8 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
 async def classify_and_dispatch(
     transcript: str,
     on_dispatched: Callable[[dict[str, Any]], Optional[asyncio.Future]],
+    *,
+    on_task_started: Callable[[dict[str, Any]], Any] | None = None,
 ) -> None:
     """Ask the text CS brain whether *transcript* is a coding request.
 
@@ -610,6 +667,9 @@ async def classify_and_dispatch(
         on_dispatched: Callable ``(info: dict) -> None | asyncio.Future``.
                        Called with the dispatch ack dict if a task was dispatched;
                        called with ``None`` if the transcript was smalltalk.
+        on_task_started: Optional synchronous callback invoked once the task id
+            is allocated, before the async task worker can complete.  This is
+            for transports that need to establish a reply route first.
     """
     text = (transcript or "").strip()
     if not text or not STEPFUN_API_KEY:
@@ -649,13 +709,18 @@ async def classify_and_dispatch(
                 args = json.loads(tc["function"].get("arguments") or "{}")
                 task = (args.get("task") or "").strip()
                 if task and not task.startswith("-"):
-                    info = await dispatch_to_engineer(task)
+                    if on_task_started is None:
+                        info = await dispatch_to_engineer(task)
+                    else:
+                        info = await dispatch_to_engineer(
+                            task, on_task_started=on_task_started
+                        )
                     try:
                         # The dispatch acknowledgement contains the task id and
                         # backend, but the browser needs the human-readable task
                         # to show the CS → CEO handoff in its transcript panel.
                         result = on_dispatched({**info, "task": task})
-                        if asyncio.isfuture(result):
+                        if inspect.isawaitable(result):
                             await result
                     except Exception as exc:
                         _log("CLASSIFY", f"on_dispatched error: {exc}")

@@ -63,6 +63,7 @@ from web.auth import is_valid_token, mint_capability  # noqa: E402
 from web.signaling   import router as signaling_router    # noqa: E402
 from web.push_server import router as push_server_router  # noqa: E402
 from web.qoder_company_routes import router as company_router  # noqa: E402
+from web.photon import router as photon_router  # noqa: E402
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 STATE_DIR = Path(os.environ.get("CODING_VIBE_STATE_DIR", Path.home() / ".coding-vibe"))
@@ -190,10 +191,12 @@ app.mount("/docs", StaticFiles(directory=str(DOCS_DIR)), name="docs")
 #               → POST /api/devices/ring     (native push ring)
 # company      → POST /api/company/run  (Qoder company demo)
 #               → GET  /api/company        (company status)
+# photon       → POST /photon-webhook     (signed Spectrum inbound messages)
 app.include_router(call_bridge_router)
 app.include_router(signaling_router)
 app.include_router(push_server_router)
 app.include_router(company_router)
+app.include_router(photon_router)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
