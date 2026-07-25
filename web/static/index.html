@@ -2,99 +2,353 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#182735">
-<title>Coding Vibe · 黄羊与 AI 公司</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Coding Vibe — Project Index</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#162735; --night:#0f1e2a; --panel:#1b3040; --panel-2:#233d4e; --line:rgba(174,209,209,.22); --cream:#f7edd4; --muted:#b3c5c7; --gold:#e3ae45; --orange:#d9824f; --mint:#69bea7; --violet:#a79aea; }
-  * { box-sizing:border-box; } html { scroll-behavior:smooth; } body { min-width:320px; margin:0; overflow-x:hidden; color:var(--cream); background:var(--night); font-family:ui-rounded,"SF Pro Rounded","Noto Sans SC",system-ui,sans-serif; }
-  a { color:inherit; text-decoration:none; } button { font:inherit; }
-  .sky { position:fixed; inset:0; z-index:-2; background:radial-gradient(circle at 72% 4%,rgba(227,174,69,.17),transparent 27%),radial-gradient(circle at 8% 26%,rgba(105,190,167,.13),transparent 27%),linear-gradient(160deg,#132938 0%,#0e1d29 58%,#192c35 100%); }
-  .sky::before { content:""; position:absolute; inset:0; opacity:.3; background-image:radial-gradient(rgba(247,237,212,.68) 1px,transparent 1.2px); background-size:30px 30px; mask-image:linear-gradient(to bottom,black,transparent 75%); }
-  .shell { width:min(1160px,calc(100% - 40px)); margin:0 auto; }
-  .nav { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:21px 0; }
-  .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.01em; } .brand-mark { display:grid; width:28px; height:28px; place-items:center; border:1px solid rgba(227,174,69,.7); border-radius:10px 10px 14px 14px; color:var(--gold); background:rgba(227,174,69,.1); }
-  .nav-state { display:flex; align-items:center; gap:7px; color:var(--muted); font-size:12px; } .pulse { width:8px; height:8px; border-radius:50%; background:var(--mint); box-shadow:0 0 0 0 rgba(105,190,167,.55); animation:pulse 2s infinite; }
-  @keyframes pulse { 70% { box-shadow:0 0 0 7px rgba(105,190,167,0); } 100% { box-shadow:0 0 0 0 rgba(105,190,167,0); } }
-  .hero { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(340px,.9fr); align-items:center; gap:clamp(30px,6vw,80px); min-height:580px; padding:40px 0 58px; }
-  .eyebrow { display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid rgba(227,174,69,.38); border-radius:999px; color:#f5d58a; background:rgba(227,174,69,.09); font-size:11px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; }
-  .hero h1 { max-width:720px; margin:18px 0; color:var(--cream); font-size:clamp(43px,6vw,78px); font-weight:850; line-height:1.01; letter-spacing:-.055em; } .hero h1 em { color:var(--gold); font-style:normal; }
-  .hero p { max-width:560px; margin:0; color:var(--muted); font-size:clamp(16px,2vw,19px); line-height:1.72; }
-  .hero-actions { display:flex; flex-wrap:wrap; gap:11px; margin-top:29px; } .button { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:48px; padding:0 18px; border:1px solid transparent; border-radius:13px; font-size:14px; font-weight:800; transition:transform .2s,box-shadow .2s,border-color .2s; } .button:hover { transform:translateY(-2px); } .button.primary { color:#172735; background:linear-gradient(135deg,#f3d788,#e3ae45); box-shadow:0 13px 28px rgba(227,174,69,.2); } .button.secondary { border-color:var(--line); color:var(--cream); background:rgba(32,57,71,.65); }
-  .hero-note { display:flex; align-items:center; gap:8px; margin-top:20px; color:#92adaa; font-size:12px; } .hero-note strong { color:#cde1d5; }
-  .sheep-scene { position:relative; min-height:440px; display:grid; place-items:center; isolation:isolate; } .scene-orbit { position:absolute; width:min(100%,430px); aspect-ratio:1; border:1px solid rgba(227,174,69,.3); border-radius:50%; box-shadow:inset 0 0 80px rgba(227,174,69,.07),0 0 75px rgba(105,190,167,.09); } .scene-orbit::after { content:""; position:absolute; inset:12%; border:1px dashed rgba(174,209,209,.2); border-radius:50%; }
-  .sheep-card { position:relative; z-index:1; width:min(86%,345px); overflow:hidden; border:1px solid rgba(227,174,69,.5); border-radius:38% 38% 21% 21%; background:#c8934e; box-shadow:0 25px 55px rgba(0,0,0,.37),0 0 0 12px rgba(227,174,69,.06); transform:rotate(2deg); } .sheep-card img { display:block; width:100%; aspect-ratio:5/6; object-fit:cover; object-position:50% 53%; } .scene-label { position:absolute; z-index:2; right:0; bottom:27px; max-width:190px; padding:12px 15px; border:1px solid rgba(105,190,167,.45); border-radius:14px; color:#d8eeea; background:rgba(20,42,55,.9); box-shadow:0 14px 28px rgba(0,0,0,.18); font-size:12px; line-height:1.4; } .scene-label b { display:block; margin-bottom:2px; color:#8ee1ca; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
-  .section { padding:78px 0; } .section-head { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:27px; } .section-kicker { color:var(--gold); font-size:11px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; } .section h2 { max-width:680px; margin:7px 0 0; font-size:clamp(29px,4vw,46px); line-height:1.1; letter-spacing:-.04em; } .section-summary { max-width:300px; color:var(--muted); font-size:14px; line-height:1.6; }
-  .route { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; } .route-card { min-height:222px; padding:22px; border:1px solid var(--line); border-radius:20px; background:linear-gradient(145deg,rgba(35,61,78,.93),rgba(21,42,55,.9)); } .route-step { display:flex; align-items:center; justify-content:center; width:34px; height:34px; margin-bottom:36px; border-radius:11px; color:var(--gold); background:rgba(227,174,69,.12); font-size:12px; font-weight:900; } .route-card:nth-child(2) .route-step { color:var(--mint); background:rgba(105,190,167,.12); } .route-card:nth-child(3) .route-step { color:#cbc3ff; background:rgba(167,154,234,.13); } .route-card h3 { margin:0 0 8px; font-size:19px; } .route-card p { margin:0; color:var(--muted); font-size:13px; line-height:1.6; }
-  .company { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr); gap:18px; padding:clamp(21px,4vw,38px); border:1px solid rgba(227,174,69,.42); border-radius:26px; background:linear-gradient(125deg,rgba(43,63,69,.98),rgba(28,52,66,.98)); box-shadow:0 28px 55px rgba(0,0,0,.18); } .company-copy h2 { margin:7px 0 12px; font-size:clamp(28px,3.8vw,43px); line-height:1.09; letter-spacing:-.04em; } .company-copy p { max-width:610px; margin:0; color:#c0d1d1; font-size:15px; line-height:1.7; } .company-copy .button { margin-top:24px; }
-  .team-panel { align-self:center; padding:17px; border:1px solid rgba(174,209,209,.22); border-radius:18px; background:rgba(12,30,41,.47); } .team-panel-title { display:flex; justify-content:space-between; gap:12px; color:#dcebea; font-size:12px; font-weight:800; } .team-kind { color:#f3d788; font-size:10px; letter-spacing:.08em; text-transform:uppercase; } .team-roles { display:flex; flex-wrap:wrap; gap:7px; margin:16px 0 18px; } .role-chip { padding:6px 9px; border:1px solid rgba(105,190,167,.33); border-radius:999px; color:#d1e5e0; background:rgba(105,190,167,.08); font-size:11px; } .team-foot { padding-top:13px; border-top:1px solid rgba(174,209,209,.18); color:var(--muted); font-size:11px; }
-  .proof { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; } .proof-item { padding:18px; border:1px solid rgba(174,209,209,.16); border-radius:17px; background:rgba(20,42,55,.46); } .proof-item b { display:block; color:var(--cream); font-size:20px; } .proof-item span { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
-  .footer { display:flex; justify-content:space-between; gap:20px; padding:31px 0 42px; color:#91a9a9; font-size:12px; } .footer a { color:#edca72; } .fade { opacity:0; transform:translateY(14px); transition:opacity .55s ease,transform .55s ease; } .fade.show { opacity:1; transform:none; }
-  @media (max-width:760px) { .shell { width:min(100% - 28px,600px); } .nav { padding:16px 0; } .hero { grid-template-columns:1fr; min-height:auto; padding:44px 0 47px; } .hero h1 { font-size:clamp(43px,13vw,65px); } .sheep-scene { order:-1; min-height:290px; } .scene-orbit { width:250px; } .sheep-card { width:190px; } .scene-label { right:3%; bottom:3px; } .section { padding:50px 0; } .section-head { display:block; } .section-summary { margin-top:12px; } .route,.proof { grid-template-columns:1fr; } .route-card { min-height:0; } .route-step { margin-bottom:22px; } .company { grid-template-columns:1fr; } .footer { display:block; } .footer div + div { margin-top:7px; } }
+:root {
+  --bg:       #182735;
+  --surface:  #213546;
+  --card:     #294255;
+  --border:   #3a5968;
+  --accent:   #d9824f;
+  --accent2:  #e3ae45;
+  --accent3:  #6f9aad;
+  --white:    #f7edd4;
+  --muted:    #a8b8bd;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Space Grotesk', 'Noto Sans SC', -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Starfield background */
+.stars {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%,  rgba(224,122,95,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 25%, rgba(212,168,67,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 40% at 15% 75%, rgba(58,138,138,0.05) 0%, transparent 55%);
+}
+
+.container {
+  position: relative; z-index: 1;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 36px;
+  padding-top: 16px;
+}
+.header h1 {
+  font-size: 28px; font-weight: 700;
+  background: linear-gradient(135deg, #f0c87a, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.header .sub {
+  font-size: 12px; color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.sheep-banner {
+  display:flex; align-items:center; gap:16px; min-height:128px;
+  margin:0 0 28px; padding:0 16px; overflow:hidden;
+  border:1px solid rgba(227,174,69,.38); border-radius:18px;
+  background:linear-gradient(115deg,rgba(41,66,85,.96),rgba(102,137,144,.56));
+  box-shadow:0 16px 34px rgba(0,0,0,.2);
+}
+.sheep-banner img { align-self:flex-end; width:108px; height:150px; object-fit:cover; object-position:50% 54%; margin-top:-20px; border-radius:46% 46% 0 0; filter:saturate(.94); }
+.sheep-banner-copy { padding:18px 0; }
+.sheep-banner-kicker { color:#f0c87a; font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+.sheep-banner-title { margin-top:3px; font-size:18px; font-weight:700; color:var(--white); }
+.sheep-banner-desc { margin-top:4px; color:#c1d1cf; font-size:11px; line-height:1.45; }
+
+/* Section labels */
+.section-label {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px;
+  margin-top: 28px;
+}
+.section-label::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: rgba(224,122,95,0.12);
+}
+
+/* Link cards */
+.links {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.link-card {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 15px 16px;
+  text-decoration: none;
+  color: var(--white);
+  transition: border-color 0.3s, transform 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.link-card:hover {
+  border-color: rgba(224,122,95,0.35);
+  transform: translateX(4px);
+}
+.link-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+}
+
+/* Alternate gradient stripes */
+.link-card:nth-child(5n+1)::before { background: linear-gradient(180deg, #e07a5f, #d4a843); }
+.link-card:nth-child(5n+2)::before { background: linear-gradient(180deg, #d4a843, #e07a5f); }
+.link-card:nth-child(5n+3)::before { background: linear-gradient(180deg, #3a8a8a, #e07a5f); }
+.link-card:nth-child(5n+4)::before { background: linear-gradient(180deg, #e07a5f, #3a8a8a); }
+.link-card:nth-child(5n+5)::before { background: linear-gradient(180deg, #d4a843, #3a8a8a); }
+
+.link-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: rgba(224,122,95,0.08);
+  border: 1px solid rgba(224,122,95,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+
+.link-body { flex: 1; min-width: 0; }
+.link-title {
+  font-size: 14px; font-weight: 600;
+  color: var(--white);
+  margin-bottom: 2px;
+}
+.link-desc {
+  font-size: 11px; color: var(--muted);
+  line-height: 1.4;
+}
+
+.link-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: 10px;
+  background: rgba(224,122,95,0.08);
+  border: 1px solid rgba(224,122,95,0.15);
+  color: var(--accent2);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.link-badge.local {
+  background: rgba(58,138,138,0.08);
+  border-color: rgba(58,138,138,0.15);
+  color: var(--accent3);
+}
+
+.link-arrow {
+  font-size: 16px; color: var(--muted);
+  transition: color 0.2s, transform 0.2s;
+}
+.link-card:hover .link-arrow { color: var(--accent); transform: translateX(3px); }
+
+/* Status dot */
+.status-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  margin-right: 4px;
+}
+.status-dot.online { background: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.5); }
+.status-dot.offline { background: #e74c3c; }
+
+/* Footer */
+.footer {
+  text-align: center; padding-top: 28px;
+  border-top: 1px solid var(--border);
+  margin-top: 32px;
+}
+.footer-tagline {
+  font-size: 16px; font-weight: 700;
+  background: linear-gradient(135deg, #c084fc, #e07a5f);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+.footer-meta {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.footer-meta a { color: var(--accent2); text-decoration: none; }
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
-<div class="sky"></div>
-<main class="shell">
-  <nav class="nav" aria-label="Primary navigation">
-    <a class="brand" href="/" aria-label="Coding Vibe home"><span class="brand-mark">✦</span><span>Coding Vibe</span></a>
-    <div class="nav-state"><span class="pulse"></span><span id="system-status">Company workspace ready</span></div>
-  </nav>
 
-  <section class="hero">
-    <div class="fade">
-      <div class="eyebrow">Voice-native AI company</div>
-      <h1>从一句<em>“你好”</em>，到一支真正开工的团队。</h1>
-      <p>黄羊先像同事一样听你说；当你明确要做产品，它才把需求交给 CEO。CEO 再带着预设角色团队，在同一个持续会话里完成、验证并回报工作。</p>
-      <div class="hero-actions">
-        <a class="button primary" href="/company">开始一段语音简报 <span>→</span></a>
-        <a class="button secondary" href="#how-it-works">看看如何工作 <span>↓</span></a>
+<div class="stars"></div>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header reveal">
+    <h1>Coding Vibe</h1>
+    <p class="sub">AdventureX 2026 · Demo Day 2026-07-26</p>
+  </div>
+
+  <div class="sheep-banner reveal">
+    <img src="/static/assets/yellow-sheep-hero.png" alt="Yellow Sheep in a boat beneath a lighthouse" />
+    <div class="sheep-banner-copy">
+      <div class="sheep-banner-kicker">黄羊 · OneZion</div>
+      <div class="sheep-banner-title">Your crew starts with a hello.</div>
+      <div class="sheep-banner-desc">A small digital teammate for the long route from voice to shipped code.</div>
+    </div>
+  </div>
+
+  <!-- Live Demos -->
+  <div class="section-label reveal">Live Demos</div>
+  <div class="links reveal">
+    <a href="/company" class="link-card">
+      <div class="link-icon">📞</div>
+      <div class="link-body">
+        <div class="link-title">Voice Control + Company Kanban</div>
+        <div class="link-desc">Call the Yellow Sheep, speak naturally, and watch the AI role team work on one live screen</div>
       </div>
-      <div class="hero-note"><span class="pulse"></span><strong>Yellow Sheep · CS</strong><span>· 不会把闲聊误派成任务</span></div>
-    </div>
-    <div class="sheep-scene fade" aria-label="Yellow Sheep digital companion">
-      <div class="scene-orbit"></div>
-      <div class="sheep-card"><img src="/static/assets/yellow-sheep-hero.png" alt="Yellow Sheep standing in a boat beneath a lighthouse"></div>
-      <div class="scene-label"><b>Now on watch</b>接住你的话，再带团队把它变成成果。</div>
-    </div>
-  </section>
+      <span class="link-badge">Live</span>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="http://localhost:7860" class="link-card" target="_blank">
+      <div class="link-icon">🎙️</div>
+      <div class="link-body">
+        <div class="link-title">Voice Server</div>
+        <div class="link-desc">StepFun WebSocket bridge — realtime audio pipeline</div>
+      </div>
+      <span class="link-badge local">local:7860</span>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
 
-  <section class="section" id="how-it-works">
-    <div class="section-head fade"><div><div class="section-kicker">One continuous handoff</div><h2>不用学习如何“操作多智能体”。你只需要说清楚想做什么。</h2></div><p class="section-summary">系统把聊天、派单、内部沟通和交付状态连成一条可见的链路。</p></div>
-    <div class="route">
-      <article class="route-card fade"><div class="route-step">01</div><h3>你 ↔ 黄羊 CS</h3><p>问候、聊进度、讨论想法都先被正常回应。它会澄清模糊需求，不会急着说“收到，马上回电”。</p></article>
-      <article class="route-card fade"><div class="route-step">02</div><h3>CS → CEO</h3><p>只有明确的软件交付才触发派单。你的原话、约束和目标会被准确交给负责决策的 CEO。</p></article>
-      <article class="route-card fade"><div class="route-step">03</div><h3>CEO → 专家团队</h3><p>预设角色分工、内部日志、看板与验证结果在同一工作区里可见，不再是黑箱式“正在处理”。</p></article>
+  <!-- Docs & Resources -->
+  <div class="section-label reveal">Docs & Resources</div>
+  <div class="links reveal">
+    <a href="/docs/landing.html" class="link-card">
+      <div class="link-icon">🌐</div>
+      <div class="link-body">
+        <div class="link-title">Landing Page</div>
+        <div class="link-desc">Marketing landing page — architecture, features, partners, try-it links</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="/docs/success-narrative-vs-mechanism.html" class="link-card">
+      <div class="link-icon">📖</div>
+      <div class="link-body">
+        <div class="link-title">Architecture Docs</div>
+        <div class="link-desc">Success Narratives vs Success Mechanisms — pitch deck / narrative doc</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="https://github.com/onezion12344/coding-vibe" class="link-card" target="_blank" rel="noopener">
+      <div class="link-icon">💻</div>
+      <div class="link-body">
+        <div class="link-title">GitHub Repository</div>
+        <div class="link-desc">Source code, README, MCP server, voice bridge. MIT licensed.</div>
+      </div>
+      <span class="link-badge">Open Source</span>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="https://onezion12344.github.io/projects/coding-vibe/" class="link-card" target="_blank" rel="noopener">
+      <div class="link-icon">🚀</div>
+      <div class="link-body">
+        <div class="link-title">Deployed Landing Page</div>
+        <div class="link-desc">GitHub Pages — share this with judges and visitors</div>
+      </div>
+      <span class="link-badge">GitHub Pages</span>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- Quick Start -->
+  <div class="section-label reveal">Quick Start</div>
+  <div class="links reveal">
+    <a href="docs/QODER-COMPANY-PLAN.md" class="link-card">
+      <div class="link-icon">🏗️</div>
+      <div class="link-body">
+        <div class="link-title">Qoder Company Plan</div>
+        <div class="link-desc">SDD plan — persistent AI company backend. T1-T5, demo-critical slice.</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+    <a href="/static/HANDOFF.md" class="link-card">
+      <div class="link-icon">📋</div>
+      <div class="link-body">
+        <div class="link-title">HANDOFF</div>
+        <div class="link-desc">Code map, what works/doesn't, how to run, priority TODO.</div>
+      </div>
+      <span class="link-arrow">→</span>
+    </a>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer reveal">
+    <div class="footer-tagline">为创造，再一次信仰之跃</div>
+    <div class="footer-meta">
+      AdventureX 2026 · Track #04<br>
+      <a href="https://github.com/onezion12344" target="_blank" rel="noopener">Harry Huang</a> ·
+      Built with Viaim · Qoder · StepFun 阶跃星辰
     </div>
-  </section>
+  </footer>
 
-  <section class="section">
-    <div class="company fade">
-      <div class="company-copy"><div class="section-kicker">Persistent Qoder company</div><h2>选择一家公司，选择它的 CEO 和团队节奏。</h2><p>快速创业、产品打磨、可靠性工程三种团队随时可切换。每一种都有自己的 CEO contract、角色 roster 和持续 Qoder 会话。</p><a class="button primary" href="/company">打开 Company Workspace <span>→</span></a></div>
-      <aside class="team-panel" aria-live="polite"><div class="team-panel-title"><span id="team-name">Rapid Startup</span><span class="team-kind" id="team-kind">loading</span></div><div class="team-roles" id="team-roles"><span class="role-chip">Product</span><span class="role-chip">Frontend</span><span class="role-chip">Fullstack</span><span class="role-chip">QA</span></div><div class="team-foot" id="team-foot">Loading the active company preset…</div></aside>
-    </div>
-  </section>
+</div>
 
-  <section class="section">
-    <div class="section-head fade"><div><div class="section-kicker">Built for a real conversation</div><h2>语音、状态和执行，不用在多个工具之间来回跳。</h2></div></div>
-    <div class="proof"><div class="proof-item fade"><b>ASR → LLM → TTS</b><span>清晰的语音链路，工具调用在文本决策层完成。</span></div><div class="proof-item fade"><b>Live network</b><span>用户、CS、CEO 和 specialist team 的通信被映射成可读网络。</span></div><div class="proof-item fade"><b>Human in control</b><span>可切换公司预设、看到角色和验证；系统不捏造进度。</span></div></div>
-  </section>
-
-  <footer class="footer"><div>为创造，再一次信仰之跃 · AdventureX 2026</div><div><a href="https://github.com/onezion12344/coding-vibe" target="_blank" rel="noopener">GitHub</a> · Built with Qoder · StepFun</div></footer>
-</main>
 <script>
-  (function () {
-    const reveal = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { entry.target.classList.add('show'); reveal.unobserve(entry.target); } }), { threshold: .09 });
-    document.querySelectorAll('.fade').forEach((item) => reveal.observe(item));
-    fetch('/api/company/active').then((response) => response.ok ? response.json() : Promise.reject()).then((state) => {
-      const active = state.active;
-      document.getElementById('team-name').textContent = active.name;
-      document.getElementById('team-kind').textContent = active.type;
-      document.getElementById('team-roles').replaceChildren(...active.roles.map((role) => { const chip = document.createElement('span'); chip.className = 'role-chip'; chip.textContent = role; return chip; }));
-      document.getElementById('team-foot').textContent = active.tagline + ' · persistent Qoder session ready';
-      document.getElementById('system-status').textContent = active.name + ' ready';
-    }).catch(() => { document.getElementById('system-status').textContent = 'Workspace available locally'; document.getElementById('team-foot').textContent = 'Open the workspace to connect a company preset.'; });
-  }());
+(function() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  setTimeout(() => {
+    document.querySelectorAll('.reveal').forEach(el => {
+      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('visible');
+    });
+  }, 100);
+
+  // Quick server status check (non-blocking)
+  fetch('/api/board').then(r => {
+    const dots = document.querySelectorAll('.status-dot');
+    if (r.ok) {
+      dots.forEach(d => { d.classList.add('online'); d.classList.remove('offline'); });
+    }
+  }).catch(() => {});
+})();
 </script>
+
 </body>
 </html>
