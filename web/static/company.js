@@ -59,43 +59,27 @@ const COMPANY = (() => {
     return headers;
   }
 
-  function populatePicker(picker, presets, selectedId) {
-    if (!picker) return;
-    picker.replaceChildren();
-    presets.forEach(preset => {
-      const option = document.createElement('option');
-      option.value = preset.id;
-      option.textContent = preset.name;
-      option.selected = preset.id === selectedId;
-      picker.appendChild(option);
-    });
-    picker.disabled = false;
-  }
-
   function renderCompanyState(payload) {
     const state = payload && (payload.company || payload);
-    if (!state || !state.active) return;
+    if (!state || !state.active || !Array.isArray(state.presets)) return;
     activeCompany = state.active;
     const picker = $('company-picker');
-    const companyPresets = state.company_presets || state.presets || [];
-    const teamPresets = state.team_presets || [];
-    if (picker && Array.isArray(companyPresets)) {
-      populatePicker(picker, companyPresets, activeCompany.company_preset_id || activeCompany.preset_id);
+    if (picker) {
+      picker.replaceChildren();
+      state.presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.id;
+        option.textContent = preset.name;
+        option.selected = preset.id === activeCompany.preset_id;
+        picker.appendChild(option);
+      });
+      picker.disabled = false;
       picker.title = activeCompany.tagline || activeCompany.name;
     }
-    const teamPicker = $('team-picker');
-    if (teamPicker && Array.isArray(teamPresets)) {
-      populatePicker(teamPicker, teamPresets, activeCompany.team_preset_id);
-      teamPicker.title = activeCompany.team_name || 'Selected employee team';
-    }
-    const roleNames = (activeCompany.role_profiles || []).map(role => role.label || role.id);
-    const teamLabel = activeCompany.team_name || 'Employee team';
     const summary = $('company-team-summary');
-    if (summary) summary.textContent = `${teamLabel} · ${roleNames.join(' · ')}`;
+    if (summary) summary.textContent = (activeCompany.roles || []).join(' · ');
     const boardSubtitle = $('company-board-subtitle');
-    if (boardSubtitle) boardSubtitle.textContent = `${activeCompany.name} / ${teamLabel} · ${roleNames.join(' · ')}`;
-    const networkSubtitle = $('network-subtitle');
-    if (networkSubtitle) networkSubtitle.textContent = `You → Yellow Sheep CS → ${activeCompany.name} CEO → ${teamLabel}`;
+    if (boardSubtitle) boardSubtitle.textContent = `${activeCompany.name} · ${(activeCompany.roles || []).join(' · ')}`;
   }
 
   async function loadCompanyState() {
@@ -103,16 +87,12 @@ const COMPANY = (() => {
       const response = await fetch('/api/company/active', { headers: authHeaders() });
       if (!response.ok) return;
       renderCompanyState(await response.json());
-      // The idle network is not an empty state: it is the selected company
-      // plus its roster.  Hydrate it immediately so a refresh never leaves
-      // the user looking at only You → CS → CEO until a task is dispatched.
-      await syncCompanyState();
     } catch {}
   }
 
   async function selectCompanyPreset(event) {
     const picker = event.currentTarget;
-    const previousPreset = activeCompany && (activeCompany.company_preset_id || activeCompany.preset_id);
+    const previousPreset = activeCompany && activeCompany.preset_id;
     const presetId = picker.value;
     if (!presetId || presetId === previousPreset) return;
     picker.disabled = true;
@@ -120,7 +100,7 @@ const COMPANY = (() => {
       const response = await fetch('/api/company/active', {
         method: 'PUT',
         headers: authHeaders(true),
-        body: JSON.stringify({ company_preset_id: presetId }),
+        body: JSON.stringify({ preset_id: presetId }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || data.error || 'Could not switch company');
@@ -128,39 +108,11 @@ const COMPANY = (() => {
       resetBoard();
       networkState = { version: 1, user_avatar: data.active?.avatar || networkState.user_avatar, nodes: [], edges: [], activity: [] };
       renderNetwork();
-      showToast(`Switched to ${data.active.name}. Yellow Sheep now routes to its CEO and team.`);
+      showToast(`Switched to ${data.active.name}. New tasks use its CEO and team.`);
       await syncCompanyState();
     } catch (error) {
       if (previousPreset) picker.value = previousPreset;
       showToast('Company switch failed: ' + (error.message || error));
-    } finally {
-      picker.disabled = false;
-    }
-  }
-
-  async function selectTeamPreset(event) {
-    const picker = event.currentTarget;
-    const previousPreset = activeCompany && activeCompany.team_preset_id;
-    const presetId = picker.value;
-    if (!presetId || presetId === previousPreset) return;
-    picker.disabled = true;
-    try {
-      const response = await fetch('/api/company/team', {
-        method: 'PUT',
-        headers: authHeaders(true),
-        body: JSON.stringify({ team_preset_id: presetId }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || data.error || 'Could not switch employee team');
-      renderCompanyState(data);
-      resetBoard();
-      networkState = { version: 1, user_avatar: data.active?.avatar || networkState.user_avatar, nodes: [], edges: [], activity: [] };
-      renderNetwork();
-      showToast(`Employee team switched to ${data.active.team_name}. Yellow Sheep will use it for the next handoff.`);
-      await syncCompanyState();
-    } catch (error) {
-      if (previousPreset) picker.value = previousPreset;
-      showToast('Employee team switch failed: ' + (error.message || error));
     } finally {
       picker.disabled = false;
     }
@@ -594,8 +546,6 @@ const COMPANY = (() => {
     $('btn-reset').addEventListener('click', resetBoard);
     const companyPicker = $('company-picker');
     if (companyPicker) companyPicker.addEventListener('change', selectCompanyPreset);
-    const teamPicker = $('team-picker');
-    if (teamPicker) teamPicker.addEventListener('change', selectTeamPreset);
     $('btn-run').disabled = false;
     connectWS();
     renderNetwork();

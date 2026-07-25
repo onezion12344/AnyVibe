@@ -28,10 +28,9 @@ from receptionist.adapters.qoder import QoderAdapter, _SDK_AVAILABLE
 from web.auth import is_valid_token
 from qoder_company.company_state import (
     active_dispatch_context,
-    activate_company_preset,
+    activate_preset,
     get_active_company,
     public_company_state,
-    select_team_preset,
     update_active_avatar,
 )
 from qoder_company.network import DEFAULT_AVATAR, NetworkGraph
@@ -72,14 +71,6 @@ def _latest_run(company_id: str | None = None) -> dict[str, Any] | None:
     return max(candidates, key=lambda run: run["started_at"]) if candidates else None
 
 
-def _network_for_company(company: dict[str, Any]) -> NetworkGraph:
-    """Build the idle organisation graph from the active employee preset."""
-    return NetworkGraph(
-        user_avatar=company["avatar"],
-        team_roles=active_dispatch_context()["roles"],
-    )
-
-
 async def start_company_run(
     task: str | None = None,
     *,
@@ -106,12 +97,13 @@ async def start_company_run(
         raise ValueError("mode must be 'company' or 'task'")
     context["mode"] = mode
 
-    # The company and employee presets own the CEO contract and roster.  A
-    # browser request can choose a public team preset, but cannot inject an
-    # arbitrary role map into a persistent company run.
-    if "roles" in body and body["roles"] != context["roles"]:
-        raise ValueError("Choose employee roles through an employee-team preset")
-    roles = context["roles"]
+    # The preset owns the CEO contract and permission profile.  Optional roles
+    # and model are useful for local experiments, but never replace the safety
+    # fields selected by the active company.
+    roles = body.get("roles", context["roles"])
+    if not isinstance(roles, dict):
+        raise ValueError("roles must be an object keyed by agent name")
+    context["roles"] = roles
     model = body.get("model")
     if model is not None and not isinstance(model, str):
         raise ValueError("model must be a string")
@@ -144,8 +136,7 @@ async def start_company_run(
         "roles": roles,
         "model": model,
         "company_id": active_company["id"],
-        "company_preset_id": active_company["company_preset_id"],
-        "team_preset_id": active_company["team_preset_id"],
+        "preset_id": active_company["preset_id"],
         "started_at": time.time(),
         "status": "running",
         "observer": None,
@@ -155,10 +146,7 @@ async def start_company_run(
     async def _drive() -> None:
         observer = CompanyObserver(
             adapter=adapter,
-            network=NetworkGraph(
-                user_avatar=active_company["avatar"],
-                team_roles=roles,
-            ),
+            network=NetworkGraph(user_avatar=active_company["avatar"]),
         )
         run_info["observer"] = observer
         try:
@@ -177,8 +165,7 @@ async def start_company_run(
         "task": resolved_task,
         "mode": mode,
         "company_id": active_company["id"],
-        "company_preset_id": active_company["company_preset_id"],
-        "team_preset_id": active_company["team_preset_id"],
+        "preset_id": active_company["preset_id"],
         "roles": list(roles),
         "model": model,
         "fixture_mode": bool(fixture_path),
@@ -189,7 +176,7 @@ async def start_company_run(
 
 @router.get("/api/company/presets")
 async def company_presets(request: Request):
-    """List company and employee-team presets without exposing prompts."""
+    """List selectable company shapes without exposing their CEO prompts."""
     _check_auth(request)
     return public_company_state()
 
@@ -203,29 +190,15 @@ async def company_active(request: Request):
 
 @router.put("/api/company/active")
 async def select_company_preset(request: Request, body: dict[str, Any] | None = None):
-    """Switch company profile; its own prior employee selection is preserved."""
+    """Switch to a known preset; the new company receives its own session."""
     _check_auth(request)
-    preset_id = (body or {}).get("company_preset_id") or (body or {}).get("preset_id")
+    preset_id = (body or {}).get("preset_id")
     if not isinstance(preset_id, str):
-        raise HTTPException(400, "company_preset_id must be a string")
+        raise HTTPException(400, "preset_id must be a string")
     try:
-        activate_company_preset(preset_id)
+        activate_preset(preset_id)
     except KeyError:
         raise HTTPException(404, f"Unknown company preset: {preset_id}") from None
-    return public_company_state()
-
-
-@router.put("/api/company/team")
-async def select_employee_team(request: Request, body: dict[str, Any] | None = None):
-    """Switch the active company's employee roster but keep its CEO session."""
-    _check_auth(request)
-    team_preset_id = (body or {}).get("team_preset_id")
-    if not isinstance(team_preset_id, str):
-        raise HTTPException(400, "team_preset_id must be a string")
-    try:
-        select_team_preset(team_preset_id)
-    except KeyError:
-        raise HTTPException(404, f"Unknown employee team preset: {team_preset_id}") from None
     return public_company_state()
 
 
@@ -240,17 +213,15 @@ async def company_run(request: Request, body: dict[str, Any] | None = None):
             "repo_path": "/path/to/repo",                  # default: /tmp/cv-demo
             "fixture_path": "/path/to/qoder_company_demo.jsonl",  # default: CV_QODER_FIXTURE
             "mode": "company|task",                       # default: active company
-            "roles": {"...": "..."},                         # must equal selected employee team
+            "roles": {"engineer": "Implement and test code"}, # local experiment override
             "model": "optional-qoder-model",               # optional Qoder model
             "use_cli": false,                               # fixture/test override only
             "run_id": "my-run-id"                          # auto-generated if omitted
         }
 
-    The selected company and employee-team presets supply the CEO prompt,
-    persistent Qoder session and role roster.  Callers cannot inject an
-    arbitrary roster into a persistent company run. Returns immediately with a
-    ``run_id``; the observer streams card and network events to connected
-    board clients in the background.
+    The selected preset supplies the CEO prompt, persistent Qoder session and
+    role roster. Returns immediately with a ``run_id``; the observer streams
+    card and network events to connected board clients in the background.
     """
     _check_auth(request)
     try:
@@ -272,7 +243,7 @@ async def company_status(request: Request, run_id: str | None = None):
         return {
             "runs": [],
             "message": "No runs yet. POST /api/company/run to start one.",
-            "network": _network_for_company(company).snapshot(),
+            "network": NetworkGraph(user_avatar=company["avatar"]).snapshot(),
             "company": public_company_state(),
         }
 
@@ -288,7 +259,7 @@ async def company_status(request: Request, run_id: str | None = None):
         "card_count": observer.card_count if observer else 0,
         "last_op": last_op,
         "emitted_ops": emitted,
-        "network": observer.network_snapshot if observer else _network_for_company(company).snapshot(),
+        "network": observer.network_snapshot if observer else NetworkGraph(user_avatar=company["avatar"]).snapshot(),
         "company": public_company_state(),
     }
 
@@ -302,7 +273,7 @@ async def company_network(request: Request, run_id: str | None = None):
     company = get_active_company()
     target = _runs.get(run_id) if run_id else _latest_run(company["id"])
     observer = target.get("observer") if target else None
-    return {"run_id": target.get("run_id") if target else None, "network": observer.network_snapshot if observer else _network_for_company(company).snapshot(), "company": public_company_state()}
+    return {"run_id": target.get("run_id") if target else None, "network": observer.network_snapshot if observer else NetworkGraph(user_avatar=company["avatar"]).snapshot(), "company": public_company_state()}
 
 
 @router.post("/api/company/avatar")

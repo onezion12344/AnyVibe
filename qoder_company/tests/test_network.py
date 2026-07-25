@@ -16,28 +16,6 @@ def test_network_has_root_chain_and_json_contract():
     assert {"version", "nodes", "edges", "activity"} <= snapshot.keys()
 
 
-def test_selected_team_is_visible_before_any_task_is_dispatched():
-    graph = NetworkGraph(
-        team_roles={
-            "architect": {"label": "Systems Architect"},
-            "backend": {"label": "Backend Reliability Engineer"},
-        }
-    )
-    snapshot = graph.snapshot()
-    assert {node["id"] for node in snapshot["nodes"]} == {
-        "user", "cs", "ceo", "architect", "backend"
-    }
-    assert all(
-        node["status"] == "idle"
-        for node in snapshot["nodes"]
-        if node["id"] in {"architect", "backend"}
-    )
-    assert {edge["id"] for edge in snapshot["edges"]} >= {
-        "ceo->architect:delegation",
-        "ceo->backend:delegation",
-    }
-
-
 def test_tool_and_message_events_create_internal_edges_and_logs():
     async def run():
         graph = NetworkGraph()

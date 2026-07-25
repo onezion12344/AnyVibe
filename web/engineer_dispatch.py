@@ -298,22 +298,6 @@ def _is_goodbye_only_turn(text: str) -> bool:
     )
 
 
-def _routing_instructions(base: str) -> str:
-    """Inject the selected company/team into the shared CS decision prompt.
-
-    This adds only public routing information, never the CEO or employee
-    system prompts.  If the company layer is absent in an older deployment the
-    receptionist keeps its existing conservative behaviour.
-    """
-    try:
-        from qoder_company.company_state import receptionist_routing_brief  # noqa: PLC0415
-
-        return f"{base}\n\n{receptionist_routing_brief()}"
-    except Exception as exc:
-        _log("ROUTING", f"active company brief unavailable: {exc}")
-        return base
-
-
 async def plan_call_turn(transcript: str) -> CallTurn:
     """Use the reasoning model to choose a reply, dispatch, or hang-up action.
 
@@ -333,7 +317,7 @@ async def plan_call_turn(transcript: str) -> CallTurn:
     payload = {
         "model": CS_BRAIN_MODEL,
         "messages": [
-            {"role": "system", "content": _routing_instructions(CALL_ROUTER_INSTRUCTIONS)},
+            {"role": "system", "content": CALL_ROUTER_INSTRUCTIONS},
             {"role": "user", "content": text},
         ],
         "tools": CALL_TOOLS,
@@ -561,19 +545,7 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
     if backend != "qoder":
         asyncio.create_task(_notify_company_board(task))
 
-    ack: dict[str, Any] = {"status": "dispatched", "task_id": tid, "backend": backend}
-    if company_context is not None:
-        ack.update(
-            {
-                "company_id": company_context.get("company_id"),
-                "company_name": company_context.get("company_name"),
-                "company_preset_id": company_context.get("company_preset_id"),
-                "team_preset_id": company_context.get("team_preset_id"),
-                "team_name": company_context.get("team_name"),
-                "roles": list((company_context.get("roles") or {}).keys()),
-            }
-        )
-    return ack
+    return {"status": "dispatched", "task_id": tid, "backend": backend}
 
 
 # ── Intent classification ─────────────────────────────────────────────────────────
@@ -611,7 +583,7 @@ async def classify_and_dispatch(
         "messages": [
             {
                 "role": "system",
-                "content": _routing_instructions(CS_TRIAGE_INSTRUCTIONS),
+                "content": CS_TRIAGE_INSTRUCTIONS,
             },
             {"role": "user", "content": text},
         ],

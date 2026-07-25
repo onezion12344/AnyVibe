@@ -85,15 +85,6 @@ class _CallPlanningClient:
         return _CallPlanningResponse()
 
 
-class _CapturingPlanningClient(_CallPlanningClient):
-    def __init__(self) -> None:
-        self.payload: dict | None = None
-
-    async def post(self, *_args, **kwargs):
-        self.payload = kwargs["json"]
-        return _CallPlanningResponse()
-
-
 class _RateLimitedResponse:
     status_code = 429
     text = '{"error":{"message":"request limited"}}'
@@ -222,34 +213,6 @@ async def test_call_planner_uses_explicit_text_tool_for_software_work(monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_shared_receptionist_receives_active_company_and_team_for_each_handoff(monkeypatch):
-    """One CS gets the selected destination without receiving private prompts."""
-    client = _CapturingPlanningClient()
-    monkeypatch.setattr(engineer_dispatch, "STEPFUN_API_KEY", "test-key")
-    monkeypatch.setattr(engineer_dispatch.httpx, "AsyncClient", lambda **_kwargs: client)
-    import qoder_company.company_state as company_state
-
-    monkeypatch.setattr(
-        company_state,
-        "receptionist_routing_brief",
-        lambda: (
-            "Active handoff destination for this call: company=Product Polish Studio "
-            "[product-polish]; employee_team=Experience Crew [experience-crew]; "
-            "available_roles=ux (UX Lead), frontend (Frontend Craftsperson)."
-        ),
-    )
-
-    decision = await engineer_dispatch.plan_call_turn("请给网站添加登录功能")
-
-    assert decision.action == "dispatch"
-    assert client.payload is not None
-    system_prompt = client.payload["messages"][0]["content"]
-    assert "company=Product Polish Studio [product-polish]" in system_prompt
-    assert "employee_team=Experience Crew [experience-crew]" in system_prompt
-    assert "private" not in system_prompt.lower()
-
-
-@pytest.mark.asyncio
 async def test_rate_limited_planner_keeps_only_clear_software_dispatches(monkeypatch):
     """A 429 must not turn an explicit feature request into lost work."""
     monkeypatch.setattr(engineer_dispatch, "STEPFUN_API_KEY", "test-key")
@@ -354,16 +317,6 @@ async def test_dispatch_runs_the_active_company_once_and_does_not_trigger_a_seco
     result = await engineer_dispatch.dispatch_to_engineer("Build a concise landing page")
     await asyncio.sleep(0.05)
 
-    assert result == {
-        "status": "dispatched",
-        "task_id": run_id,
-        "backend": "qoder",
-        "company_id": "rapid-startup",
-        "company_name": None,
-        "company_preset_id": None,
-        "team_preset_id": None,
-        "team_name": None,
-        "roles": [],
-    }
+    assert result == {"status": "dispatched", "task_id": run_id, "backend": "qoder"}
     assert calls == [("Build a concise landing page", str(tmp_path))]
     assert state["delegations"][-1]["status"] == "completed"

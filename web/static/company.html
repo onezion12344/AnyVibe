@@ -105,7 +105,7 @@
   .network-activity .na-row { min-width:0; padding:5px 6px; border:1px solid rgba(111,154,173,.28); border-radius:7px; background:rgba(10,22,40,.38); } .network-activity .na-arrow { display:block; margin-bottom:2px; overflow:hidden; color:#f0c87a; font-weight:800; white-space:nowrap; text-overflow:ellipsis; } .network-activity .na-text { display:-webkit-box; overflow:hidden; color:#b7c9c7; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
   .network-empty { color:#66808a; text-align:center; width:100%; padding:9px; } .network-activity .network-empty { grid-column:1 / -1; }
   @media (max-width: 780px) { html, body { height:auto; min-height:100%; overflow:auto; } #company-app { min-height:100vh; } .cmp-layout { grid-template-columns:1fr; } .workspace-stack { min-height:1020px; } .voice-panel { min-height:380px; } .voice-log { max-height:90px; } .board-panel { min-height:470px; } .workspace-stack > .network-panel { flex-basis:395px; } .network-graph { min-height:258px; } .company-team-summary { display:block; } }
-  @media (max-width: 560px) { .cmp-hd { padding-left:14px; padding-right:14px; align-items:flex-start; } .cmp-hd-actions { flex-direction:column; align-items:flex-end; gap:5px; } .company-picker-wrap { max-width:220px; } .company-picker { min-width:0; max-width:150px; } .cmp-layout { padding:0 8px 8px; } .cmp-cols { grid-template-columns:repeat(2,minmax(0,1fr)); overflow-y:auto; } .cmp-ctrl { flex-wrap:wrap; } .board-head { align-items:flex-start; flex-direction:column; } .workspace-stack > .network-panel { flex-basis:565px; } .network-head { align-items:flex-start; flex-direction:column; } .network-tools { width:100%; } .network-tools .cmp-btn { flex:1; text-align:center; } .network-graph { min-height:335px; } .network-activity { grid-template-columns:1fr; max-height:88px; } }
+  @media (max-width: 560px) { .cmp-hd { padding-left:14px; padding-right:14px; align-items:flex-start; } .cmp-hd-actions { flex-direction:column; align-items:flex-end; gap:5px; } .company-picker-wrap { max-width:184px; } .company-picker { min-width:0; max-width:128px; } .cmp-layout { padding:0 8px 8px; } .cmp-cols { grid-template-columns:repeat(2,minmax(0,1fr)); overflow-y:auto; } .cmp-ctrl { flex-wrap:wrap; } .board-head { align-items:flex-start; flex-direction:column; } .workspace-stack > .network-panel { flex-basis:565px; } .network-head { align-items:flex-start; flex-direction:column; } .network-tools { width:100%; } .network-tools .cmp-btn { flex:1; text-align:center; } .network-graph { min-height:335px; } .network-activity { grid-template-columns:1fr; max-height:88px; } }
 </style>
 </head>
 <body>
@@ -116,11 +116,7 @@
     <div class="cmp-hd-actions">
       <div class="company-picker-wrap">
         <label class="company-picker-label" for="company-picker">Company</label>
-        <select class="company-picker" id="company-picker" aria-label="Active company preset" disabled><option>Loading companies…</option></select>
-      </div>
-      <div class="company-picker-wrap">
-        <label class="company-picker-label" for="team-picker">Employees</label>
-        <select class="company-picker" id="team-picker" aria-label="Active employee team preset" disabled><option>Loading teams…</option></select>
+        <select class="company-picker" id="company-picker" aria-label="Active company preset" disabled><option>Loading teams…</option></select>
         <span class="company-team-summary" id="company-team-summary"></span>
       </div>
       <div class="cmp-hd-badge" id="cmp-hd-badge">Board connecting</div>
@@ -160,7 +156,7 @@
       </div>
     </section>
     <section class="network-panel" aria-label="Agent communication network">
-      <div class="network-head"><div><div class="network-eyebrow">Live org map</div><div class="network-title">Agent Network · 组织协作图</div><div class="network-subtitle" id="network-subtitle">You → Yellow Sheep CS → CEO → selected employee team</div></div><div class="network-tools"><label class="cmp-btn" for="network-avatar-upload">Upload avatar</label><input id="network-avatar-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><button class="cmp-btn network-generate" id="network-avatar-generate" type="button">Generate avatar</button></div></div>
+      <div class="network-head"><div><div class="network-eyebrow">Live org map</div><div class="network-title">Agent Network · 组织协作图</div><div class="network-subtitle">You → Yellow Sheep CS → CEO → specialist team</div></div><div class="network-tools"><label class="cmp-btn" for="network-avatar-upload">Upload avatar</label><input id="network-avatar-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><button class="cmp-btn network-generate" id="network-avatar-generate" type="button">Generate avatar</button></div></div>
       <div class="network-graph" id="network-graph" aria-live="polite"><svg id="network-edges" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg><div class="network-empty" id="network-empty">Waiting for the first voice or company event…</div></div>
       <div class="network-activity" id="network-activity"><div class="network-empty">Internal summaries will appear here as agents communicate.</div></div>
     </section>

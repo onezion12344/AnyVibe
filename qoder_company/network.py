@@ -39,11 +39,7 @@ def _actor_id(actor: str | None) -> str:
 class NetworkGraph:
     """Mutable graph that can be serialized for the browser and replayed."""
 
-    def __init__(
-        self,
-        user_avatar: str = DEFAULT_AVATAR,
-        team_roles: dict[str, dict[str, str]] | None = None,
-    ) -> None:
+    def __init__(self, user_avatar: str = DEFAULT_AVATAR) -> None:
         self.user_avatar = user_avatar or DEFAULT_AVATAR
         self.nodes: dict[str, dict[str, Any]] = {}
         self.edges: dict[str, dict[str, Any]] = {}
@@ -54,13 +50,6 @@ class NetworkGraph:
         self._ensure_node("ceo", "CEO", "ceo")
         self._ensure_edge("user", "cs", "handoff")
         self._ensure_edge("cs", "ceo", "handoff")
-        # A selected employee preset is part of the organisation before the
-        # first job begins.  Seed it here so switching a team visibly changes
-        # the org chart instead of leaving a blank CEO-only graph.
-        for role_id, profile in (team_roles or {}).items():
-            label = str(profile.get("label") or role_id.replace("_", " ").title())
-            self._ensure_node(role_id, label, "agent", "idle")
-            self._ensure_edge("ceo", role_id, "delegation")
 
     def _ensure_node(
         self,
