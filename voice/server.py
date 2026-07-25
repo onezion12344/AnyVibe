@@ -52,6 +52,10 @@ PUBLIC_WSS = os.environ.get("CV_PUBLIC_WSS", "wss://twilio.onezion.top/twilio-st
 _MAX_TWILIO_STREAMS = int(os.environ.get("CV_MAX_TWILIO_STREAMS", "4"))
 _active_twilio_streams = 0
 
+# Twilio auth token — used to validate X-Twilio-Signature on /twilio-voice so
+# only genuine Twilio requests get TwiML (and the minted capability token).
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
+
 # StepFun Realtime session config — kept verbatim in sync with the browser
 # frontend (voice/frontend/index.html session.update): same instructions, voice,
 # audio formats, transcription and turn_detection so phone and web behave alike.
@@ -267,13 +271,37 @@ async def twilio_voice(request: Request):
     Twilio fetches this when a call reaches the configured number; the returned
     <Connect><Stream> hands the call's media to our /twilio-stream WebSocket.
     """
-    # Append the shared secret so /twilio-stream can authenticate the media
-    # socket — the wss URL is public and otherwise anyone could open a StepFun
-    # session on it. XML-escape the separator since it lives in an attribute.
+    # (1) Authenticate the request actually came from Twilio (best-effort:
+    #     needs TWILIO_AUTH_TOKEN + the twilio SDK). Rejects forged callers who
+    #     would otherwise harvest the capability token from the TwiML.
+    if TWILIO_AUTH_TOKEN:
+        try:
+            from twilio.request_validator import RequestValidator
+
+            validator = RequestValidator(TWILIO_AUTH_TOKEN)
+            form = dict(await request.form())
+            # Behind a tunnel the app sees localhost, so trust forwarded
+            # proto/host (the values Twilio actually signed against).
+            proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+            host = (
+                request.headers.get("x-forwarded-host")
+                or request.headers.get("host")
+                or request.url.netloc
+            )
+            public_url = f"{proto}://{host}{request.url.path}"
+            sig = request.headers.get("X-Twilio-Signature", "")
+            if not validator.validate(public_url, form, sig):
+                return Response(content="forbidden", status_code=403)
+        except ImportError:
+            print("[twilio] twilio SDK missing — skipping signature check", flush=True)
+
+    # (2) Embed a SHORT-LIVED capability token (never the long-lived secret) so
+    #     a logged TwiML URL only leaks a value that expires in _CAP_TTL.
     stream_url = PUBLIC_WSS
     if CV_API_TOKEN:
+        cap = _mint_capability()
         sep = "&amp;" if "?" in PUBLIC_WSS else "?"
-        stream_url = f"{PUBLIC_WSS}{sep}token={CV_API_TOKEN}"
+        stream_url = f"{PUBLIC_WSS}{sep}token={cap}"
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
         f'<Response><Connect><Stream url="{stream_url}" /></Connect></Response>'
@@ -303,15 +331,17 @@ async def twilio_stream(ws: WebSocket):
         return
 
     _active_twilio_streams += 1
-    await ws.accept()
-    print("[twilio] Media Stream client connected", flush=True)
-
     stepfun_ws = None
     stream_sid: str | None = None
     in_state = None   # Twilio → StepFun resampler state (8k → 24k)
     out_state = None  # StepFun → Twilio resampler state (24k → 8k)
 
     try:
+        # accept() inside the try so the counter always decrements in finally,
+        # even if the handshake itself fails (otherwise the cap slot leaks).
+        await ws.accept()
+        print("[twilio] Media Stream client connected", flush=True)
+
         # ── Connect to StepFun Realtime API (same params as /ws relay) ────────
         stepfun_ws = await websockets.connect(
             f"{STEPFUN_REALTIME_URL}?model={REALTIME_MODEL}",
