@@ -28,6 +28,14 @@ def _role_from_text(text: str) -> tuple[str | None, str]:
     return None, text.strip()
 
 
+def _actor_id(actor: str | None) -> str:
+    """Return a safe network actor id, defaulting old adapter events to CEO."""
+    clean = (actor or "").strip().lower()
+    if clean and clean.replace("_", "").replace("-", "").isalnum() and len(clean) <= 64:
+        return clean
+    return "ceo"
+
+
 class NetworkGraph:
     """Mutable graph that can be serialized for the browser and replayed."""
 
@@ -111,11 +119,19 @@ class NetworkGraph:
         self.user_avatar = avatar_url
         self.nodes["user"]["avatar"] = avatar_url
 
-    async def apply_event(self, kind: str, text: str) -> dict[str, Any]:
+    async def apply_event(self, kind: str, text: str, *, actor: str = "") -> dict[str, Any]:
         """Apply one streamed status event and return its latest activity."""
         raw = (text or "").strip()
         role, message = _role_from_text(raw)
         now = time.time()
+        # New Qoder adapters preserve the actor explicitly.  Older adapters
+        # did not, so retain their useful delegation-context behaviour for
+        # messages/progress after ``CEO → specialist`` while keeping an
+        # untagged direct tool call owned by the CEO.
+        source = _actor_id(actor) if actor else (
+            self.active_role if kind in {"message", "progress"} and self.active_role in self.nodes else "ceo"
+        )
+        self._ensure_node(source, source.replace("_", " ").title(), "ceo" if source == "ceo" else "agent")
 
         # Tool events are CEO delegations in the adapter contract.
         if kind == "tool" and role:
@@ -126,34 +142,36 @@ class NetworkGraph:
             self.nodes["cs"]["column"] = "running"
             self.active_role = role
             self.nodes[role]["column"] = "running"
-            edge = self._ensure_edge("ceo", role, "delegation")
+            edge = self._ensure_edge(source, role, "delegation")
             edge["status"] = "active"
-            summary = await summarize(message, role="ceo")
+            summary = await summarize(message, role=source)
             self._append(edge, summary, message, now)
             edge["messages"] += 1
             self._append(self.nodes[role], summary, message, now)
-            activity = {"from": "ceo", "to": role, "kind": kind, "text": summary, "ts": now}
+            activity = {"from": source, "to": role, "kind": kind, "text": summary, "ts": now}
         else:
-            source = self.active_role if self.active_role in self.nodes else "ceo"
-            target = "ceo" if source == "ceo" else source
-            if kind in {"message", "progress", "tool"}:
+            if kind == "tool":
+                # A direct Bash/Write call is work performed by the emitting
+                # role, not a fictional CS → CEO message.  Keep it as a local
+                # activity (the browser renders this as "CEO · tool").
                 summary = await summarize(raw, role=source)
-                node = self._ensure_node(target, target.replace("_", " ").title(), "agent", "running")
+                self.nodes[source]["status"] = "running"
+                self.nodes[source]["column"] = "running"
+                self._append(self.nodes[source], summary, raw, now)
+                activity = {"from": source, "to": source, "kind": kind, "text": summary, "ts": now}
+            elif kind in {"message", "progress"}:
+                summary = await summarize(raw, role=source)
+                target = "cs" if source == "ceo" else "ceo"
+                node = self._ensure_node(target, target.replace("_", " ").title(), "cs" if target == "cs" else "ceo", "running")
                 node["status"] = "running"
                 node["column"] = "running"
+                self._append(self.nodes[source], summary, raw, now)
                 self._append(node, summary, raw, now)
-                if source != "ceo":
-                    edge = self._ensure_edge(source, "ceo", "message")
-                    edge["status"] = "active"
-                    self._append(edge, summary, raw, now)
-                    edge["messages"] += 1
-                    activity = {"from": source, "to": "ceo", "kind": kind, "text": summary, "ts": now}
-                else:
-                    edge = self._ensure_edge("cs", "ceo", "message")
-                    edge["status"] = "active"
-                    self._append(edge, summary, raw, now)
-                    edge["messages"] += 1
-                    activity = {"from": "cs", "to": "ceo", "kind": kind, "text": summary, "ts": now}
+                edge = self._ensure_edge(source, target, "message")
+                edge["status"] = "active"
+                self._append(edge, summary, raw, now)
+                edge["messages"] += 1
+                activity = {"from": source, "to": target, "kind": kind, "text": summary, "ts": now}
             elif kind == "done":
                 for node in self.nodes.values():
                     if node["kind"] in {"cs", "ceo", "agent"}:
@@ -162,14 +180,28 @@ class NetworkGraph:
                 for edge in self.edges.values():
                     if edge["status"] == "active":
                         edge["status"] = "done"
-                activity = {"from": "ceo", "to": "user", "kind": kind, "text": raw or "Task complete", "ts": now}
+                completion = raw or "Task complete"
+                ceo_to_cs = self._ensure_edge("ceo", "cs", "message")
+                ceo_to_cs["status"] = "done"
+                self._append(ceo_to_cs, completion, completion, now)
+                ceo_to_cs["messages"] += 1
+                cs_to_user = self._ensure_edge("cs", "user", "handoff")
+                cs_to_user["status"] = "done"
+                self._append(cs_to_user, completion, completion, now)
+                cs_to_user["messages"] += 1
+                self.activity.append({"from": "ceo", "to": "cs", "kind": kind, "text": completion, "ts": now})
+                activity = {"from": "cs", "to": "user", "kind": kind, "text": completion, "ts": now}
             elif kind == "error":
                 self.nodes["ceo"]["status"] = "error"
                 self.nodes["ceo"]["column"] = "needs_approval"
                 self._append(self.nodes["ceo"], raw, raw, now)
-                activity = {"from": "ceo", "to": "user", "kind": kind, "text": raw, "ts": now}
+                edge = self._ensure_edge("ceo", "cs", "message")
+                edge["status"] = "active"
+                self._append(edge, raw, raw, now)
+                edge["messages"] += 1
+                activity = {"from": "ceo", "to": "cs", "kind": kind, "text": raw, "ts": now}
             else:
-                activity = {"from": "cs", "to": "ceo", "kind": kind, "text": raw, "ts": now}
+                activity = {"from": source, "to": "cs" if source == "ceo" else "ceo", "kind": kind, "text": raw, "ts": now}
 
         self.activity.append(activity)
         del self.activity[:-MAX_LOGS]

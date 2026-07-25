@@ -54,6 +54,28 @@ def test_tool_and_message_events_create_internal_edges_and_logs():
     assert snapshot["activity"][-1]["to"] == "ceo"
 
 
+def test_ceo_completion_flows_through_cs_to_user_and_direct_tools_are_not_cs_messages():
+    async def run():
+        graph = NetworkGraph()
+        direct_tool = await graph.apply_event("tool", "Write({'file_path': 'demo.py'})", actor="ceo")
+        ceo_update = await graph.apply_event("message", "Implementation and tests passed", actor="ceo")
+        completion = await graph.apply_event("done", "Qoder task complete", actor="ceo")
+        return graph.snapshot(), direct_tool, ceo_update, completion
+
+    snapshot, direct_tool, ceo_update, completion = asyncio.run(run())
+    assert direct_tool["from"] == direct_tool["to"] == "ceo"
+    assert ceo_update["from"] == "ceo"
+    assert ceo_update["to"] == "cs"
+    assert completion["from"] == "cs"
+    assert completion["to"] == "user"
+    assert completion["kind"] == "done"
+    assert completion["text"] == "Qoder task complete"
+    assert [(item["from"], item["to"]) for item in snapshot["activity"][-2:]] == [
+        ("ceo", "cs"),
+        ("cs", "user"),
+    ]
+
+
 def test_done_and_error_map_to_network_columns():
     async def run():
         graph = NetworkGraph()

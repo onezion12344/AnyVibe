@@ -134,6 +134,18 @@ class TestCompanyObserverFixtureRun:
             + str([op.get("op") for op in observer.emitted])
         )
 
+    async def test_network_preserves_qoder_roles_and_completion_handoff(self):
+        """Fixture actors must not be misreported as CS → CEO traffic."""
+        observer = await _run_observer()
+        directions = [
+            (activity["from"], activity["to"])
+            for activity in observer.network_snapshot["activity"]
+        ]
+        assert ("researcher", "ceo") in directions
+        assert ("full_stack", "ceo") in directions
+        assert ("qa", "ceo") in directions
+        assert directions[-2:] == [("ceo", "cs"), ("cs", "user")]
+
     async def test_card_created_ops_count(self):
         """Four card_created ops (CEO + 3 sub-roles) must appear."""
         observer = await _run_observer()

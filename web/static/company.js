@@ -406,7 +406,8 @@ const COMPANY = (() => {
       activity.replaceChildren();
       const items = (networkState.activity || []).slice(-5).reverse();
       if (!items.length) { const e = document.createElement('div'); e.className = 'network-empty'; e.textContent = 'Internal summaries will appear here as agents communicate.'; activity.appendChild(e); }
-      items.forEach(item => { const row = document.createElement('div'); row.className = 'na-row'; const arrow = document.createElement('span'); arrow.className = 'na-arrow'; arrow.textContent = `${item.from || '?'} → ${item.to || '?'}`; row.appendChild(arrow); const text = document.createElement('span'); text.className = 'na-text'; text.textContent = item.text || item.kind || ''; row.appendChild(text); activity.appendChild(row); });
+      const activityName = id => id === 'ceo' ? 'CEO' : id === 'cs' ? 'CS' : id === 'user' ? 'You' : String(id || '?').replaceAll('_', ' ');
+      items.forEach(item => { const row = document.createElement('div'); row.className = 'na-row'; const arrow = document.createElement('span'); arrow.className = 'na-arrow'; const from = item.from || '?'; const to = item.to || '?'; arrow.textContent = from === to ? `${activityName(from)} · ${item.kind || 'work'}` : `${activityName(from)} → ${activityName(to)}`; row.appendChild(arrow); const text = document.createElement('span'); text.className = 'na-text'; text.textContent = item.text || item.kind || ''; row.appendChild(text); activity.appendChild(row); });
     }
   }
 

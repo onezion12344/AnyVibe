@@ -109,6 +109,13 @@ class TestQoderAdapterFixtureMode:
         assert "tool" in kinds, f"Expected 'tool' events, got: {kinds}"
         assert "message" in kinds, f"Expected 'message' events, got: {kinds}"
 
+    async def test_fixture_events_preserve_the_qoder_actor(self, adapter):
+        handle = await adapter.spawn("帮我写快速排序", repo_path="/tmp/fakerepo")
+        events = [event async for event in adapter.stream_status(handle)]
+        assert any(event.kind == "message" and event.actor == "researcher" for event in events)
+        assert any(event.kind == "tool" and event.actor == "ceo" for event in events)
+        assert events[-1].actor == "ceo"
+
     # ── result ───────────────────────────────────────────────────────────────
 
     async def test_result_returns_task_result_ok(self, adapter):

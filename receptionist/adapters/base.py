@@ -10,10 +10,16 @@ from typing import AsyncIterator
 
 @dataclass
 class StatusEvent:
-    """A single status update emitted by a running harness."""
+    """A single status update emitted by a running harness.
+
+    ``actor`` is the emitting Qoder role when the backend provides it.  It is
+    intentionally optional so older adapters remain compatible, but it lets
+    the company network distinguish a CEO update from a CS handoff.
+    """
 
     kind: str
     text: str
+    actor: str = ""
 
     # Allowed kinds
     PROGRESS = "progress"

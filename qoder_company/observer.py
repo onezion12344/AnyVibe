@@ -132,7 +132,7 @@ class CompanyObserver:
             logger.debug("[observer] network broadcast failed: %s", exc)
 
     async def _push_network(self, event: StatusEvent) -> None:
-        activity = await self.network.apply_event(event.kind, event.text)
+        activity = await self.network.apply_event(event.kind, event.text, actor=event.actor)
         payload = {"snapshot": self.network.snapshot(), "activity": activity}
         self.network_emitted.append(payload)
         del self.network_emitted[:-24]

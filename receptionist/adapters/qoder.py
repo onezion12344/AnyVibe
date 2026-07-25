@@ -126,7 +126,7 @@ async def _replay_fixture(fixture_path: str, handle: str) -> None:
                     continue
                 record = json.loads(line)
                 rtype = record.get("type", "")
-                role = record.get("role", "")
+                role = str(record.get("role", "") or "ceo")
                 content_blocks = record.get("content", [])
                 text_field = record.get("text")  # optional per-record text
 
@@ -140,7 +140,7 @@ async def _replay_fixture(fixture_path: str, handle: str) -> None:
                             txt = block.get("text", "")
                             if txt:
                                 store["events"].append(
-                                    StatusEvent(kind="message", text=txt)
+                                    StatusEvent(kind="message", text=txt, actor=role)
                                 )
                         elif btype == "tool_use":
                             name = block.get("name", "tool")
@@ -154,6 +154,7 @@ async def _replay_fixture(fixture_path: str, handle: str) -> None:
                                     StatusEvent(
                                         kind="tool",
                                         text=f"{agent_role}: {summary}",
+                                        actor=role,
                                     )
                                 )
                             else:
@@ -162,32 +163,34 @@ async def _replay_fixture(fixture_path: str, handle: str) -> None:
                                     StatusEvent(
                                         kind="tool",
                                         text=f"{name}({args})",
+                                        actor=role,
                                     )
                                 )
                         elif btype == "tool_result":
                             res_text = block.get("content", "") or str(block)
                             store["events"].append(
                                 StatusEvent(
-                                    kind="progress",
-                                    text=(res_text[:200] if isinstance(res_text, str) else str(res_text)[:200]),
+                                        kind="progress",
+                                        text=(res_text[:200] if isinstance(res_text, str) else str(res_text)[:200]),
+                                        actor=role,
                                 )
                             )
 
                     # Also check for a plain ``text`` field (simple records)
                     if text_field and not content_blocks:
                         store["events"].append(
-                            StatusEvent(kind="message", text=text_field)
+                            StatusEvent(kind="message", text=text_field, actor=role)
                         )
 
                 elif rtype == "tool_result":
                     res_text = record.get("content", "") or record.get("text", "") or str(record)
                     store["events"].append(
-                        StatusEvent(kind="progress", text=str(res_text)[:200])
+                        StatusEvent(kind="progress", text=str(res_text)[:200], actor=role)
                     )
 
                 elif rtype == "result":
                     # terminal event — add a done marker
-                    store["events"].append(StatusEvent(kind="done", text="Qoder task complete"))
+                    store["events"].append(StatusEvent(kind="done", text="Qoder task complete", actor="ceo"))
 
                 # Yield between events so stream_status looks live
                 await asyncio.sleep(0.08)
@@ -203,7 +206,7 @@ async def _replay_fixture(fixture_path: str, handle: str) -> None:
     finally:
         # Always emit a done marker so stream_status consumers can assert it.
         if not any(e.kind == "done" for e in store["events"]):
-            store["events"].append(StatusEvent(kind="done", text="Qoder task complete"))
+            store["events"].append(StatusEvent(kind="done", text="Qoder task complete", actor="ceo"))
         store["status"] = "done"
 
 
@@ -219,6 +222,7 @@ def _append_stream_record(store: dict, record: dict) -> bool:
     rtype = str(record.get("type", "")).lower()
     message = record.get("message")
     payload = message if isinstance(message, dict) else record
+    actor = str(payload.get("role") or record.get("role") or "ceo")
     content_blocks = payload.get("content", record.get("content", []))
     if not isinstance(content_blocks, list):
         content_blocks = [{"type": "text", "text": str(content_blocks)}]
@@ -231,7 +235,7 @@ def _append_stream_record(store: dict, record: dict) -> bool:
             if btype == "text":
                 text = str(block.get("text", "")).strip()
                 if text:
-                    store["events"].append(StatusEvent(kind="message", text=text))
+                    store["events"].append(StatusEvent(kind="message", text=text, actor=actor))
             elif btype == "tool_use":
                 name = str(block.get("name", "tool"))
                 input_data = block.get("input", {})
@@ -241,20 +245,20 @@ def _append_stream_record(store: dict, record: dict) -> bool:
                     prompt = str(input_data.get("prompt", "…"))
                     summary = prompt[:80] + ("…" if len(prompt) > 80 else "")
                     store["events"].append(
-                        StatusEvent(kind="tool", text=f"{agent_role}: {summary}")
+                        StatusEvent(kind="tool", text=f"{agent_role}: {summary}", actor=actor)
                     )
                 else:
                     store["events"].append(
-                        StatusEvent(kind="tool", text=f"{name}({str(input_data)[:60]})")
+                        StatusEvent(kind="tool", text=f"{name}({str(input_data)[:60]})", actor=actor)
                     )
             elif btype == "tool_result":
                 result = block.get("content", "") or str(block)
-                store["events"].append(StatusEvent(kind="progress", text=str(result)[:200]))
+                store["events"].append(StatusEvent(kind="progress", text=str(result)[:200], actor=actor))
         return False
 
     if rtype in {"tool_result", "toolresult"}:
         result = payload.get("content", record.get("content", "")) or str(record)
-        store["events"].append(StatusEvent(kind="progress", text=str(result)[:200]))
+        store["events"].append(StatusEvent(kind="progress", text=str(result)[:200], actor=actor))
         return False
 
     if rtype == "result":
@@ -265,14 +269,14 @@ def _append_stream_record(store: dict, record: dict) -> bool:
                 or payload.get("content")
                 or "qodercli reported an unsuccessful result"
             )
-            store["events"].append(StatusEvent(kind="error", text=str(error)[:500]))
+            store["events"].append(StatusEvent(kind="error", text=str(error)[:500], actor=actor))
         return True
 
     # stream-json can include a few informational records; they are useful
     # only when they carry human-readable progress and are otherwise ignored.
     text = payload.get("text") or record.get("text")
     if text:
-        store["events"].append(StatusEvent(kind="progress", text=str(text)[:200]))
+        store["events"].append(StatusEvent(kind="progress", text=str(text)[:200], actor=actor))
     return False
 
 
@@ -405,6 +409,7 @@ async def _run_live_session(handle: str, client: QoderSDKClient, prompt: str, mo
             # ---- AssistantMessage ----
             # SDK documented shape: msg.type == "assistant", msg.content = [...]
             msg_type = getattr(msg, "type", "") or type(msg).__name__.lower()
+            actor = str(getattr(msg, "role", "") or "ceo")
 
             if msg_type in ("assistant", "assistantmessage"):
                 content = getattr(msg, "content", [])
@@ -418,7 +423,7 @@ async def _run_live_session(handle: str, client: QoderSDKClient, prompt: str, mo
                         txt = block.get("text", "")
                         if txt:
                             store["events"].append(
-                                StatusEvent(kind="message", text=txt)
+                                StatusEvent(kind="message", text=txt, actor=actor)
                             )
                     elif btype == "tool_use":
                         name = block.get("name", "tool")
@@ -428,19 +433,19 @@ async def _run_live_session(handle: str, client: QoderSDKClient, prompt: str, mo
                             prompt_txt = inp.get("prompt", "…")
                             summary = prompt_txt[:80] + ("…" if len(prompt_txt) > 80 else "")
                             store["events"].append(
-                                StatusEvent(kind="tool", text=f"{agent_role}: {summary}")
+                                StatusEvent(kind="tool", text=f"{agent_role}: {summary}", actor=actor)
                             )
                         else:
                             args = str(inp)[:60]
                             store["events"].append(
-                                StatusEvent(kind="tool", text=f"{name}({args})")
+                                StatusEvent(kind="tool", text=f"{name}({args})", actor=actor)
                             )
 
             # ---- ToolResult ----
             elif msg_type in ("tool_result", "toolresult"):
                 content = getattr(msg, "content", None) or str(msg)
                 store["events"].append(
-                    StatusEvent(kind="progress", text=str(content)[:200])
+                    StatusEvent(kind="progress", text=str(content)[:200], actor=actor)
                 )
 
             # ---- ResultMessage ----
@@ -453,22 +458,22 @@ async def _run_live_session(handle: str, client: QoderSDKClient, prompt: str, mo
                 delta = getattr(msg, "delta", None) or str(msg)
                 if delta:
                     store["events"].append(
-                        StatusEvent(kind="progress", text=f"[delta] {str(delta)[:120]}")
+                        StatusEvent(kind="progress", text=f"[delta] {str(delta)[:120]}", actor=actor)
                     )
 
             # Unknown type — store as a progress note
             else:
                 store["events"].append(
-                    StatusEvent(kind="progress", text=f"[{msg_type}] {str(msg)[:120]}")
+                    StatusEvent(kind="progress", text=f"[{msg_type}] {str(msg)[:120]}", actor=actor)
                 )
 
-        store["events"].append(StatusEvent(kind="done", text="Qoder task complete"))
+        store["events"].append(StatusEvent(kind="done", text="Qoder task complete", actor="ceo"))
     except Exception as exc:
         store["events"].append(StatusEvent(kind="error", text=str(exc)))
     finally:
         # Emit "done" before flipping status so stream_status can yield it.
         if store["status"] != "failed":
-            store["events"].append(StatusEvent(kind="done", text="Qoder task complete"))
+            store["events"].append(StatusEvent(kind="done", text="Qoder task complete", actor="ceo"))
         store["status"] = "done"
         if mode == "task":
             try:
