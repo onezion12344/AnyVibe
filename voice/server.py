@@ -277,23 +277,24 @@ async def twilio_voice(request: Request):
     if TWILIO_AUTH_TOKEN:
         try:
             from twilio.request_validator import RequestValidator
-
-            validator = RequestValidator(TWILIO_AUTH_TOKEN)
-            form = dict(await request.form())
-            # Behind a tunnel the app sees localhost, so trust forwarded
-            # proto/host (the values Twilio actually signed against).
-            proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-            host = (
-                request.headers.get("x-forwarded-host")
-                or request.headers.get("host")
-                or request.url.netloc
-            )
-            public_url = f"{proto}://{host}{request.url.path}"
-            sig = request.headers.get("X-Twilio-Signature", "")
-            if not validator.validate(public_url, form, sig):
-                return Response(content="forbidden", status_code=403)
         except ImportError:
-            print("[twilio] twilio SDK missing — skipping signature check", flush=True)
+            # Fail CLOSED: the token is configured (we intend to validate) but
+            # we can't — refuse rather than serve TwiML + a real capability token.
+            print("[twilio] twilio SDK missing — refusing request", flush=True)
+            return Response(content="forbidden", status_code=403)
+
+        from urllib.parse import urlsplit
+
+        validator = RequestValidator(TWILIO_AUTH_TOKEN)
+        form = dict(await request.form())
+        # Pin the signed URL host to our configured public endpoint (PUBLIC_WSS)
+        # instead of trusting client-supplied x-forwarded-* headers (spoofable).
+        # Twilio always calls webhooks over https.
+        pub_host = urlsplit(PUBLIC_WSS).netloc or request.url.netloc
+        public_url = f"https://{pub_host}{request.url.path}"
+        sig = request.headers.get("X-Twilio-Signature", "")
+        if not validator.validate(public_url, form, sig):
+            return Response(content="forbidden", status_code=403)
 
     # (2) Embed a SHORT-LIVED capability token (never the long-lived secret) so
     #     a logged TwiML URL only leaks a value that expires in _CAP_TTL.
