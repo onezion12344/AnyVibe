@@ -66,8 +66,15 @@
     if (_tokenReady) {
       const _origFetch = window.fetch.bind(window);
       window.fetch = (input, init = {}) => {
-        const url = typeof input === "string" ? input : (input && input.url) || "";
-        if (url.indexOf("/api/offer") !== -1) {
+        const raw = typeof input === "string" ? input : (input && input.url) || "";
+        let sameOriginOffer = false;
+        try {
+          const u = new URL(raw, location.origin);
+          // Only attach the token to a genuine same-origin /api/offer request
+          // (POST offer + PATCH ICE candidates) — never leak it to a foreign origin.
+          sameOriginOffer = u.origin === location.origin && u.pathname === "/api/offer";
+        } catch (_) { sameOriginOffer = false; }
+        if (sameOriginOffer) {
           const headers = new Headers(init.headers || {});
           headers.set("x-cv-token", CV_TOKEN);
           init = { ...init, headers };

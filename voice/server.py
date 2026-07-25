@@ -27,7 +27,7 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -39,8 +39,14 @@ sys.path.insert(0, str(_WORKTREE_ROOT))
 _FRONTEND_DIR = Path(__file__).parent / "frontend"
 
 # ── Pipecat imports ──────────────────────────────────────────────────────────────
-from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
+from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection, IceServer
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
+from pipecat.transports.smallwebrtc.request_handler import (
+    SmallWebRTCRequestHandler,
+    SmallWebRTCRequest,
+    SmallWebRTCPatchRequest,
+    IceCandidate,
+)
 from pipecat.transports.base_transport import TransportParams
 
 from voice.bot import main as bot_main  # noqa: E402 — local, after sys.path
@@ -135,110 +141,106 @@ if _FRONTEND_DIR.exists():
         app.mount("/node_modules", StaticFiles(directory=str(_NM)), name="node_modules")
 
 
+# ── SmallWebRTC request handler ───────────────────────────────────────────────────
+# The official pipecat handler speaks the exact protocol the @pipecat-ai JS client
+# expects: POST /api/offer → {sdp, type, pc_id}; PATCH /api/offer → trickle-ICE
+# candidates keyed by pc_id. (The previous hand-rolled endpoint returned session_id
+# and nested the answer dict under "sdp", and had no ICE PATCH — so WebRTC never
+# completed and the browser could not connect.)
+
+_TRANSPORT_PARAMS = TransportParams(
+    audio_in_enabled=True,
+    audio_in_sample_rate=24_000,
+    audio_in_channels=1,
+    audio_out_enabled=True,
+    audio_out_sample_rate=24_000,
+    audio_out_channels=1,
+)
+_ICE = [IceServer(urls=u.strip()) for u in _ICE_SERVERS if u.strip()]
+_request_handler = SmallWebRTCRequestHandler(ice_servers=_ICE)
+
+
+async def _on_webrtc_connection(connection: SmallWebRTCConnection) -> None:
+    """Handler callback for each NEW peer connection — start a bot pipeline."""
+    pc_id = connection.pc_id
+    transport = SmallWebRTCTransport(connection, _TRANSPORT_PARAMS)
+    print(f"[server] pc {pc_id}: starting bot", flush=True)
+    asyncio.create_task(_run_bot(pc_id, transport, connection))
+
+
 # ── SDP offer/answer endpoint ───────────────────────────────────────────────────
 
 
 @app.post("/api/offer")
 async def handle_offer(request: Request) -> JSONResponse:
-    """Receive a browser SDP offer, create a bot task, and return the SDP answer.
+    """Browser SDP offer → SDP answer (with ``pc_id``).
 
-    The browser sends::
-
-        POST /api/offer
-        {"sdp": "<browser SDP offer>", "type": "offer"}
-
-    We respond::
-
-        {"sdp": "<bot SDP answer>", "type": "answer", "session_id": "..."}
+    Handles both a fresh offer (new connection + bot) and renegotiation (when the
+    body carries a known ``pc_id``). Returns ``{sdp, type, pc_id}`` — the JS client
+    stores ``pc_id`` and uses it to trickle ICE candidates via ``PATCH``.
     """
     try:
         body = await request.json()
     except Exception:
         return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
 
-    # Auth gate — same token as the rest of the API (this endpoint reaches the CEO).
+    # Auth gate — this endpoint reaches the CEO backend (code exec).
     if not _check_offer_auth(request, body):
         return JSONResponse({"error": "unauthorized"}, status_code=401)
 
-    sdp: str = body.get("sdp", "")
-    sdp_type: str = body.get("type", "offer")
-    # Always server-generated — never trust a client-supplied session_id.
-    session_id: str = str(uuid.uuid4())[:8]
+    try:
+        req = SmallWebRTCRequest.from_dict(body)
+        answer = await _request_handler.handle_web_request(req, _on_webrtc_connection)
+        if answer is None:
+            raise RuntimeError("SmallWebRTC connection produced no SDP answer")
+        return JSONResponse(answer)  # {sdp, type, pc_id}
+    except Exception as exc:
+        print(f"[server] offer error: {exc}", flush=True)
+        return JSONResponse({"error": str(exc)}, status_code=500)
 
-    if not sdp or sdp_type != "offer":
-        return JSONResponse(
-            {"error": "Expected body {sdp, type='offer'}"},
-            status_code=400,
-        )
 
-    # Create a WebRTC connection for this peer
-    ice_servers = [s.strip() for s in _ICE_SERVERS if s.strip()]
-    connection = SmallWebRTCConnection(ice_servers=ice_servers)
+@app.patch("/api/offer")
+async def handle_offer_patch(request: Request) -> JSONResponse:
+    """Trickle-ICE candidates from the browser, keyed by ``pc_id``."""
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Invalid JSON body"}, status_code=400)
 
-    async with _connection_lock:
-        if len(_connections) >= _MAX_CONNECTIONS:
-            return JSONResponse({"error": "server at capacity"}, status_code=429)
-        _connections[session_id] = connection
-
-    # Build transport params
-    params = TransportParams(
-        audio_in_enabled=True,
-        audio_in_sample_rate=24_000,
-        audio_in_channels=1,
-        audio_out_enabled=True,
-        audio_out_sample_rate=24_000,
-        audio_out_channels=1,
-    )
+    if not _check_offer_auth(request, body):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
 
     try:
-        # Initialize the connection with the browser's offer — this generates the answer
-        await connection.initialize(sdp=sdp, type=sdp_type)
-        answer_sdp = connection.get_answer()
-        if answer_sdp is None:
-            raise RuntimeError("SmallWebRTC connection produced no SDP answer")
-
-        print(f"[server] Session {session_id}: SDP answer generated", flush=True)
-
-        # Start the bot as a background task (it will run until the call ends)
-        transport = SmallWebRTCTransport(connection, params)
-        asyncio.create_task(_run_bot(session_id, transport, connection))
-
-        return JSONResponse(
-            {
-                "sdp": answer_sdp,
-                "type": "answer",
-                "session_id": session_id,
-            }
-        )
-
+        candidates = [IceCandidate(**c) for c in (body.get("candidates") or [])]
+        preq = SmallWebRTCPatchRequest(pc_id=body.get("pc_id", ""), candidates=candidates)
+        await _request_handler.handle_patch_request(preq)
+        return JSONResponse({"status": "ok"})
+    except HTTPException:
+        raise
     except Exception as exc:
-        print(f"[server] Session {session_id}: offer error: {exc}", flush=True)
-        async with _connection_lock:
-            _connections.pop(session_id, None)
+        print(f"[server] ice patch error: {exc}", flush=True)
         return JSONResponse({"error": str(exc)}, status_code=500)
 
 
 async def _run_bot(
-    session_id: str,
+    pc_id: str,
     transport: SmallWebRTCTransport,
     connection: SmallWebRTCConnection,
 ) -> None:
     """Run the Pipecat bot pipeline for one session, then clean up."""
     try:
-        print(f"[server] Session {session_id}: bot starting", flush=True)
+        print(f"[server] pc {pc_id}: bot starting", flush=True)
         await bot_main(transport)
     except asyncio.CancelledError:
-        print(f"[server] Session {session_id}: bot cancelled", flush=True)
+        print(f"[server] pc {pc_id}: bot cancelled", flush=True)
     except Exception as exc:
-        print(f"[server] Session {session_id}: bot error: {exc}", flush=True)
+        print(f"[server] pc {pc_id}: bot error: {exc}", flush=True)
     finally:
-        print(f"[server] Session {session_id}: bot ended, closing connection", flush=True)
+        print(f"[server] pc {pc_id}: bot ended, closing connection", flush=True)
         try:
-            await connection.close()
+            await connection.disconnect()
         except Exception:
             pass
-        async with _connection_lock:
-            _connections.pop(session_id, None)
 
 
 # ── Root → client page ───────────────────────────────────────────────────────────
