@@ -47,6 +47,11 @@ REALTIME_MODEL = os.environ.get("CV_REALTIME_MODEL", "step-1o-audio")
 # Public wss:// URL Twilio dials into (tunnel/ingress → this server's /twilio-stream)
 PUBLIC_WSS = os.environ.get("CV_PUBLIC_WSS", "wss://twilio.onezion.top/twilio-stream")
 
+# Cap concurrent Twilio media streams so a flood of connections can't open
+# unbounded (paid) StepFun sessions. Each accepted stream opens one StepFun WS.
+_MAX_TWILIO_STREAMS = int(os.environ.get("CV_MAX_TWILIO_STREAMS", "4"))
+_active_twilio_streams = 0
+
 # StepFun Realtime session config — kept verbatim in sync with the browser
 # frontend (voice/frontend/index.html session.update): same instructions, voice,
 # audio formats, transcription and turn_detection so phone and web behave alike.
@@ -262,9 +267,16 @@ async def twilio_voice(request: Request):
     Twilio fetches this when a call reaches the configured number; the returned
     <Connect><Stream> hands the call's media to our /twilio-stream WebSocket.
     """
+    # Append the shared secret so /twilio-stream can authenticate the media
+    # socket — the wss URL is public and otherwise anyone could open a StepFun
+    # session on it. XML-escape the separator since it lives in an attribute.
+    stream_url = PUBLIC_WSS
+    if CV_API_TOKEN:
+        sep = "&amp;" if "?" in PUBLIC_WSS else "?"
+        stream_url = f"{PUBLIC_WSS}{sep}token={CV_API_TOKEN}"
     twiml = (
         '<?xml version="1.0" encoding="UTF-8"?>'
-        f'<Response><Connect><Stream url="{PUBLIC_WSS}" /></Connect></Response>'
+        f'<Response><Connect><Stream url="{stream_url}" /></Connect></Response>'
     )
     return Response(content=twiml, media_type="text/xml")
 
@@ -277,6 +289,20 @@ async def twilio_stream(ws: WebSocket):
     base64 PCM16 mono 24kHz. We transcode in both directions (see
     voice.telephony_audio) and keep independent resampler state per direction.
     """
+    # Authenticate before doing any work: the wss URL is public, and each
+    # accepted stream opens a (paid) StepFun session. Reject unauthorized or
+    # over-cap connections without accepting — matches the /ws relay pattern.
+    global _active_twilio_streams
+    token = (ws.query_params.get("token") or ws.headers.get("x-cv-token") or "").strip()
+    if not _check_token(token):
+        await ws.close(code=4001, reason="unauthorized")
+        return
+    if _active_twilio_streams >= _MAX_TWILIO_STREAMS:
+        print("[twilio] rejecting stream — concurrent cap reached", flush=True)
+        await ws.close(code=4429, reason="too many streams")
+        return
+
+    _active_twilio_streams += 1
     await ws.accept()
     print("[twilio] Media Stream client connected", flush=True)
 
@@ -427,6 +453,7 @@ async def twilio_stream(ws: WebSocket):
     except Exception as exc:
         print(f"[twilio] StepFun connection error: {exc!r}", flush=True)
     finally:
+        _active_twilio_streams -= 1
         if stepfun_ws is not None:
             try:
                 await stepfun_ws.close()
