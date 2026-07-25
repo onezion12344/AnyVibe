@@ -16,11 +16,6 @@
   .cmp-back:hover { color:var(--accent); }
   .cmp-hd-title { font-size:17px; font-weight:700; background:linear-gradient(135deg,#f0c87a,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .cmp-hd-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
-  .company-picker-wrap { display:flex; align-items:center; gap:7px; min-width:0; padding:4px 8px; border:1px solid var(--border); border-radius:11px; background:rgba(33,53,70,.76); }
-  .company-picker-label { color:var(--accent2); font-size:9px; font-weight:800; letter-spacing:.11em; text-transform:uppercase; white-space:nowrap; }
-  .company-picker { min-width:146px; max-width:214px; overflow:hidden; border:0; outline:0; color:var(--white); background:transparent; font:600 11px inherit; text-overflow:ellipsis; cursor:pointer; }
-  .company-picker option { color:#182735; background:#f7edd4; }
-  .company-team-summary { display:none; color:var(--muted); font-size:9px; white-space:nowrap; }
   .cmp-hd-badge { font-size:11px; font-weight:500; letter-spacing:.06em; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 10px; white-space:nowrap; }
   .cmp-layout { flex:1; min-height:0; display:grid; grid-template-columns:minmax(250px,.75fr) minmax(0,1.8fr); gap:12px; padding:0 14px 14px; }
   .workspace-stack { min-height:0; display:flex; flex-direction:column; gap:12px; }
@@ -104,8 +99,8 @@
   .network-activity { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; max-height:70px; min-height:52px; padding:7px 10px 10px; overflow-y:auto; font:9px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace; color:#d7e1e0; }
   .network-activity .na-row { min-width:0; padding:5px 6px; border:1px solid rgba(111,154,173,.28); border-radius:7px; background:rgba(10,22,40,.38); } .network-activity .na-arrow { display:block; margin-bottom:2px; overflow:hidden; color:#f0c87a; font-weight:800; white-space:nowrap; text-overflow:ellipsis; } .network-activity .na-text { display:-webkit-box; overflow:hidden; color:#b7c9c7; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
   .network-empty { color:#66808a; text-align:center; width:100%; padding:9px; } .network-activity .network-empty { grid-column:1 / -1; }
-  @media (max-width: 780px) { html, body { height:auto; min-height:100%; overflow:auto; } #company-app { min-height:100vh; } .cmp-layout { grid-template-columns:1fr; } .workspace-stack { min-height:1020px; } .voice-panel { min-height:380px; } .voice-log { max-height:90px; } .board-panel { min-height:470px; } .workspace-stack > .network-panel { flex-basis:395px; } .network-graph { min-height:258px; } .company-team-summary { display:block; } }
-  @media (max-width: 560px) { .cmp-hd { padding-left:14px; padding-right:14px; align-items:flex-start; } .cmp-hd-actions { flex-direction:column; align-items:flex-end; gap:5px; } .company-picker-wrap { max-width:184px; } .company-picker { min-width:0; max-width:128px; } .cmp-layout { padding:0 8px 8px; } .cmp-cols { grid-template-columns:repeat(2,minmax(0,1fr)); overflow-y:auto; } .cmp-ctrl { flex-wrap:wrap; } .board-head { align-items:flex-start; flex-direction:column; } .workspace-stack > .network-panel { flex-basis:565px; } .network-head { align-items:flex-start; flex-direction:column; } .network-tools { width:100%; } .network-tools .cmp-btn { flex:1; text-align:center; } .network-graph { min-height:335px; } .network-activity { grid-template-columns:1fr; max-height:88px; } }
+  @media (max-width: 780px) { html, body { height:auto; min-height:100%; overflow:auto; } #company-app { min-height:100vh; } .cmp-layout { grid-template-columns:1fr; } .workspace-stack { min-height:1020px; } .voice-panel { min-height:380px; } .voice-log { max-height:90px; } .board-panel { min-height:470px; } .workspace-stack > .network-panel { flex-basis:395px; } .network-graph { min-height:258px; } }
+  @media (max-width: 560px) { .cmp-hd { padding-left:14px; padding-right:14px; align-items:flex-start; } .cmp-hd-actions { flex-direction:column; align-items:flex-end; gap:5px; } .cmp-layout { padding:0 8px 8px; } .cmp-cols { grid-template-columns:repeat(2,minmax(0,1fr)); overflow-y:auto; } .cmp-ctrl { flex-wrap:wrap; } .board-head { align-items:flex-start; flex-direction:column; } .workspace-stack > .network-panel { flex-basis:565px; } .network-head { align-items:flex-start; flex-direction:column; } .network-tools { width:100%; } .network-tools .cmp-btn { flex:1; text-align:center; } .network-graph { min-height:335px; } .network-activity { grid-template-columns:1fr; max-height:88px; } }
 </style>
 </head>
 <body>
@@ -113,14 +108,7 @@
 <div id="company-app">
   <header class="cmp-hd">
     <div class="cmp-brand"><a class="cmp-back" href="/" aria-label="Back to index">←</a><div><div class="cmp-hd-title">Coding Vibe Company</div><div class="board-subtitle">Voice Control · AI Role Team · Live Kanban</div></div></div>
-    <div class="cmp-hd-actions">
-      <div class="company-picker-wrap">
-        <label class="company-picker-label" for="company-picker">Company</label>
-        <select class="company-picker" id="company-picker" aria-label="Active company preset" disabled><option>Loading teams…</option></select>
-        <span class="company-team-summary" id="company-team-summary"></span>
-      </div>
-      <div class="cmp-hd-badge" id="cmp-hd-badge">Board connecting</div>
-    </div>
+    <div class="cmp-hd-actions"><div class="cmp-hd-badge" id="cmp-hd-badge">Board connecting</div></div>
   </header>
   <main class="cmp-layout">
     <section class="voice-panel" aria-label="Voice control">

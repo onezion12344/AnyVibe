@@ -31,7 +31,6 @@ const COMPANY = (() => {
   // cards: card_id → { role, column, title, subtitle, edges, el }
   const cards = new Map();
   let networkState = { version: 1, user_avatar: '/static/assets/yellow-sheep-meditating.png', nodes: [], edges: [], activity: [] };
-  let activeCompany = null;
 
   // column div ID → DOM element cache
   const colEls = {};
@@ -57,65 +56,6 @@ const COMPANY = (() => {
     if (json) headers['Content-Type'] = 'application/json';
     if (token) headers['x-cv-token'] = token;
     return headers;
-  }
-
-  function renderCompanyState(payload) {
-    const state = payload && (payload.company || payload);
-    if (!state || !state.active || !Array.isArray(state.presets)) return;
-    activeCompany = state.active;
-    const picker = $('company-picker');
-    if (picker) {
-      picker.replaceChildren();
-      state.presets.forEach(preset => {
-        const option = document.createElement('option');
-        option.value = preset.id;
-        option.textContent = preset.name;
-        option.selected = preset.id === activeCompany.preset_id;
-        picker.appendChild(option);
-      });
-      picker.disabled = false;
-      picker.title = activeCompany.tagline || activeCompany.name;
-    }
-    const summary = $('company-team-summary');
-    if (summary) summary.textContent = (activeCompany.roles || []).join(' · ');
-    const boardSubtitle = $('company-board-subtitle');
-    if (boardSubtitle) boardSubtitle.textContent = `${activeCompany.name} · ${(activeCompany.roles || []).join(' · ')}`;
-  }
-
-  async function loadCompanyState() {
-    try {
-      const response = await fetch('/api/company/active', { headers: authHeaders() });
-      if (!response.ok) return;
-      renderCompanyState(await response.json());
-    } catch {}
-  }
-
-  async function selectCompanyPreset(event) {
-    const picker = event.currentTarget;
-    const previousPreset = activeCompany && activeCompany.preset_id;
-    const presetId = picker.value;
-    if (!presetId || presetId === previousPreset) return;
-    picker.disabled = true;
-    try {
-      const response = await fetch('/api/company/active', {
-        method: 'PUT',
-        headers: authHeaders(true),
-        body: JSON.stringify({ preset_id: presetId }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || data.error || 'Could not switch company');
-      renderCompanyState(data);
-      resetBoard();
-      networkState = { version: 1, user_avatar: data.active?.avatar || networkState.user_avatar, nodes: [], edges: [], activity: [] };
-      renderNetwork();
-      showToast(`Switched to ${data.active.name}. New tasks use its CEO and team.`);
-      await syncCompanyState();
-    } catch (error) {
-      if (previousPreset) picker.value = previousPreset;
-      showToast('Company switch failed: ' + (error.message || error));
-    } finally {
-      picker.disabled = false;
-    }
   }
 
   /* ── Render helpers ───────────────────────────────────────────────── */
@@ -434,7 +374,6 @@ const COMPANY = (() => {
       const r = await fetch('/api/company', { headers: authHeaders() });
       if (!r.ok) return;
       const data = await r.json();
-      if (data.company) renderCompanyState(data.company);
       const ops = data.emitted_ops || [];
       ops.forEach(handleBoardUpdate);
       if (data.network) handleNetworkUpdate(data.network);
@@ -544,12 +483,9 @@ const COMPANY = (() => {
     initDOM();
     $('btn-run').addEventListener('click', postRun);
     $('btn-reset').addEventListener('click', resetBoard);
-    const companyPicker = $('company-picker');
-    if (companyPicker) companyPicker.addEventListener('change', selectCompanyPreset);
     $('btn-run').disabled = false;
     connectWS();
     renderNetwork();
-    loadCompanyState();
     const avatarInput = $('network-avatar-upload');
     if (avatarInput) avatarInput.addEventListener('change', event => uploadAvatar(event.target.files && event.target.files[0]));
     const avatarGenerate = $('network-avatar-generate');
