@@ -3,236 +3,105 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coding Vibe — Pipecat Voice Client</title>
+  <title>Coding Vibe — Pipecat Voice</title>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg:        #0d1b2a;
-      --surface:   #1b2d44;
-      --accent:    #e07a5f;
-      --gold:      #d4a843;
-      --teal:      #3a8a8a;
-      --text:      #e0e6f0;
-      --muted:     #7a8fa8;
-    }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Space Grotesk", "Noto Sans SC", system-ui, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 1.5rem;
-      padding: 2rem;
-    }
-
-    h1 { font-size: 1.5rem; color: var(--gold); letter-spacing: 0.04em; }
-
-    .card {
-      background: var(--surface);
-      border-radius: 16px;
-      border: 1px solid #2a4060;
-      padding: 2rem 2.5rem;
-      width: 100%;
-      max-width: 480px;
-    }
-
-    label { display: block; font-size: 0.75rem; color: var(--muted); margin-bottom: 0.5rem; }
-    input[type=text] {
-      width: 100%;
-      padding: 0.6rem 0.9rem;
-      background: #0a1628;
-      border: 1px solid #2a4060;
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 0.95rem;
-      outline: none;
-    }
-    input[type=text]:focus { border-color: var(--accent); }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.7rem 1.4rem;
-      border-radius: 10px;
-      border: none;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-    }
-    .btn:active { transform: scale(0.97); }
-    .btn-connect  { background: var(--accent); color: #fff; width: 100%; justify-content: center; }
-    .btn-connect:hover { background: #c9684f; }
-    .btn-mute     { background: #2a4060; color: var(--text); }
-    .btn-mute.muted { background: #4a3040; }
-
-    .status {
-      margin-top: 1rem;
-      padding: 0.7rem 1rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      line-height: 1.4;
-    }
-    .status.idle     { background: #0a1628; border: 1px solid #2a4060; color: var(--muted); }
-    .status.connecting { background: #1a2a10; border: 1px solid var(--teal); color: #7ae0c0; }
-    .status.connected { background: #1a2a10; border: 1px solid var(--teal); color: #7ae0c0; }
-    .status.error    { background: #2a1010; border: 1px solid #e05050; color: #f08080; }
-
-    #log {
-      margin-top: 1rem;
-      max-height: 160px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 0.72rem;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-    #log span { display: block; }
-
-    .waveform {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      height: 48px;
-      margin-top: 1rem;
-    }
-    .bar {
-      width: 4px;
-      background: var(--accent);
-      border-radius: 2px;
-      transition: height 0.08s ease;
-    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1b2a;--surface:#162236;--border:#1e3050;--accent:#e07a5f;--gold:#d4a843;--teal:#3a8a8a;--text:#f0e6d8;--muted:#8a9ab0}
+    body{background:var(--bg);color:var(--text);font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;padding:2rem}
+    h1{font-size:1.4rem;background:linear-gradient(135deg,#f0c87a,#e07a5f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.04em}
+    .card{background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:2rem 2.2rem;width:100%;max-width:460px}
+    .btn{padding:.75rem 1.4rem;border-radius:12px;border:none;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .1s,background .15s}
+    .btn:active{transform:scale(.97)}
+    .btn-connect{background:var(--accent);color:#fff;width:100%;justify-content:center;box-shadow:0 0 30px rgba(224,122,95,.25)}
+    .btn-connect:hover{background:#c9684f}
+    .btn-mute{background:#243a56;color:var(--text);margin-top:.7rem;width:100%}
+    .btn-mute.muted{background:#4a3040}
+    .status{margin-top:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.85rem;line-height:1.4}
+    .status.idle{background:#0a1628;border:1px solid var(--border);color:var(--muted)}
+    .status.connecting,.status.connected{background:#12241c;border:1px solid var(--teal);color:#7ae0c0}
+    .status.error{background:#2a1010;border:1px solid #e05050;color:#f08080}
+    #log{margin-top:1rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:.72rem;color:var(--muted);line-height:1.6}
+    #log span{display:block}
+    .wave{display:flex;align-items:center;justify-content:center;gap:4px;height:44px;margin-top:1rem}
+    .bar{width:4px;background:var(--accent);border-radius:2px;transition:height .08s}
   </style>
 </head>
 <body>
-
-  <h1>Coding Vibe Voice</h1>
-
+  <h1>🐑 Coding Vibe Voice (Pipecat)</h1>
   <div class="card">
-    <label for="url">Bot transport URL</label>
-    <input id="url" type="text"
-           value="ws://localhost:7860"
-           placeholder="ws://localhost:7860" />
-
-    <div style="display:flex; gap:0.75rem; margin-top:1rem;">
-      <button id="connectBtn" class="btn btn-connect">Connect</button>
-      <button id="muteBtn" class="btn btn-mute">Mic Off</button>
+    <button id="connectBtn" class="btn btn-connect">Call</button>
+    <button id="muteBtn" class="btn btn-mute">Mute</button>
+    <div id="status" class="status idle">Ready — click Call, allow the mic.</div>
+    <div id="wave" class="wave" style="display:none">
+      <div class="bar" style="height:8px"></div><div class="bar" style="height:20px"></div>
+      <div class="bar" style="height:32px"></div><div class="bar" style="height:44px"></div>
+      <div class="bar" style="height:28px"></div><div class="bar" style="height:16px"></div>
+      <div class="bar" style="height:36px"></div><div class="bar" style="height:12px"></div>
     </div>
-
-    <div id="status" class="status idle">
-      Ready — enter the bot URL and click Connect.
-    </div>
-
-    <div id="wave" class="waveform" style="display:none">
-      <div class="bar" style="height:8px"></div>
-      <div class="bar" style="height:20px"></div>
-      <div class="bar" style="height:32px"></div>
-      <div class="bar" style="height:44px"></div>
-      <div class="bar" style="height:28px"></div>
-      <div class="bar" style="height:16px"></div>
-      <div class="bar" style="height:36px"></div>
-      <div class="bar" style="height:12px"></div>
-      <div class="bar" style="height:40px"></div>
-      <div class="bar" style="height:24px"></div>
-    </div>
-
     <div id="log"></div>
   </div>
-
-  <!-- Pipecat SmallWebRTC prebuilt (CDN) — zero build step -->
-  <!-- integrity hash updated on each npm publish; re-verify before deployment -->
-  <script src="https://unpkg.com/@pipecat-ai/small-webrtc@latest/dist/index.js"
-          crossorigin="anonymous"></script>
+  <audio id="botAudio" autoplay playsinline></audio>
 
   <script>
-    // ── UI helpers ────────────────────────────────────────────────────────────
-    const statusEl  = document.getElementById("status");
-    const logEl     = document.getElementById("log");
-    const waveEl    = document.getElementById("wave");
-    const urlInput  = document.getElementById("url");
-    const connBtn   = document.getElementById("connectBtn");
-    const muteBtn   = document.getElementById("muteBtn");
-    let isMuted     = false;
+    // Plain WebRTC client — no SDK. Exchanges SDP with the server's POST /api/offer.
+    const TOKEN = new URLSearchParams(location.search).get("token") || "";
+    const OFFER_URL = location.origin + "/api/offer";
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("log");
+    const waveEl = document.getElementById("wave");
+    const connBtn = document.getElementById("connectBtn");
+    const muteBtn = document.getElementById("muteBtn");
+    const botAudio = document.getElementById("botAudio");
+    let pc = null, localStream = null, muted = false, waveTimer = null;
 
-    function setStatus(cls, msg) {
-      statusEl.className = "status " + cls;
-      statusEl.textContent = msg;
-    }
+    const setStatus = (c, m) => { statusEl.className = "status " + c; statusEl.textContent = m; };
+    const log = (m) => { const s = document.createElement("span"); s.textContent = new Date().toISOString().slice(11,19)+" "+m; logEl.appendChild(s); logEl.scrollTop = logEl.scrollHeight; };
+    const startWave = () => { waveEl.style.display="flex"; const b=waveEl.querySelectorAll(".bar"); waveTimer=setInterval(()=>b.forEach(x=>x.style.height=(Math.random()*36+6)+"px"),120); };
+    const stopWave = () => { clearInterval(waveTimer); waveEl.style.display="none"; };
 
-    function log(msg) {
-      const line = new Date().toISOString().split("T")[1].slice(0, 8) + " " + msg;
-      const span = document.createElement("span");
-      span.textContent = line;            // textContent — no HTML interpretation (XSS-safe)
-      logEl.appendChild(span);
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    // ── Waveform animation ────────────────────────────────────────────────────
-    let waveInterval;
-    function startWave() {
-      waveEl.style.display = "flex";
-      const bars = waveEl.querySelectorAll(".bar");
-      waveInterval = setInterval(() => {
-        bars.forEach(b => {
-          b.style.height = Math.random() * 40 + 6 + "px";
-        });
-      }, 120);
-    }
-    function stopWave() { clearInterval(waveInterval); waveEl.style.display = "none"; }
-
-    // ── Connection ─────────────────────────────────────────────────────────────
-    let pc = null;
-
-    connBtn.addEventListener("click", () => {
-      if (pc) { pc.disconnect(); pc = null; connBtn.textContent = "Connect"; return; }
-      const url = urlInput.value.trim();
-      if (!url) { setStatus("error", "Enter a transport URL first."); return; }
-      setStatus("connecting", "Connecting…");
-      log("Connecting to " + url);
+    async function connect() {
+      setStatus("connecting", "Connecting…"); log("starting WebRTC");
+      pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+      pc.ontrack = (e) => { log("bot audio track"); botAudio.srcObject = e.streams[0]; botAudio.play().catch(()=>{}); startWave(); };
+      pc.onconnectionstatechange = () => {
+        log("pc " + pc.connectionState);
+        if (pc.connectionState === "connected") setStatus("connected", "Connected — 说话吧。");
+        if (["failed","disconnected","closed"].includes(pc.connectionState)) { setStatus("idle","Disconnected."); stopWave(); }
+      };
       try {
-        pc = new SmallWebRTCPeer({ transportUrl: url });
-        pc.start();
-        pc.on("connected", () => {
-          setStatus("connected", "Connected — speak into your mic.");
-          log("WebRTC connected");
-          startWave();
-          connBtn.textContent = "Disconnect";
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true } });
+      } catch (e) { setStatus("error","Mic denied: "+e.message); return; }
+      localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+      await pc.setLocalDescription(await pc.createOffer());
+      // aiortc is non-trickle — wait for ICE gathering to finish (max 3s)
+      await new Promise(res => {
+        if (pc.iceGatheringState === "complete") return res();
+        const chk = () => { if (pc.iceGatheringState === "complete") { pc.removeEventListener("icegatheringstatechange", chk); res(); } };
+        pc.addEventListener("icegatheringstatechange", chk); setTimeout(res, 3000);
+      });
+      log("posting offer");
+      let resp;
+      try {
+        resp = await fetch(OFFER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...(TOKEN ? { "x-cv-token": TOKEN } : {}) },
+          body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }),
         });
-        pc.on("disconnected", () => {
-          setStatus("idle", "Disconnected.");
-          log("WebRTC disconnected");
-          stopWave();
-          connBtn.textContent = "Connect";
-          pc = null;
-        });
-        pc.on("error", (e) => {
-          setStatus("error", "Error: " + (e.message || e));
-          log("Error: " + JSON.stringify(e));
-          stopWave();
-        });
-        pc.on("track", (e) => {
-          log("Track: " + e.kind + " " + e.label);
-        });
-      } catch (err) {
-        setStatus("error", "Failed: " + err.message);
-        log("Exception: " + err.message);
-      }
-    });
+      } catch (e) { setStatus("error","offer fetch failed: "+e.message); log(e.message); return; }
+      if (!resp.ok) { const t = await resp.text(); setStatus("error","offer "+resp.status); log("offer "+resp.status+" "+t.slice(0,120)); return; }
+      const ans = await resp.json();
+      await pc.setRemoteDescription({ type: "answer", sdp: ans.sdp });
+      log("answer set · session " + (ans.session_id || "?"));
+      connBtn.textContent = "Hang up";
+    }
 
-    // ── Mute ──────────────────────────────────────────────────────────────────
+    function hangup() { try { localStream && localStream.getTracks().forEach(t=>t.stop()); } catch{} try { pc && pc.close(); } catch{} pc=null; stopWave(); setStatus("idle","Call ended."); connBtn.textContent="Call"; }
+
+    connBtn.addEventListener("click", () => { if (pc) hangup(); else connect(); });
     muteBtn.addEventListener("click", () => {
-      isMuted = !isMuted;
-      muteBtn.textContent = isMuted ? "Mic On" : "Mic Off";
-      muteBtn.classList.toggle("muted", isMuted);
-      if (pc) pc.setMicrophoneEnabled(!isMuted);
-      log(isMuted ? "Mic muted" : "Mic unmuted");
+      muted = !muted; muteBtn.textContent = muted ? "Unmute" : "Mute"; muteBtn.classList.toggle("muted", muted);
+      if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+      log(muted ? "mic muted" : "mic on");
     });
   </script>
 </body>
