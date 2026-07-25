@@ -21,17 +21,22 @@ from __future__ import annotations
 import asyncio
 import hmac
 import os
+import secrets
 import sys
+import time
 import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 # ── Project path ─────────────────────────────────────────────────────────────────
 _WORKTREE_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_WORKTREE_ROOT))
+
+# ── Frontend: serve the official Pipecat JS client from voice/frontend/ ────────────
+_FRONTEND_DIR = Path(__file__).parent / "frontend"
 
 # ── Pipecat imports ──────────────────────────────────────────────────────────────
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
@@ -51,11 +56,39 @@ _ICE_SERVERS = os.environ.get(
 ).split(",")
 
 # Auth: /api/offer starts a bot that can reach dispatch → CEO (code exec), so it
-# must be gated the same as the rest of the API. Token via x-cv-token header,
-# ?token= query, or body {"token": ...}.
+# must be gated. Two accepted credentials:
+#   • the long-lived shared secret CV_API_TOKEN (for API/programmatic clients),
+#     via x-cv-token header, ?token= query, or body {"token": ...}; and
+#   • a short-lived, single-use capability token minted per page load (see
+#     _mint_capability). The browser page never receives the long-lived secret —
+#     only an ephemeral capability that is consumed on first use and expires.
 CV_API_TOKEN = os.environ.get("CV_API_TOKEN", "")
 _DANGEROUS_BACKENDS = {"claude-code", "openopc"}
 _MAX_CONNECTIONS = int(os.environ.get("CV_PIPECAT_MAX_CONN", "32"))
+
+# Ephemeral single-use capability tokens: token -> expiry epoch seconds.
+_CAP_TTL = float(os.environ.get("CV_OFFER_CAP_TTL", "300"))  # 5 minutes
+_capabilities: dict[str, float] = {}
+
+
+def _mint_capability() -> str:
+    """Create a short-lived, single-use capability token for /api/offer."""
+    now = time.monotonic()
+    # Opportunistically evict expired tokens so the store can't grow unbounded.
+    for tok in [t for t, exp in _capabilities.items() if exp <= now]:
+        _capabilities.pop(tok, None)
+    token = secrets.token_urlsafe(32)
+    _capabilities[token] = now + _CAP_TTL
+    return token
+
+
+def _consume_capability(token: str) -> bool:
+    """Validate and single-use-consume a capability token (constant-time-ish)."""
+    if not token:
+        return False
+    exp = _capabilities.pop(token, None)  # pop = single use
+    return exp is not None and exp > time.monotonic()
+
 
 # ── In-memory connection registry ────────────────────────────────────────────────
 # Each browser peer gets its own SmallWebRTCConnection + background bot task.
@@ -64,7 +97,11 @@ _connection_lock = asyncio.Lock()
 
 
 def _check_offer_auth(request: "Request", body: dict) -> bool:
-    """Constant-time token check for /api/offer (open only if no token set)."""
+    """Auth for /api/offer: long-lived shared secret OR single-use capability.
+
+    Open only if no CV_API_TOKEN is configured (mock/dev). The capability path
+    lets the browser authenticate without ever being handed the shared secret.
+    """
     if not CV_API_TOKEN:
         return True
     tok = (
@@ -73,17 +110,29 @@ def _check_offer_auth(request: "Request", body: dict) -> bool:
         or (body.get("token") if isinstance(body, dict) else "")
         or ""
     )
-    return bool(tok) and hmac.compare_digest(tok, CV_API_TOKEN)
+    if not tok:
+        return False
+    # Long-lived shared secret (constant-time compare).
+    if hmac.compare_digest(tok, CV_API_TOKEN):
+        return True
+    # Otherwise, a valid unexpired single-use capability token.
+    return _consume_capability(tok)
 
 
 # ── App ──────────────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="Coding Vibe Pipecat Voice Server")
 
-# Serve the browser client from voice/client/
-_CLIENT_DIR = Path(__file__).parent / "client"
-if _CLIENT_DIR.exists():
-    app.mount("/client", StaticFiles(directory=str(_CLIENT_DIR)), name="client")
+# Serve the official Pipecat frontend from voice/frontend/
+# The frontend uses @pipecat-ai/client-js + @pipecat-ai/small-webrtc-transport
+# and must be mounted to expose node_modules via /node_modules/ for ESM imports.
+_FRONTEND_DIR = Path(__file__).parent / "frontend"
+if _FRONTEND_DIR.exists():
+    app.mount("/client", StaticFiles(directory=str(_FRONTEND_DIR)), name="frontend")
+    # Also serve node_modules from the frontend dir so ESM module imports work
+    _NM = _FRONTEND_DIR / "node_modules"
+    if _NM.exists():
+        app.mount("/node_modules", StaticFiles(directory=str(_NM)), name="node_modules")
 
 
 # ── SDP offer/answer endpoint ───────────────────────────────────────────────────
@@ -196,11 +245,27 @@ async def _run_bot(
 
 
 @app.get("/", include_in_schema=False)
-async def root() -> FileResponse:
-    """Serve the browser voice client."""
-    index = _CLIENT_DIR / "index.html"
+async def root():
+    """Serve the official Pipecat voice client.
+
+    The client must authenticate ``POST /api/offer`` (it can reach the CEO
+    backend). Rather than embed the long-lived ``CV_API_TOKEN`` in the page, we
+    mint a **short-lived, single-use capability token** per load and inject it
+    into ``__CV_OFFER_TOKEN__``; the client appends it as ``?token=``. It is
+    consumed on first use and expires after ``CV_OFFER_CAP_TTL`` seconds, so log
+    or history exposure is time-bounded and useless after the call starts.
+
+    The capability is only minted when bound to loopback. When bound to a
+    non-loopback interface we do NOT auto-inject any credential — an operator
+    must supply the real token out-of-band — so the page is never a credential
+    disclosure surface on the network.
+    """
+    index = _FRONTEND_DIR / "index.html"
     if index.exists():
-        return FileResponse(str(index))
+        html = index.read_text(encoding="utf-8")
+        cap = _mint_capability() if (CV_API_TOKEN and _HOST == "127.0.0.1") else ""
+        html = html.replace("__CV_OFFER_TOKEN__", cap)
+        return HTMLResponse(html)
     return JSONResponse(
         {"status": "Coding Vibe Pipecat server running", "port": _PORT},
     )

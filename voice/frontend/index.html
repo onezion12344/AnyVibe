@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coding Vibe — Pipecat Voice (Official UI)</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0d1b2a;--surface:#162236;--border:#1e3050;--accent:#e07a5f;--gold:#d4a843;--teal:#3a8a8a;--text:#f0e6d8;--muted:#8a9ab0}
+    body{background:var(--bg);color:var(--text);font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;padding:2rem}
+    h1{font-size:1.4rem;background:linear-gradient(135deg,#f0c87a,#e07a5f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.04em}
+    .card{background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:2rem 2.2rem;width:100%;max-width:460px}
+    .btn{padding:.75rem 1.4rem;border-radius:12px;border:none;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .1s,background .15s}
+    .btn:active{transform:scale(.97)}
+    .btn-connect{background:var(--accent);color:#fff;width:100%;justify-content:center;box-shadow:0 0 30px rgba(224,122,95,.25)}
+    .btn-connect:hover{background:#c9684f}
+    .btn-connect:disabled{background:#4a3040;box-shadow:none;cursor:not-allowed}
+    .btn-mute{background:#243a56;color:var(--text);margin-top:.7rem;width:100%}
+    .btn-mute.muted{background:#4a3040}
+    .status{margin-top:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.85rem;line-height:1.4}
+    .status.idle{background:#0a1628;border:1px solid var(--border);color:var(--muted)}
+    .status.connecting,.status.connected{background:#12241c;border:1px solid var(--teal);color:#7ae0c0}
+    .status.error{background:#2a1010;border:1px solid #e05050;color:#f08080}
+    #log{margin-top:1rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:.72rem;color:var(--muted);line-height:1.6}
+    #log span{display:block}
+    .wave{display:flex;align-items:center;justify-content:center;gap:4px;height:44px;margin-top:1rem}
+    .bar{width:4px;background:var(--accent);border-radius:2px;transition:height .08s}
+  </style>
+</head>
+<body>
+  <h1>🐑 Coding Vibe Voice — Pipecat Official Client</h1>
+  <div class="card">
+    <button id="connectBtn" class="btn btn-connect">Call</button>
+    <button id="muteBtn" class="btn btn-mute">Mute</button>
+    <div id="status" class="status idle">Ready — click Call, allow the mic.</div>
+    <div id="wave" class="wave" style="display:none">
+      <div class="bar" style="height:8px"></div><div class="bar" style="height:20px"></div>
+      <div class="bar" style="height:32px"></div><div class="bar" style="height:44px"></div>
+      <div class="bar" style="height:28px"></div><div class="bar" style="height:16px"></div>
+      <div class="bar" style="height:36px"></div><div class="bar" style="height:12px"></div>
+    </div>
+    <div id="log"></div>
+  </div>
+  <audio id="botAudio" autoplay playsinline></audio>
+
+  <!--
+    Pipecat Official JS Client + SmallWebRTC Transport
+    Uses @pipecat-ai/client-js + @pipecat-ai/small-webrtc-transport
+    Served via a local dev server (npm run dev) from voice/frontend/
+  -->
+  <script type="module">
+    import { PipecatClient, RTVIEvent } from "/node_modules/@pipecat-ai/client-js/dist/index.js";
+    import { SmallWebRTCTransport } from "/node_modules/@pipecat-ai/small-webrtc-transport/dist/index.js";
+
+    const OFFER_URL = location.origin.replace(/:\d+$/, ":7860") + "/api/offer";
+
+    // Token is injected server-side (GET / replaces __CV_OFFER_TOKEN__ with a
+    // short-lived, single-use capability token — never the long-lived shared
+    // secret, and only when the server is loopback-bound). /api/offer is gated
+    // because it can reach the CEO backend. If the placeholder wasn't
+    // substituted (raw static file) or none was minted, fall back to the bare path.
+    const CV_TOKEN = "__CV_OFFER_TOKEN__";
+    const _tokenReady = CV_TOKEN && !CV_TOKEN.includes("CV_OFFER_TOKEN");
+    const OFFER_PATH = _tokenReady ? "/api/offer?token=" + CV_TOKEN : "/api/offer";
+
+    // ── UI refs ──────────────────────────────────────────────────────────────────
+    const statusEl = document.getElementById("status");
+    const logEl    = document.getElementById("log");
+    const waveEl   = document.getElementById("wave");
+    const connBtn  = document.getElementById("connectBtn");
+    const muteBtn  = document.getElementById("muteBtn");
+    const botAudio = document.getElementById("botAudio");
+    let   muted    = false;
+    let   waveTimer = null;
+
+    const setStatus = (c, m) => { statusEl.className = "status " + c; statusEl.textContent = m; };
+    const log = (m) => {
+      const s = document.createElement("span");
+      s.textContent = new Date().toISOString().slice(11, 19) + " " + m;
+      logEl.appendChild(s);
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+    const startWave = () => {
+      waveEl.style.display = "flex";
+      const b = waveEl.querySelectorAll(".bar");
+      waveTimer = setInterval(() => b.forEach(x => x.style.height = (Math.random() * 36 + 6) + "px"), 120);
+    };
+    const stopWave = () => { clearInterval(waveTimer); waveEl.style.display = "none"; };
+
+    // ── Build client ─────────────────────────────────────────────────────────────
+    // @pipecat-ai/small-webrtc-transport SmallWebRTCTransport
+    //   • offerUrlTemplate is the canonical way to set the /api/offer endpoint
+    //   • connect() with no params uses whatever was set at construction time
+    const transport = new SmallWebRTCTransport({
+      offerUrlTemplate: OFFER_PATH,
+    });
+
+    const pcClient = new PipecatClient({
+      transport,
+      enableMic: true,
+      enableCam: false,
+      callbacks: {
+        onConnected: () => { log("onConnected"); setStatus("connected", "Connected — 说话吧。"); },
+        onDisconnected: () => { log("onDisconnected"); setStatus("idle", "Disconnected."); stopWave(); },
+        onTransportStateChanged: (state) => { log("transportState: " + state); },
+        onBotConnected: () => { log("onBotConnected"); },
+        onBotDisconnected: () => { log("onBotDisconnected"); },
+        onBotReady: () => { log("onBotReady — 🎙 可以开始说话"); },
+        onError: (err) => { log("ERROR: " + (err?.message || JSON.stringify(err))); setStatus("error", "Error: " + (err?.message || "see log")); },
+      },
+    });
+
+    // ── Events ──────────────────────────────────────────────────────────────────
+    pcClient.on(RTVIEvent.Connected, () => { log("EVENT Connected"); startWave(); });
+    pcClient.on(RTVIEvent.Disconnected, () => { log("EVENT Disconnected"); stopWave(); });
+    pcClient.on(RTVIEvent.BotReady, () => { log("EVENT BotReady"); });
+    pcClient.on(RTVIEvent.Error, (err) => { log("EVENT Error: " + (err?.message || "")); });
+
+    // ── Actions ─────────────────────────────────────────────────────────────────
+    async function connect() {
+      setStatus("connecting", "Connecting…"); log("Starting Pipecat client…");
+      connBtn.disabled = true;
+      try {
+        // offerUrlTemplate was set at construction time; connect() needs no extra args
+        await pcClient.connect();
+        log("connect() resolved");
+        connBtn.textContent = "Hang up";
+        connBtn.disabled = false;
+      } catch (err) {
+        log("connect() rejected: " + (err?.message || err));
+        setStatus("error", "Connect failed: " + (err?.message || err));
+        connBtn.disabled = false;
+      }
+    }
+
+    function hangup() {
+      pcClient.disconnect().catch(() => {});
+      connBtn.textContent = "Call";
+      setStatus("idle", "Ready — click Call, allow the mic.");
+    }
+
+    connBtn.addEventListener("click", () => {
+      if (pcClient.state() !== "disconnected") { hangup(); return; }
+      connect();
+    });
+
+    muteBtn.addEventListener("click", () => {
+      muted = !muted;
+      muteBtn.textContent = muted ? "Unmute" : "Mute";
+      muteBtn.classList.toggle("muted", muted);
+      try { pcClient.enableMic(!muted); } catch (_) {}
+      log(muted ? "mic muted" : "mic on");
+    });
+  </script>
+</body>
+</html>

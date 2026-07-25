@@ -52,6 +52,34 @@ if _CALL_BACKEND in ("claude-code", "openopc") and not CV_API_TOKEN:
 
 _CALL_REPO: str = os.environ.get("CV_DEMO_REPO", "/tmp/cv-demo")
 
+# ── Company kanban bridge ──────────────────────────────────────────────────────────
+# The company board's WS clients live in the web-server process, so a voice-side
+# dispatch lights up the board by POSTing to that server's /api/company/run
+# (server-to-server, token-authed). Best-effort; never blocks or fails the call.
+_COMPANY_BOARD_URL: str = os.environ.get("CV_COMPANY_BOARD_URL", "http://127.0.0.1:5091")
+_AUTO_BOARD: bool = os.environ.get("CV_COMPANY_AUTO_BOARD", "1") == "1"
+
+
+async def _notify_company_board(task: str) -> None:
+    """Fire the company kanban run for *task* (best-effort, non-blocking).
+
+    Lights up any board client connected to the web server's signaling WS.
+    Failures are logged and never affect the voice call.
+    """
+    if not _AUTO_BOARD:
+        return
+    url = _COMPANY_BOARD_URL.rstrip("/") + "/api/company/run"
+    headers = {"content-type": "application/json"}
+    if CV_API_TOKEN:
+        headers["x-cv-token"] = CV_API_TOKEN
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(url, json={"task": task}, headers=headers)
+        _log("BOARD", f"company board run → {url} [{resp.status_code}]")
+    except Exception as exc:
+        _log("BOARD", f"board notify failed (non-fatal): {exc}")
+
+
 # ── Tool schema ──────────────────────────────────────────────────────────────────
 # Both the realtime bridge (StepFun tool-calling) and the text brain
 # (step-3.7-flash function-calling) use this identical schema.
@@ -166,6 +194,10 @@ async def dispatch_to_engineer(task: str) -> dict[str, Any]:
         _log("DISPATCH", f"state write failed: {exc}")
 
     _log("DISPATCH", f"dispatched  task_id={tid}")
+
+    # Light up the company kanban for this dispatch (best-effort, non-blocking).
+    asyncio.create_task(_notify_company_board(task))
+
     return {"status": "dispatched", "task_id": tid, "backend": _CALL_BACKEND}
 
 
