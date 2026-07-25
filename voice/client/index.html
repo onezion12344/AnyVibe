@@ -44,7 +44,17 @@
 
   <script>
     // Plain WebRTC client — no SDK. Exchanges SDP with the server's POST /api/offer.
-    const TOKEN = new URLSearchParams(location.search).get("token") || "";
+    // Token arrives once via ?token=; stash it, STRIP it from the URL, send via header only.
+    let TOKEN = new URLSearchParams(location.search).get("token")
+             || sessionStorage.getItem("cv_token") || "";
+    if (TOKEN) {
+      sessionStorage.setItem("cv_token", TOKEN);
+      if (location.search.includes("token=")) {
+        const u = new URL(location.href);
+        u.searchParams.delete("token");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+    }
     const OFFER_URL = location.origin + "/api/offer";
     const statusEl = document.getElementById("status");
     const logEl = document.getElementById("log");
