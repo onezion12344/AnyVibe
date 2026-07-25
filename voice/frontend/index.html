@@ -3,174 +3,427 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coding Vibe — Pipecat Voice (Official UI)</title>
+  <title>Coding Vibe — StepFun Realtime Voice</title>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{--bg:#0d1b2a;--surface:#162236;--border:#1e3050;--accent:#e07a5f;--gold:#d4a843;--teal:#3a8a8a;--text:#f0e6d8;--muted:#8a9ab0}
     body{background:var(--bg);color:var(--text);font-family:"Space Grotesk","Noto Sans SC",system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;padding:2rem}
     h1{font-size:1.4rem;background:linear-gradient(135deg,#f0c87a,#e07a5f);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.04em}
-    .card{background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:2rem 2.2rem;width:100%;max-width:460px}
+    .card{background:var(--surface);border-radius:16px;border:1px solid var(--border);padding:2rem 2.2rem;width:100%;max-width:520px}
     .btn{padding:.75rem 1.4rem;border-radius:12px;border:none;font-size:1rem;font-weight:600;cursor:pointer;transition:transform .1s,background .15s}
     .btn:active{transform:scale(.97)}
-    .btn-connect{background:var(--accent);color:#fff;width:100%;justify-content:center;box-shadow:0 0 30px rgba(224,122,95,.25)}
+    .btn-row{display:flex;gap:.7rem}
+    .btn-connect{background:var(--accent);color:#fff;flex:1;box-shadow:0 0 30px rgba(224,122,95,.25)}
     .btn-connect:hover{background:#c9684f}
     .btn-connect:disabled{background:#4a3040;box-shadow:none;cursor:not-allowed}
-    .btn-mute{background:#243a56;color:var(--text);margin-top:.7rem;width:100%}
-    .btn-mute.muted{background:#4a3040}
+    .btn-hangup{background:#c0392b;color:#fff;flex:1}
+    .btn-hangup:hover{background:#a93226}
+    .btn-hangup:disabled{background:#4a3040;cursor:not-allowed}
     .status{margin-top:1rem;padding:.7rem 1rem;border-radius:8px;font-size:.85rem;line-height:1.4}
     .status.idle{background:#0a1628;border:1px solid var(--border);color:var(--muted)}
     .status.connecting,.status.connected{background:#12241c;border:1px solid var(--teal);color:#7ae0c0}
+    .status.speaking{background:#1a2010;border:1px solid var(--gold);color:#f0c87a}
     .status.error{background:#2a1010;border:1px solid #e05050;color:#f08080}
-    #log{margin-top:1rem;max-height:180px;overflow-y:auto;font-family:monospace;font-size:.72rem;color:var(--muted);line-height:1.6}
+    #log{margin-top:1rem;max-height:200px;overflow-y:auto;font-family:monospace;font-size:.72rem;color:var(--muted);line-height:1.6}
     #log span{display:block}
-    .wave{display:flex;align-items:center;justify-content:center;gap:4px;height:44px;margin-top:1rem}
-    .bar{width:4px;background:var(--accent);border-radius:2px;transition:height .08s}
+    #log .asr{color:#7ae0c0}
+    #log .bot{color:#f0c87a}
+    .transcript-bar{margin-top:.8rem;padding:.5rem .8rem;background:#0a1628;border:1px solid var(--border);border-radius:8px;font-size:.82rem;color:var(--text);min-height:2rem;word-break:break-word}
+    .transcript-bar .label{font-size:.65rem;color:var(--muted);margin-right:.4rem;text-transform:uppercase}
+    .mic-indicator{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.4rem;background:var(--muted);transition:background .15s}
+    .mic-indicator.active{background:#4caf50;box-shadow:0 0 6px #4caf50}
+    .mic-indicator.speaking{background:var(--accent);box-shadow:0 0 6px var(--accent)}
   </style>
 </head>
 <body>
-  <h1>🐑 Coding Vibe Voice — Pipecat Official Client</h1>
+  <h1>&#x1f411; Coding Vibe Voice — StepFun Realtime</h1>
   <div class="card">
-    <button id="connectBtn" class="btn btn-connect">Call</button>
-    <button id="muteBtn" class="btn btn-mute">Mute</button>
-    <div id="status" class="status idle">Ready — click Call, allow the mic.</div>
-    <div id="wave" class="wave" style="display:none">
-      <div class="bar" style="height:8px"></div><div class="bar" style="height:20px"></div>
-      <div class="bar" style="height:32px"></div><div class="bar" style="height:44px"></div>
-      <div class="bar" style="height:28px"></div><div class="bar" style="height:16px"></div>
-      <div class="bar" style="height:36px"></div><div class="bar" style="height:12px"></div>
+    <div class="btn-row">
+      <button id="callBtn" class="btn btn-connect">Call</button>
+      <button id="hangupBtn" class="btn btn-hangup" disabled>Hang up</button>
+    </div>
+    <div id="status" class="status idle">Ready — click Call to start the voice conversation.</div>
+    <div class="transcript-bar" id="transcript">
+      <span class="label">Bot:</span><span id="transcriptText"></span>
     </div>
     <div id="log"></div>
   </div>
-  <audio id="botAudio" autoplay playsinline></audio>
 
-  <!--
-    Pipecat Official JS Client + SmallWebRTC Transport
-    Uses @pipecat-ai/client-js + @pipecat-ai/small-webrtc-transport
-    Served via a local dev server (npm run dev) from voice/frontend/
-  -->
-  <script type="module">
-    import { PipecatClient, RTVIEvent } from "/node_modules/@pipecat-ai/client-js/dist/index.js";
-    import { SmallWebRTCTransport } from "/node_modules/@pipecat-ai/small-webrtc-transport/dist/index.js";
+<!--
+  StepFun Realtime WebSocket voice frontend
+  =========================================
+  - Pure HTML/CSS/JS — zero npm packages needed
+  - Web Audio API for mic capture (PCM16 24kHz mono) and playback
+  - WebSocket relay to /ws (server forwards to StepFun Realtime API)
+  - Yellow-sheep dark theme styling
+-->
 
-    const OFFER_URL = location.origin.replace(/:\d+$/, ":7860") + "/api/offer";
+<script>
+// ── Auth token injection ──────────────────────────────────────────────────────────
+const CV_TOKEN = "__CV_OFFER_TOKEN__";
+const _tokenReady = CV_TOKEN && !CV_TOKEN.includes("CV_OFFER_TOKEN");
 
-    // Token is injected server-side (GET / replaces __CV_OFFER_TOKEN__ with a
-    // short-lived, single-use capability token — never the long-lived shared
-    // secret, and only when the server is loopback-bound). /api/offer is gated
-    // because it can reach the CEO backend. We send the token as the x-cv-token
-    // request HEADER (never in the URL — no log/history/Referer leak) by
-    // wrapping fetch for the offer request; _check_offer_auth reads that header.
-    const CV_TOKEN = "__CV_OFFER_TOKEN__";
-    const _tokenReady = CV_TOKEN && !CV_TOKEN.includes("CV_OFFER_TOKEN");
-    const OFFER_PATH = "/api/offer";
-    if (_tokenReady) {
-      const _origFetch = window.fetch.bind(window);
-      window.fetch = (input, init = {}) => {
-        const raw = typeof input === "string" ? input : (input && input.url) || "";
-        let sameOriginOffer = false;
-        try {
-          const u = new URL(raw, location.origin);
-          // Only attach the token to a genuine same-origin /api/offer request
-          // (POST offer + PATCH ICE candidates) — never leak it to a foreign origin.
-          sameOriginOffer = u.origin === location.origin && u.pathname === "/api/offer";
-        } catch (_) { sameOriginOffer = false; }
-        if (sameOriginOffer) {
-          const headers = new Headers(init.headers || {});
-          headers.set("x-cv-token", CV_TOKEN);
-          init = { ...init, headers };
-        }
-        return _origFetch(input, init);
-      };
+// ── Config ────────────────────────────────────────────────────────────────────────
+const SAMPLE_RATE = 24000;
+const CHUNK_MS = 120;            // send audio every 120ms
+const CHUNK_SAMPLES = Math.floor(SAMPLE_RATE * CHUNK_MS / 1000); // 2880 samples per chunk
+
+const WS_URL = (() => {
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  const wsPath = "/ws";
+  const tokenParam = _tokenReady ? `?token=${encodeURIComponent(CV_TOKEN)}` : "";
+  return `${proto}//${location.host}${wsPath}${tokenParam}`;
+})();
+
+// ── DOM refs ─────────────────────────────────────────────────────────────────────
+const callBtn   = document.getElementById("callBtn");
+const hangupBtn = document.getElementById("hangupBtn");
+const statusEl  = document.getElementById("status");
+const logEl     = document.getElementById("log");
+const transcriptTextEl = document.getElementById("transcriptText");
+
+// ── Helpers ───────────────────────────────────────────────────────────────────────
+function setStatus(cls, msg) {
+  statusEl.className = `status ${cls}`;
+  statusEl.textContent = msg;
+}
+function log(msg, cssClass = "") {
+  const s = document.createElement("span");
+  if (cssClass) s.className = cssClass;
+  s.textContent = new Date().toISOString().slice(11, 19) + " " + msg;
+  logEl.appendChild(s);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────────
+let ws            = null;
+let audioCtx      = null;
+let micStream     = null;
+let scriptNode    = null;
+let isCallActive  = false;
+let isSpeaking    = false;
+let botTranscript = "";
+let audioBuffer   = [];   // Float32 buffer for accumulating mic samples
+
+// ── Audio playback ───────────────────────────────────────────────────────────────
+
+async function ensureAudioContext() {
+  if (!audioCtx || audioCtx.state === "closed") {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({
+      sampleRate: SAMPLE_RATE,
+    });
+  }
+  if (audioCtx.state === "suspended") {
+    await audioCtx.resume();
+  }
+}
+
+function playPCM16Base64(base64Data) {
+  // Decode base64 → raw PCM16 bytes → Float32 → AudioBuffer → play
+  if (!audioCtx) return;
+
+  try {
+    // Base64 → binary string → Uint8Array
+    const binary = atob(base64Data);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
     }
 
-    // ── UI refs ──────────────────────────────────────────────────────────────────
-    const statusEl = document.getElementById("status");
-    const logEl    = document.getElementById("log");
-    const waveEl   = document.getElementById("wave");
-    const connBtn  = document.getElementById("connectBtn");
-    const muteBtn  = document.getElementById("muteBtn");
-    const botAudio = document.getElementById("botAudio");
-    let   muted    = false;
-    let   waveTimer = null;
+    // Uint8Array → Int16Array (little-endian PCM16)
+    const numSamples = Math.floor(bytes.length / 2);
+    const pcm = new Int16Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      pcm[i] = bytes[i * 2] | (bytes[i * 2 + 1] << 8);
+    }
 
-    const setStatus = (c, m) => { statusEl.className = "status " + c; statusEl.textContent = m; };
-    const log = (m) => {
-      const s = document.createElement("span");
-      s.textContent = new Date().toISOString().slice(11, 19) + " " + m;
-      logEl.appendChild(s);
-      logEl.scrollTop = logEl.scrollHeight;
-    };
-    const startWave = () => {
-      waveEl.style.display = "flex";
-      const b = waveEl.querySelectorAll(".bar");
-      waveTimer = setInterval(() => b.forEach(x => x.style.height = (Math.random() * 36 + 6) + "px"), 120);
-    };
-    const stopWave = () => { clearInterval(waveTimer); waveEl.style.display = "none"; };
+    // Convert to Float32 (-1.0 to 1.0)
+    const floatData = new Float32Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      floatData[i] = pcm[i] / 32768;
+    }
 
-    // ── Build client ─────────────────────────────────────────────────────────────
-    // @pipecat-ai/small-webrtc-transport SmallWebRTCTransport
-    //   • offerUrlTemplate is the canonical way to set the /api/offer endpoint
-    //   • connect() with no params uses whatever was set at construction time
-    const transport = new SmallWebRTCTransport({
-      offerUrlTemplate: OFFER_PATH,
-    });
+    // Create AudioBuffer and fill
+    const buffer = audioCtx.createBuffer(1, numSamples, SAMPLE_RATE);
+    buffer.getChannelData(0).set(floatData);
 
-    const pcClient = new PipecatClient({
-      transport,
-      enableMic: true,
-      enableCam: false,
-      callbacks: {
-        onConnected: () => { log("onConnected"); setStatus("connected", "Connected — 说话吧。"); },
-        onDisconnected: () => { log("onDisconnected"); setStatus("idle", "Disconnected."); stopWave(); },
-        onTransportStateChanged: (state) => { log("transportState: " + state); },
-        onBotConnected: () => { log("onBotConnected"); },
-        onBotDisconnected: () => { log("onBotDisconnected"); },
-        onBotReady: () => { log("onBotReady — 🎙 可以开始说话"); },
-        onError: (err) => { log("ERROR: " + (err?.message || JSON.stringify(err))); setStatus("error", "Error: " + (err?.message || "see log")); },
-      },
-    });
+    // Play
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.start();
+  } catch (e) {
+    log("Playback error: " + e.message);
+  }
+}
 
-    // ── Events ──────────────────────────────────────────────────────────────────
-    pcClient.on(RTVIEvent.Connected, () => { log("EVENT Connected"); startWave(); });
-    pcClient.on(RTVIEvent.Disconnected, () => { log("EVENT Disconnected"); stopWave(); });
-    pcClient.on(RTVIEvent.BotReady, () => { log("EVENT BotReady"); });
-    pcClient.on(RTVIEvent.Error, (err) => { log("EVENT Error: " + (err?.message || "")); });
+// ── PCM16 encoding ───────────────────────────────────────────────────────────────
 
-    // ── Actions ─────────────────────────────────────────────────────────────────
-    async function connect() {
-      setStatus("connecting", "Connecting…"); log("Starting Pipecat client…");
-      connBtn.disabled = true;
+function float32ToPCM16Base64(float32Array) {
+  // Convert Float32Array (-1.0 to 1.0) → Int16Array → base64
+  const len = float32Array.length;
+  const int16 = new Int16Array(len);
+  for (let i = 0; i < len; i++) {
+    let s = Math.max(-1, Math.min(1, float32Array[i]));
+    int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+
+  // Int16Array → Uint8Array (little-endian)
+  const bytes = new Uint8Array(len * 2);
+  for (let i = 0; i < len; i++) {
+    const val = int16[i];
+    bytes[i * 2]     = val & 0xFF;
+    bytes[i * 2 + 1] = (val >> 8) & 0xFF;
+  }
+
+  // Uint8Array → binary string → base64
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+// ── Microphone capture ───────────────────────────────────────────────────────────
+
+async function startMic() {
+  await ensureAudioContext();
+
+  micStream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      sampleRate: SAMPLE_RATE,
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: true,
+    },
+  });
+
+  const source = audioCtx.createMediaStreamSource(micStream);
+
+  // Use ScriptProcessorNode for PCM capture
+  // Buffer size should be power of 2; 4096 works well for 24kHz (~170ms)
+  const bufferSize = 4096;
+  scriptNode = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+
+  scriptNode.onaudioprocess = (event) => {
+    if (!isCallActive || !ws) return;
+    const inputData = event.inputBuffer.getChannelData(0);
+    audioBuffer.push(...inputData);
+
+    // When we have enough samples for a chunk, encode and send
+    while (audioBuffer.length >= CHUNK_SAMPLES) {
+      const chunk = new Float32Array(audioBuffer.splice(0, CHUNK_SAMPLES));
+      const b64 = float32ToPCM16Base64(chunk);
+
       try {
-        // offerUrlTemplate was set at construction time; connect() needs no extra args
-        await pcClient.connect();
-        log("connect() resolved");
-        connBtn.textContent = "Hang up";
-        connBtn.disabled = false;
-      } catch (err) {
-        log("connect() rejected: " + (err?.message || err));
-        setStatus("error", "Connect failed: " + (err?.message || err));
-        connBtn.disabled = false;
+        ws.send(JSON.stringify({
+          type: "input_audio_buffer.append",
+          audio: b64,
+        }));
+      } catch (e) {
+        // silently drop — WebSocket errors are handled elsewhere
       }
     }
+  };
 
-    function hangup() {
-      pcClient.disconnect().catch(() => {});
-      connBtn.textContent = "Call";
-      setStatus("idle", "Ready — click Call, allow the mic.");
+  source.connect(scriptNode);
+  scriptNode.connect(audioCtx.destination);
+
+  log("Microphone started (24kHz mono PCM16)");
+}
+
+function stopMic() {
+  if (scriptNode) {
+    scriptNode.disconnect();
+    scriptNode = null;
+  }
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+  audioBuffer = [];
+}
+
+// ── WebSocket handling ───────────────────────────────────────────────────────────
+
+function connect() {
+  setStatus("connecting", "Connecting to StepFun Realtime…");
+  log("Connecting to " + WS_URL);
+
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = async () => {
+    log("WebSocket connected");
+    try {
+      await startMic();
+      isCallActive = true;
+      callBtn.disabled = true;
+      hangupBtn.disabled = false;
+      setStatus("connected", "Connected — start speaking!");
+
+      // Send session.update to configure the model
+      ws.send(JSON.stringify({
+        type: "session.update",
+        session: {
+          model: "step-1o-audio",
+          modalities: ["text", "audio"],
+          instructions: "你是 Coding Vibe 工作室的电话接线员（CS）。说话简短、自然、口语化，像在打电话。如果来电者想做/写/改某个代码或功能，就热情、简短地回应：『好的，我马上安排工程师处理，忙完打给你哈。』然后就好——不要自己写代码、不要解释实现细节。如果只是闲聊或问进度，就自然地聊。始终友好。用中文回答。",
+          voice: "alloy",
+          input_audio_format: "pcm16",
+          output_audio_format: "pcm16",
+          input_audio_transcription: {
+            model: "step-asr"
+          },
+          turn_detection: {
+            type: "server_vad",
+          },
+        },
+      }));
+      log("Sent session.update");
+    } catch (e) {
+      log("Mic error: " + e.message);
+      setStatus("error", e.message);
+    }
+  };
+
+  ws.onmessage = (event) => {
+    let msg;
+    try {
+      msg = JSON.parse(event.data);
+    } catch {
+      return;
     }
 
-    connBtn.addEventListener("click", () => {
-      if (pcClient.state() !== "disconnected") { hangup(); return; }
-      connect();
-    });
+    switch (msg.type) {
+      case "session.updated":
+        log("Session updated — model: " + (msg.session?.model || "?"));
+        break;
 
-    muteBtn.addEventListener("click", () => {
-      muted = !muted;
-      muteBtn.textContent = muted ? "Unmute" : "Mute";
-      muteBtn.classList.toggle("muted", muted);
-      try { pcClient.enableMic(!muted); } catch (_) {}
-      log(muted ? "mic muted" : "mic on");
-    });
-  </script>
+      case "session.created":
+        log("Session created (id: " + (msg.session?.id || "?") + ")");
+        break;
+
+      case "input_audio_buffer.speech_started":
+        isSpeaking = true;
+        log("Speech detected", "asr");
+        break;
+
+      case "input_audio_buffer.speech_stopped":
+        isSpeaking = false;
+        log("Speech ended", "asr");
+        // Auto-commit and create response on speech stop
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "input_audio_buffer.commit" }));
+          ws.send(JSON.stringify({ type: "response.create" }));
+        }
+        break;
+
+      case "input_audio_buffer.committed":
+        log("Audio buffer committed");
+        break;
+
+      case "response.audio.delta":
+        // Play audio chunk from the bot
+        if (msg.delta) {
+          playPCM16Base64(msg.delta);
+        }
+        break;
+
+      case "response.audio_transcript.delta":
+        // Show what the bot is saying
+        botTranscript += (msg.delta || "");
+        transcriptTextEl.textContent = botTranscript;
+        break;
+
+      case "response.text.delta":
+        // Text output from the model
+        if (!msg.delta) break;
+        if (msg.delta !== botTranscript) {
+          botTranscript += msg.delta;
+        }
+        transcriptTextEl.textContent = botTranscript;
+        break;
+
+      case "response.audio.done":
+        log("Bot finished speaking", "bot");
+        // Reset transcript for next turn
+        botTranscript = "";
+        transcriptTextEl.textContent = "";
+        break;
+
+      case "response.done":
+        log("Response complete", "bot");
+        break;
+
+      case "error":
+        log("Server error: " + (msg.error?.message || JSON.stringify(msg)), "error");
+        break;
+
+      default:
+        // Log unknown events at reduced volume
+        if (msg.type && !msg.type.startsWith("input_audio_buffer.")) {
+          log("Event: " + msg.type);
+        }
+    }
+  };
+
+  ws.onerror = (e) => {
+    log("WebSocket error");
+    console.error("WS error:", e);
+    setStatus("error", "WebSocket connection error");
+  };
+
+  ws.onclose = (e) => {
+    log(`WebSocket closed (code=${e.code})`);
+    cleanup();
+  };
+}
+
+function hangup() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.close(1000, "user hangup");
+  }
+  cleanup();
+}
+
+function cleanup() {
+  isCallActive = false;
+  isSpeaking = false;
+  botTranscript = "";
+  transcriptTextEl.textContent = "";
+  stopMic();
+
+  if (ws) {
+    ws.onopen = null;
+    ws.onmessage = null;
+    ws.onerror = null;
+    ws.onclose = null;
+    ws = null;
+  }
+
+  callBtn.disabled = false;
+  hangupBtn.disabled = true;
+  setStatus("idle", "Ready — click Call to start the voice conversation.");
+}
+
+// ── Button handlers ──────────────────────────────────────────────────────────────
+
+callBtn.addEventListener("click", () => {
+  if (isCallActive) return;
+  connect();
+});
+
+hangupBtn.addEventListener("click", () => {
+  if (isCallActive) hangup();
+});
+
+// ── Cleanup on page unload ───────────────────────────────────────────────────────
+window.addEventListener("beforeunload", () => {
+  cleanup();
+});
+
+// Ready
+log("StepFun Realtime frontend loaded");
+</script>
 </body>
 </html>
