@@ -57,11 +57,24 @@
     // Token is injected server-side (GET / replaces __CV_OFFER_TOKEN__ with a
     // short-lived, single-use capability token — never the long-lived shared
     // secret, and only when the server is loopback-bound). /api/offer is gated
-    // because it can reach the CEO backend. If the placeholder wasn't
-    // substituted (raw static file) or none was minted, fall back to the bare path.
+    // because it can reach the CEO backend. We send the token as the x-cv-token
+    // request HEADER (never in the URL — no log/history/Referer leak) by
+    // wrapping fetch for the offer request; _check_offer_auth reads that header.
     const CV_TOKEN = "__CV_OFFER_TOKEN__";
     const _tokenReady = CV_TOKEN && !CV_TOKEN.includes("CV_OFFER_TOKEN");
-    const OFFER_PATH = _tokenReady ? "/api/offer?token=" + CV_TOKEN : "/api/offer";
+    const OFFER_PATH = "/api/offer";
+    if (_tokenReady) {
+      const _origFetch = window.fetch.bind(window);
+      window.fetch = (input, init = {}) => {
+        const url = typeof input === "string" ? input : (input && input.url) || "";
+        if (url.indexOf("/api/offer") !== -1) {
+          const headers = new Headers(init.headers || {});
+          headers.set("x-cv-token", CV_TOKEN);
+          init = { ...init, headers };
+        }
+        return _origFetch(input, init);
+      };
+    }
 
     // ── UI refs ──────────────────────────────────────────────────────────────────
     const statusEl = document.getElementById("status");
