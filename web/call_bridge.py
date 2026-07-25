@@ -1,11 +1,5 @@
 """web/call_bridge.py — StepFun Realtime voice bridge.
 
-Refactored: core dispatch logic (dispatch_to_engineer, classify_and_dispatch,
-TOOLS, config) lives in ``web/engineer_dispatch.py`` (backend-agnostic, shared
-with the Pipecat bot).  This file only handles the StepFun WebSocket transport
-layer — forwarding audio PCM frames, handling StepFun-specific event types, and
-calling the shared classify + dispatch helpers.
-
 server.py must mount this router:
     from web.call_bridge import router as call_bridge_router
     app.include_router(call_bridge_router)
@@ -20,7 +14,10 @@ WebSocket message flow:
   browser → /api/call WS → StepFun WS (input_audio_buffer.append, base64 PCM)
   StepFun WS → /api/call WS → browser (response.audio.delta, base64 PCM)
 
-Shared dispatch logic: web/engineer_dispatch.py
+Tokens
+  CV_API_TOKEN  – if set, required on the WS query string ?token= (constant-time
+                  compare; close 4401 on mismatch).
+  STEPFUN_API_KEY  – StepFun Bearer token (read from env).
 """
 
 from __future__ import annotations
@@ -42,25 +39,18 @@ from fastapi.websockets import WebSocketState
 
 router = APIRouter()
 
-# ── Shared dispatch config (imported from engineer_dispatch) ─────────────────────
-# All backend-agnostic logic lives in web/engineer_dispatch.py.
-from web.engineer_dispatch import (  # noqa: E402
-    STEPFUN_BASE_URL,
-    CS_BRAIN_MODEL,
-    CV_API_TOKEN,
-    STEPFUN_API_KEY,      # re-exported for StepFun WS auth
-    TOOLS,
-    classify_and_dispatch,
-    dispatch_to_engineer,
-)
+STEPFUN_API_KEY: str = os.environ.get("STEPFUN_API_KEY", "")
+STEPFUN_WS_URL = "wss://api.stepfun.com/v1/realtime?model=stepaudio-2.5-realtime"
+STEPFUN_BASE_URL: str = os.environ.get("STEPFUN_BASE_URL", "https://api.stepfun.com/v1")
+# Text "brain" that decides intent + dispatch on each transcript (reliable text
+# tool-calling — the realtime audio model's tool-calling is only ~1/3 reliable).
+CS_BRAIN_MODEL = os.environ.get("CV_CS_BRAIN_MODEL", "step-3.7-flash")
+CV_API_TOKEN: str = os.environ.get("CV_API_TOKEN", "")
 
-# Audio constants (PCM16 / 24 kHz / mono) — StepFun transport-specific
+# Audio constants (PCM16 / 24 kHz / mono)
 _SAMPLE_RATE = 24_000
 _FRAMES_PER_CHUNK = 480  # 20 ms
 _RAW_CHUNK_BYTES = _FRAMES_PER_CHUNK * 2  # 960 bytes per 20 ms chunk
-
-# StepFun WebSocket URL — transport constant
-STEPFUN_WS_URL = "wss://api.stepfun.com/v1/realtime?model=stepaudio-2.5-realtime"
 
 # CS "receptionist" VOICE persona. The realtime model ONLY talks — it does NOT
 # decide dispatch (its audio tool-calling is unreliable). A separate text brain
@@ -72,54 +62,163 @@ _SYSTEM_INSTRUCTIONS = (
     "如果只是闲聊或问进度，就自然地聊。始终友好。"
 )
 
+# Backend the CS dispatches to. Real code-exec backends (claude-code/openopc) are
+# OFF by default — enabling one is a deliberate, separately-gated decision:
+# set CV_CALL_BACKEND=claude-code AND a token (the /api/call WS is token-gated).
+# Without a token we force mock (fail-closed) so a spoken request can never reach
+# an unauthenticated code-exec path.
+_CALL_BACKEND = os.environ.get("CV_CALL_BACKEND", "mock")
+if _CALL_BACKEND in ("claude-code", "openopc") and not CV_API_TOKEN:
+    _CALL_BACKEND = "mock"
+_CALL_REPO = os.environ.get("CV_DEMO_REPO", "/tmp/cv-demo")
+
+# Tool the CS can call when it judges the caller wants engineering work done.
+_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "dispatch_to_engineer",
+            "description": (
+                "把用户的编程/写代码/修bug/做功能/搭网站/写脚本等一切软件开发需求派给工程团队。"
+                "只要用户想做任何代码或软件相关的事，就调用它。"
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "A clear, self-contained description of the task to build.",
+                    }
+                },
+                "required": ["task"],
+            },
+        },
+    }
+]
+
 # Maximum incoming message size (bytes) — defend against memory bombs
 _MAX_WS_MESSAGE_BYTES = 1 << 20  # 1 MiB
 
 
-# ── StepFun-realtime-specific classify + dispatch ─────────────────────────────────
-# _classify_and_dispatch from engineer_dispatch is backend-agnostic (calls
-# on_dispatched callback).  The StepFun bridge needs a thin wrapper that also
-# sends the dispatched event back to the browser WebSocket — that's done here.
+# ── Helper: tool-call stub ────────────────────────────────────────────────────────
+
+async def dispatch_to_engineer(task: str) -> dict[str, Any]:
+    """Dispatch a coding task to the engineer (CEO) backend.
+
+    Spawns the task via the receptionist, records a delegation in shared state so
+    the kanban shows it live, and RINGS the caller back when the engineer finishes
+    (the agent-calls-you differentiator). Returns an ack dict for the CS to voice.
+    """
+    import time as _time
+    from pathlib import Path as _Path
+    try:
+        from receptionist.core import Receptionist
+        from receptionist.state import load_state, save_state
+    except Exception as exc:
+        _log("DISPATCH", f"receptionist import failed: {exc}")
+        return {"status": "error", "error": str(exc)}
+
+    try:
+        _Path(_CALL_REPO).mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+    r = Receptionist()
+
+    async def _on_complete(result: Any) -> None:
+        # mark the delegation done, then ring the caller back
+        try:
+            st2 = load_state()
+            for d in st2.get("delegations", []):
+                if d.get("task_id") == tid:
+                    d["status"] = "completed"
+            save_state(st2)
+        except Exception:
+            pass
+        try:
+            from web.signaling import ring
+            summary = (getattr(result, "summary", "") or "")[:80]
+            await ring(reason=f"任务完成：{summary}", frm="CEO")
+        except Exception as exc:
+            _log("DISPATCH", f"ring failed: {exc}")
+
+    tid = await r.dispatch_async(
+        task,
+        backend=_CALL_BACKEND,
+        repo_path=_CALL_REPO,
+        on_complete=_on_complete,
+    )
+
+    # record a delegation so /api/board shows it as in-progress right away
+    try:
+        st = load_state()
+        st.setdefault("delegations", []).append({
+            "task_id": tid,
+            "description": task,
+            "status": "running",
+            "created_at": _time.time(),
+        })
+        save_state(st)
+    except Exception as exc:
+        _log("DISPATCH", f"state write failed: {exc}")
+
+    thash = hashlib.sha256(task.encode()).hexdigest()[:8]
+    _log("DISPATCH", f"dispatched task_id={tid} backend={_CALL_BACKEND} task#{thash}")
+    return {"status": "dispatched", "task_id": tid, "backend": _CALL_BACKEND}
 
 
 async def _classify_and_dispatch(transcript: str, browser_ws: Any) -> None:
     """Decide — via the text CS brain (reliable tool-calling) — whether the user's
-    spoken turn is a coding request, and if so dispatch it.
-
-    Wraps the shared :func:`~web.engineer_dispatch.classify_and_dispatch`,
-    passing a StepFun-bridge-specific callback that relays dispatched events
-    back to the browser WebSocket.
+    spoken turn is a coding request, and if so dispatch it. This replaces the
+    realtime audio model's tool-calling, which is only ~1/3 reliable.
     """
     text = (transcript or "").strip()
-    if not text:
+    if not text or not STEPFUN_API_KEY:
         return
-
-    def _on_dispatched(info: dict[str, Any]) -> None:
-        """Fire-and-forget: push dispatched event to the browser WS."""
-        try:
-            task = (info or {}).get("task", "")
-            asyncio.get_running_loop().create_task(
-                browser_ws.send_json({"type": "dispatched", "task": task, **(info or {})})
-            )
-        except Exception:
-            pass
-
-    # Fire-and-forget so we never block the audio pump loop.
+    payload = {
+        "model": CS_BRAIN_MODEL,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "你是任务分诊器。判断用户这句话是不是想让工程团队做/写/改/修任何代码、"
+                    "程序、功能、网站、脚本或软件。如果是，调用 dispatch_to_engineer 并给出"
+                    "一句简洁清晰的任务描述；如果只是闲聊/问候/问进度，就什么都不做、不要调用工具。"
+                ),
+            },
+            {"role": "user", "content": text},
+        ],
+        "tools": _TOOLS,
+        "tool_choice": "auto",
+    }
     try:
-        asyncio.create_task(classify_and_dispatch(text, on_dispatched=_on_dispatched))
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(
+                f"{STEPFUN_BASE_URL}/chat/completions",
+                headers={"Authorization": f"Bearer {STEPFUN_API_KEY}"},
+                json=payload,
+            )
+        if r.status_code != 200:
+            _log("CLASSIFY", f"brain non-200: {r.status_code} {r.text[:120]}")
+            return
+        choice = (r.json().get("choices") or [{}])[0]
+        tool_calls = (choice.get("message") or {}).get("tool_calls") or []
+        for tc in tool_calls:
+            if (tc.get("function") or {}).get("name") == "dispatch_to_engineer":
+                args = json.loads(tc["function"].get("arguments") or "{}")
+                task = (args.get("task") or "").strip()
+                if task and not task.startswith("-"):
+                    ack = await dispatch_to_engineer(task)
+                    try:
+                        await browser_ws.send_json({"type": "dispatched", "task": task, **ack})
+                    except Exception:
+                        pass
+                return
     except Exception as exc:
-        _log("CLASSIFY", f"schedule error: {exc}")
-
-
-# ── Helper: log to stdout with structured prefix ─────────────────────────────────
-
-
-def _log(prefix: str, msg: str) -> None:
-    print(f"[{prefix}] {msg}", flush=True)
+        _log("CLASSIFY", f"error: {exc}")
 
 
 # ── Helper: build StepFun client events ─────────────────────────────────────────
-
 
 def _client_session_update(event_id: str) -> dict[str, Any]:
     return {
@@ -135,6 +234,9 @@ def _client_session_update(event_id: str) -> dict[str, Any]:
                 "type": "server_vad",
                 "prefix_padding_ms": 300,
                 "silence_duration_ms": 500,
+                # REQUIRED: without create_response, StepFun detects speech
+                # start/stop but never auto-generates a reply — the call goes
+                # silent. This flag makes it respond after you stop talking.
                 "create_response": True,
             },
         },
@@ -149,8 +251,13 @@ def _client_audio_append(event_id: str, b64_audio: str) -> dict[str, Any]:
     }
 
 
-# ── WebSocket route ──────────────────────────────────────────────────────────────
+# ── Helper: log to stdout with structured prefix ─────────────────────────────────
 
+def _log(prefix: str, msg: str) -> None:
+    print(f"[{prefix}] {msg}", flush=True)
+
+
+# ── WebSocket route ──────────────────────────────────────────────────────────────
 
 @router.websocket("/api/call")
 async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
@@ -166,6 +273,10 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     immediately with close code 4401.
     """
     # ── Auth gate ──────────────────────────────────────────────────────────
+    # Browsers can't set headers on a WebSocket, and a token in the URL leaks
+    # into access logs. Accept it from the query (back-compat) OR, preferably,
+    # as the first text message {"type":"auth","token":"..."} the client sends
+    # right after the socket opens.
     await websocket.accept()
 
     if CV_API_TOKEN:
@@ -195,9 +306,7 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
         import websockets as _ws_lib  # noqa: WPS433
     except ImportError:
         _log("SF", "websockets package not installed — cannot bridge to StepFun")
-        await websocket.close(
-            code=5002, reason="Server misconfiguration: websockets not installed"
-        )
+        await websocket.close(code=5002, reason="Server misconfiguration: websockets not installed")
         return
 
     stepfun_headers = {
@@ -209,13 +318,9 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     try:
         # websockets >=14 renamed extra_headers → additional_headers; support both.
         try:
-            step_ws = await _ws_lib.connect(
-                STEPFUN_WS_URL, additional_headers=stepfun_headers
-            )
+            step_ws = await _ws_lib.connect(STEPFUN_WS_URL, additional_headers=stepfun_headers)
         except TypeError:
-            step_ws = await _ws_lib.connect(
-                STEPFUN_WS_URL, extra_headers=stepfun_headers
-            )
+            step_ws = await _ws_lib.connect(STEPFUN_WS_URL, extra_headers=stepfun_headers)
     except Exception as exc:
         _log("SF", f"Failed to connect to StepFun: {exc}")
         await websocket.close(
@@ -233,9 +338,7 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
     except Exception as exc:
         _log("SF", f"Failed to send session.update: {exc}")
         await _safe_close(step_ws)
-        await websocket.close(
-            code=5004, reason="Failed to initialise StepFun session"
-        )
+        await websocket.close(code=5004, reason="Failed to initialise StepFun session")
         return
 
     _log("SF", f"session.update sent (event_id={session_event_id})")
@@ -257,11 +360,10 @@ async def voice_call(websocket: WebSocket, token: str | None = Query(None)):
 
 # ── Pump: browser → StepFun ──────────────────────────────────────────────────────
 
-
 async def _pump_browser_to_stepfun(browser_ws: WebSocket, step_ws: Any) -> None:
     """Read binary PCM16 frames from the browser and relay them to StepFun as
     base64-encoded ``input_audio_buffer.append`` events."""
-    audio_accum = bytearray()
+    audio_accum = bytearray()   # accumulate bytes until we have a full chunk
 
     while True:
         try:
@@ -279,6 +381,9 @@ async def _pump_browser_to_stepfun(browser_ws: WebSocket, step_ws: Any) -> None:
 
         data: bytes | None = msg.get("bytes")
         if data is None:
+            # Ignore text messages from browser in the voice channel.
+            # A future extension could use JSON text for control signals
+            # (e.g. "end-of-utterance" or "hang-up").
             _log("IN", f"Ignoring text message from browser: {msg.get('text', '')[:80]}")
             continue
 
@@ -288,6 +393,7 @@ async def _pump_browser_to_stepfun(browser_ws: WebSocket, step_ws: Any) -> None:
 
         audio_accum.extend(data)
 
+        # Drain full chunks
         while len(audio_accum) >= _RAW_CHUNK_BYTES:
             chunk = audio_accum[:_RAW_CHUNK_BYTES]
             del audio_accum[:_RAW_CHUNK_BYTES]
@@ -302,7 +408,6 @@ async def _pump_browser_to_stepfun(browser_ws: WebSocket, step_ws: Any) -> None:
 
 # ── Pump: StepFun → browser ─────────────────────────────────────────────────────
 
-
 async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
     """Receive StepFun server events and relay audio deltas to the browser as raw
     binary PCM16 frames.
@@ -311,7 +416,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
     buffering output audio, the buffer is flushed so the new user speech takes
     priority immediately.
     """
-    audio_accum = bytearray()
+    audio_accum = bytearray()   # accumulate decoded chunks for partial sends
 
     while True:
         try:
@@ -321,7 +426,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
             break
 
         if not isinstance(raw, str):
-            _log("OUT", "Unexpected binary frame from StepFun — skipping")
+            _log("OUT", f"Unexpected binary frame from StepFun — skipping")
             continue
 
         try:
@@ -332,7 +437,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
 
         evt_type: str = evt.get("type", "")
 
-        # ── Audio delta ─────────────────────────────────────────────────────────
+        # ── Audio delta: decode base64 → raw PCM → forward to browser ───────────
         if evt_type == "response.audio.delta":
             b64_delta: str | None = evt.get("delta")
             if b64_delta:
@@ -340,6 +445,8 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
                     raw_bytes = base64.b64decode(b64_delta)
                     audio_accum.extend(raw_bytes)
 
+                    # Flush in whole 960-byte frames so the browser sees
+                    # exact 20-ms chunks.
                     while len(audio_accum) >= _RAW_CHUNK_BYTES:
                         frame = audio_accum[:_RAW_CHUNK_BYTES]
                         del audio_accum[:_RAW_CHUNK_BYTES]
@@ -351,7 +458,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
                 except Exception as exc:
                     _log("OUT", f"Audio decode error: {exc}")
 
-        # ── Barge-in ─────────────────────────────────────────────────────────────
+        # ── Barge-in: user started speaking while AI was talking ─────────────────
         elif evt_type == "input_audio_buffer.speech_started":
             _log("OUT", "Barge-in detected — flushing output buffer")
             audio_accum.clear()
@@ -360,9 +467,10 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
             except Exception:
                 pass
 
-        # ── Response done ────────────────────────────────────────────────────────
+        # ── Response done ───────────────────────────────────────────────────────
         elif evt_type == "response.done":
             _log("OUT", "response.done — flushing remaining audio")
+            # Flush any remaining bytes (< 960) so the browser gets the tail.
             if audio_accum:
                 try:
                     await browser_ws.send_bytes(bytes(audio_accum))
@@ -374,7 +482,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
             except Exception:
                 pass
 
-        # ── Function call: CS dispatched to engineer via realtime tool-calling ────
+        # ── Function call: CS decided to dispatch to the engineer ───────────────
         elif evt_type == "response.function_call_arguments.done":
             call_id = evt.get("call_id", "")
             try:
@@ -386,6 +494,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
             _log("OUT", f"CS dispatched via tool (task#{thash})")
             ack: dict[str, Any] = {"status": "no-op"}
             if task.startswith("-"):
+                # defense-in-depth vs argv flag smuggling (adapters also use `--`)
                 _log("OUT", f"Rejected task starting with '-' (task#{thash})")
                 ack = {"status": "error", "error": "Invalid task"}
             elif task:
@@ -411,7 +520,7 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
             except Exception as exc:
                 _log("OUT", f"function_call_output send failed: {exc}")
 
-        # ── Transcript complete → classify via text brain ────────────────────────
+        # ── User's turn transcribed → decide dispatch via the text brain ────────
         elif evt_type == "conversation.item.input_audio_transcription.completed":
             tx = evt.get("transcript", "") or ""
             # Content redacted by default (PII); set CV_LOG_TRANSCRIPTS=1 for local debug.
@@ -436,7 +545,6 @@ async def _pump_stepfun_to_browser(step_ws: Any, browser_ws: WebSocket) -> None:
 
 
 # ── Cleanup helpers ──────────────────────────────────────────────────────────────
-
 
 async def _safe_close(conn: Any) -> None:
     """Close a websocket connection if it is still open. Silently ignores errors."""
