@@ -23,10 +23,12 @@ def _register_builtins() -> None:
     from receptionist.adapters.claude_code import ClaudeCodeAdapter
     from receptionist.adapters.mock import MockAdapter
     from receptionist.adapters.openopc import OpenOPCAdapter
+    from receptionist.adapters.qoder import QoderAdapter
 
     register_adapter(MockAdapter)
     register_adapter(ClaudeCodeAdapter)
     register_adapter(OpenOPCAdapter)
+    register_adapter(QoderAdapter)
 
 
 # Side-effect: register built-ins at package import time.
