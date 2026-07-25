@@ -51,10 +51,20 @@ body {
 
 /* Header */
 .header {
+  position: relative;
   text-align: center;
   margin-bottom: 36px;
   padding-top: 16px;
 }
+.language-toggle {
+  position: absolute; top: 0; right: 0;
+  min-width: 44px; padding: 5px 9px;
+  border: 1px solid var(--border); border-radius: 999px;
+  background: rgba(33,53,70,.78); color: var(--white);
+  font: 700 11px/1 'Space Grotesk', 'Noto Sans SC', sans-serif;
+  cursor: pointer; letter-spacing: .05em;
+}
+.language-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
 .header h1 {
   font-size: 28px; font-weight: 700;
   background: linear-gradient(135deg, #f0c87a, #e07a5f);
@@ -216,6 +226,7 @@ body {
 
   <!-- Header -->
   <div class="header reveal">
+    <button class="language-toggle" data-language-toggle type="button"></button>
     <h1>Coding Vibe</h1>
     <p class="sub">AdventureX 2026 · Demo Day 2026-07-26</p>
   </div>
@@ -224,28 +235,28 @@ body {
     <img src="/static/assets/yellow-sheep-hero.png" alt="Yellow Sheep in a boat beneath a lighthouse" />
     <div class="sheep-banner-copy">
       <div class="sheep-banner-kicker">黄羊 · OneZion</div>
-      <div class="sheep-banner-title">Your crew starts with a hello.</div>
-      <div class="sheep-banner-desc">A small digital teammate for the long route from voice to shipped code.</div>
+      <div class="sheep-banner-title" data-i18n="hero_title">Your crew starts with a hello.</div>
+      <div class="sheep-banner-desc" data-i18n="hero_description">A small digital teammate for the long route from voice to shipped code.</div>
     </div>
   </div>
 
   <!-- Live Demos -->
-  <div class="section-label reveal">Live Demos</div>
+  <div class="section-label reveal" data-i18n="live_demos">Live Demos</div>
   <div class="links reveal">
     <a href="/company" class="link-card">
       <div class="link-icon">📞</div>
       <div class="link-body">
-        <div class="link-title">Voice Control + Company Kanban</div>
-        <div class="link-desc">Call the Yellow Sheep, speak naturally, and watch the AI role team work on one live screen</div>
+        <div class="link-title" data-i18n="voice_company_title">Voice Control + Company Kanban</div>
+        <div class="link-desc" data-i18n="voice_company_description">Call the Yellow Sheep, speak naturally, and watch the AI role team work on one live screen</div>
       </div>
-      <span class="link-badge">Live</span>
+      <span class="link-badge" data-i18n="live">Live</span>
       <span class="link-arrow">→</span>
     </a>
     <a href="http://localhost:7860" class="link-card" target="_blank">
       <div class="link-icon">🎙️</div>
       <div class="link-body">
-        <div class="link-title">Voice Server</div>
-        <div class="link-desc">StepFun WebSocket bridge — realtime audio pipeline</div>
+        <div class="link-title" data-i18n="voice_server_title">Voice Server</div>
+        <div class="link-desc" data-i18n="voice_server_description">StepFun WebSocket bridge — realtime audio pipeline</div>
       </div>
       <span class="link-badge local">local:7860</span>
       <span class="link-arrow">→</span>
@@ -253,52 +264,52 @@ body {
   </div>
 
   <!-- Docs & Resources -->
-  <div class="section-label reveal">Docs & Resources</div>
+  <div class="section-label reveal" data-i18n="docs_resources">Docs & Resources</div>
   <div class="links reveal">
     <a href="/docs/landing.html" class="link-card">
       <div class="link-icon">🌐</div>
       <div class="link-body">
-        <div class="link-title">Landing Page</div>
-        <div class="link-desc">Marketing landing page — architecture, features, partners, try-it links</div>
+        <div class="link-title" data-i18n="landing_page">Landing Page</div>
+        <div class="link-desc" data-i18n="landing_page_description">Marketing landing page — architecture, features, partners, try-it links</div>
       </div>
       <span class="link-arrow">→</span>
     </a>
     <a href="/docs/success-narrative-vs-mechanism.html" class="link-card">
       <div class="link-icon">📖</div>
       <div class="link-body">
-        <div class="link-title">Architecture Docs</div>
-        <div class="link-desc">Success Narratives vs Success Mechanisms — pitch deck / narrative doc</div>
+        <div class="link-title" data-i18n="architecture_docs">Architecture Docs</div>
+        <div class="link-desc" data-i18n="architecture_docs_description">Success Narratives vs Success Mechanisms — pitch deck / narrative doc</div>
       </div>
       <span class="link-arrow">→</span>
     </a>
     <a href="https://github.com/onezion12344/coding-vibe" class="link-card" target="_blank" rel="noopener">
       <div class="link-icon">💻</div>
       <div class="link-body">
-        <div class="link-title">GitHub Repository</div>
-        <div class="link-desc">Source code, README, MCP server, voice bridge. MIT licensed.</div>
+        <div class="link-title" data-i18n="github_repository">GitHub Repository</div>
+        <div class="link-desc" data-i18n="github_repository_description">Source code, README, MCP server, voice bridge. MIT licensed.</div>
       </div>
-      <span class="link-badge">Open Source</span>
+      <span class="link-badge" data-i18n="open_source">Open Source</span>
       <span class="link-arrow">→</span>
     </a>
     <a href="https://onezion12344.github.io/projects/coding-vibe/" class="link-card" target="_blank" rel="noopener">
       <div class="link-icon">🚀</div>
       <div class="link-body">
-        <div class="link-title">Deployed Landing Page</div>
-        <div class="link-desc">GitHub Pages — share this with judges and visitors</div>
+        <div class="link-title" data-i18n="deployed_landing_page">Deployed Landing Page</div>
+        <div class="link-desc" data-i18n="deployed_landing_page_description">GitHub Pages — share this with judges and visitors</div>
       </div>
-      <span class="link-badge">GitHub Pages</span>
+      <span class="link-badge" data-i18n="github_pages">GitHub Pages</span>
       <span class="link-arrow">→</span>
     </a>
   </div>
 
   <!-- Quick Start -->
-  <div class="section-label reveal">Quick Start</div>
+  <div class="section-label reveal" data-i18n="quick_start">Quick Start</div>
   <div class="links reveal">
     <a href="docs/QODER-COMPANY-PLAN.md" class="link-card">
       <div class="link-icon">🏗️</div>
       <div class="link-body">
-        <div class="link-title">Qoder Company Plan</div>
-        <div class="link-desc">SDD plan — persistent AI company backend. T1-T5, demo-critical slice.</div>
+        <div class="link-title" data-i18n="qoder_company_plan">Qoder Company Plan</div>
+        <div class="link-desc" data-i18n="qoder_company_plan_description">SDD plan — persistent AI company backend. T1-T5, demo-critical slice.</div>
       </div>
       <span class="link-arrow">→</span>
     </a>
@@ -306,7 +317,7 @@ body {
       <div class="link-icon">📋</div>
       <div class="link-body">
         <div class="link-title">HANDOFF</div>
-        <div class="link-desc">Code map, what works/doesn't, how to run, priority TODO.</div>
+        <div class="link-desc" data-i18n="handoff_description">Code map, what works/doesn't, how to run, priority TODO.</div>
       </div>
       <span class="link-arrow">→</span>
     </a>
@@ -324,6 +335,36 @@ body {
 
 </div>
 
+<script>
+window.CV_I18N = {
+  switch_to_chinese: { en: 'Switch to Chinese', zh: '切换到中文' },
+  switch_to_english: { en: 'Switch to English', zh: '切换到英文' },
+  hero_title: { en: 'Your crew starts with a hello.', zh: '从一句你好，启动你的团队。' },
+  hero_description: { en: 'A small digital teammate for the long route from voice to shipped code.', zh: '一个陪你从语音想法走到代码交付的数字队友。' },
+  live_demos: { en: 'Live Demos', zh: '实时演示' },
+  live: { en: 'Live', zh: '在线' },
+  voice_company_title: { en: 'Voice Control + Company Kanban', zh: '语音控制 + 公司看板' },
+  voice_company_description: { en: 'Call the Yellow Sheep, speak naturally, and watch the AI role team work on one live screen.', zh: '呼叫黄羊，自然说话，在同一个界面观看 AI 团队协作。' },
+  voice_server_title: { en: 'Voice Server', zh: '语音服务' },
+  voice_server_description: { en: 'StepFun WebSocket bridge — realtime audio pipeline', zh: 'StepFun WebSocket 桥接 — 实时语音管线' },
+  docs_resources: { en: 'Docs & Resources', zh: '文档与资源' },
+  landing_page: { en: 'Landing Page', zh: '落地页' },
+  landing_page_description: { en: 'Marketing landing page — architecture, features, partners, try-it links', zh: '产品落地页 — 架构、功能、合作伙伴与体验入口' },
+  architecture_docs: { en: 'Architecture Docs', zh: '架构文档' },
+  architecture_docs_description: { en: 'Success Narratives vs Success Mechanisms — pitch deck / narrative doc', zh: '成功叙事与成功机制 — 路演与叙事文档' },
+  github_repository: { en: 'GitHub Repository', zh: 'GitHub 仓库' },
+  github_repository_description: { en: 'Source code, README, MCP server, voice bridge. MIT licensed.', zh: '源代码、README、MCP 服务与语音桥接，采用 MIT 协议。' },
+  open_source: { en: 'Open Source', zh: '开源' },
+  deployed_landing_page: { en: 'Deployed Landing Page', zh: '已部署落地页' },
+  deployed_landing_page_description: { en: 'GitHub Pages — share this with judges and visitors', zh: 'GitHub Pages — 可分享给评委和访客' },
+  github_pages: { en: 'GitHub Pages', zh: 'GitHub Pages' },
+  quick_start: { en: 'Quick Start', zh: '快速开始' },
+  qoder_company_plan: { en: 'Qoder Company Plan', zh: 'Qoder 公司方案' },
+  qoder_company_plan_description: { en: 'SDD plan — persistent AI company backend. T1-T5, demo-critical slice.', zh: 'SDD 方案 — 持续运行的 AI 公司后端，T1-T5 演示核心路径。' },
+  handoff_description: { en: 'Code map, what works/doesn\'t, how to run, priority TODO.', zh: '代码地图、已实现与未实现部分、运行方式与优先级待办。' },
+};
+</script>
+<script src="/static/language.js"></script>
 <script>
 (function() {
   const observer = new IntersectionObserver((entries) => {

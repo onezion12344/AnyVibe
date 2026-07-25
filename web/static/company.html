@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="cv-company-capability" content="">
-<title>Coding Vibe · Voice Control + Company Kanban</title>
+<title data-i18n="page_title">Coding Vibe · Voice Control + Company Kanban</title>
 <link rel="stylesheet" href="/static/call.css">
 <style>
   :root { --bg:#182735; --surface:#213546; --card:#294255; --border:#3a5968; --accent:#d9824f; --accent2:#e3ae45; --accent3:#6f9aad; --white:#f7edd4; --muted:#a8b8bd; }
@@ -16,6 +16,8 @@
   .cmp-back:hover { color:var(--accent); }
   .cmp-hd-title { font-size:17px; font-weight:700; background:linear-gradient(135deg,#f0c87a,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .cmp-hd-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:0; }
+  .language-toggle { min-width:42px; padding:5px 9px; border:1px solid var(--border); border-radius:999px; color:var(--white); background:rgba(33,53,70,.78); font:700 11px/1 inherit; letter-spacing:.05em; cursor:pointer; }
+  .language-toggle:hover { color:var(--accent2); border-color:var(--accent2); }
   .cmp-hd-badge { font-size:11px; font-weight:500; letter-spacing:.06em; color:var(--muted); background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:3px 10px; white-space:nowrap; }
   .cmp-layout { flex:1; min-height:0; display:grid; grid-template-columns:minmax(250px,.75fr) minmax(0,1.8fr); gap:12px; padding:0 14px 14px; }
   .workspace-stack { min-height:0; display:flex; flex-direction:column; gap:12px; }
@@ -107,8 +109,8 @@
 <div id="star-bg"></div>
 <div id="company-app">
   <header class="cmp-hd">
-    <div class="cmp-brand"><a class="cmp-back" href="/" aria-label="Back to index">←</a><div><div class="cmp-hd-title">Coding Vibe Company</div><div class="board-subtitle">Voice Control · AI Role Team · Live Kanban</div></div></div>
-    <div class="cmp-hd-actions"><div class="cmp-hd-badge" id="cmp-hd-badge">Board connecting</div></div>
+    <div class="cmp-brand"><a class="cmp-back" href="/" aria-label="Back to index" data-i18n-aria-label="back_to_index">←</a><div><div class="cmp-hd-title" data-i18n="workspace_title">Coding Vibe Company</div><div class="board-subtitle" data-i18n="workspace_subtitle">Voice Control · AI Role Team · Live Kanban</div></div></div>
+    <div class="cmp-hd-actions"><button class="language-toggle" data-language-toggle type="button"></button><div class="cmp-hd-badge" id="cmp-hd-badge" data-i18n="board_connecting">Board connecting</div></div>
   </header>
   <main class="cmp-layout">
     <section class="voice-panel" aria-label="Voice control">
@@ -119,39 +121,65 @@
           <span class="pet-spark">✦</span>
         </button>
         <div class="pet-name">黄羊 · Yellow Sheep</div>
-        <div class="pet-mood" id="pet-mood">waiting by the lighthouse</div>
+        <div class="pet-mood" id="pet-mood" data-i18n="pet_waiting">waiting by the lighthouse</div>
       </div>
-      <div class="voice-title">Yellow Sheep · CS</div>
-      <div class="voice-sub">Your digital teammate is listening. Call, then watch the crew move.</div>
+      <div class="voice-title" data-i18n="yellow_sheep_cs">Yellow Sheep · CS</div>
+      <div class="voice-sub" data-i18n="voice_subtitle">Your digital teammate is listening. Call, then watch the crew move.</div>
       <div class="voice-controls">
-        <button class="voice-btn primary" id="voice-call">Call</button>
-        <button class="voice-btn" id="voice-mute" disabled>Mute</button>
-        <button class="voice-btn hang" id="voice-hangup" disabled>Hang up</button>
+        <button class="voice-btn primary" id="voice-call" data-i18n="call">Call</button>
+        <button class="voice-btn" id="voice-mute" disabled data-i18n="mute">Mute</button>
+        <button class="voice-btn hang" id="voice-hangup" disabled data-i18n="hang_up">Hang up</button>
       </div>
-      <div class="voice-status" id="voice-status"><span class="voice-dot"></span><span id="voice-status-text">Ready — tap Call to start</span></div>
-      <div class="voice-transcript"><span class="voice-transcript-label">Latest handoff</span><span id="voice-transcript-text">No task dispatched yet.</span></div>
+      <div class="voice-status" id="voice-status"><span class="voice-dot"></span><span id="voice-status-text" data-i18n="ready_to_call">Ready — tap Call to start</span></div>
+      <div class="voice-transcript"><span class="voice-transcript-label" data-i18n="latest_handoff">Latest handoff</span><span id="voice-transcript-text" data-i18n="no_task_dispatched">No task dispatched yet.</span></div>
       <div class="voice-log" id="voice-log" aria-live="polite"></div>
     </section>
     <div class="workspace-stack">
     <section class="board-panel" aria-label="Company kanban">
-      <div class="board-head"><div><div class="board-title">Live Company Kanban</div><div class="board-subtitle" id="company-board-subtitle">Every voice request becomes a role-team card.</div></div><div class="cmp-ctrl"><button class="cmp-btn accent" id="btn-run">Run Team</button><button class="cmp-btn" id="btn-reset">Reset</button></div></div>
-      <div class="cmp-status"><div class="live-dot" id="cmp-dot"></div><span id="cmp-status-text">Connecting to live board…</span><span id="cmp-card-count" style="margin-left:auto">0 cards</span></div>
+      <div class="board-head"><div><div class="board-title" data-i18n="live_company_kanban">Live Company Kanban</div><div class="board-subtitle" id="company-board-subtitle" data-i18n="board_subtitle">Every voice request becomes a role-team card.</div></div><div class="cmp-ctrl"><button class="cmp-btn accent" id="btn-run" data-i18n="run_team">Run Team</button><button class="cmp-btn" id="btn-reset" data-i18n="reset">Reset</button></div></div>
+      <div class="cmp-status"><div class="live-dot" id="cmp-dot"></div><span id="cmp-status-text" data-i18n="connecting_board">Connecting to live board…</span><span id="cmp-card-count" style="margin-left:auto">0 cards</span></div>
       <div class="cmp-cols">
-        <div class="cmp-col" id="col-backlog"><div class="cmp-col-hd n1">Backlog <span class="cmp-col-badge">0</span></div><div id="col-backlog-cards" class="cmp-col-empty">—</div></div>
-        <div class="cmp-col" id="col-running"><div class="cmp-col-hd n2">Running <span class="cmp-col-badge">0</span></div><div id="col-running-cards" class="cmp-col-empty">—</div></div>
-        <div class="cmp-col" id="col-needs_approval"><div class="cmp-col-hd n3">Needs Approval <span class="cmp-col-badge">0</span></div><div id="col-needs_approval-cards" class="cmp-col-empty">—</div></div>
-        <div class="cmp-col" id="col-done"><div class="cmp-col-hd n4">Done <span class="cmp-col-badge">0</span></div><div id="col-done-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-backlog"><div class="cmp-col-hd n1"><span data-i18n="backlog">Backlog</span> <span class="cmp-col-badge">0</span></div><div id="col-backlog-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-running"><div class="cmp-col-hd n2"><span data-i18n="running">Running</span> <span class="cmp-col-badge">0</span></div><div id="col-running-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-needs_approval"><div class="cmp-col-hd n3"><span data-i18n="needs_approval">Needs Approval</span> <span class="cmp-col-badge">0</span></div><div id="col-needs_approval-cards" class="cmp-col-empty">—</div></div>
+        <div class="cmp-col" id="col-done"><div class="cmp-col-hd n4"><span data-i18n="done">Done</span> <span class="cmp-col-badge">0</span></div><div id="col-done-cards" class="cmp-col-empty">—</div></div>
       </div>
     </section>
     <section class="network-panel" aria-label="Agent communication network">
-      <div class="network-head"><div><div class="network-eyebrow">Live org map</div><div class="network-title">Agent Network · 组织协作图</div><div class="network-subtitle">You → Yellow Sheep CS → CEO → specialist team</div></div><div class="network-tools"><label class="cmp-btn" for="network-avatar-upload">Upload avatar</label><input id="network-avatar-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><button class="cmp-btn network-generate" id="network-avatar-generate" type="button">Generate avatar</button></div></div>
-      <div class="network-graph" id="network-graph" aria-live="polite"><svg id="network-edges" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg><div class="network-empty" id="network-empty">Waiting for the first voice or company event…</div></div>
-      <div class="network-activity" id="network-activity"><div class="network-empty">Internal summaries will appear here as agents communicate.</div></div>
+      <div class="network-head"><div><div class="network-eyebrow" data-i18n="live_org_map">Live org map</div><div class="network-title" data-i18n="agent_network">Agent Network · 组织协作图</div><div class="network-subtitle" data-i18n="network_subtitle">You → Yellow Sheep CS → CEO → specialist team</div></div><div class="network-tools"><label class="cmp-btn" for="network-avatar-upload" data-i18n="upload_avatar">Upload avatar</label><input id="network-avatar-upload" type="file" accept="image/png,image/jpeg,image/gif,image/webp"><button class="cmp-btn network-generate" id="network-avatar-generate" type="button" data-i18n="generate_avatar">Generate avatar</button></div></div>
+      <div class="network-graph" id="network-graph" aria-live="polite"><svg id="network-edges" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg><div class="network-empty" id="network-empty" data-i18n="waiting_for_event">Waiting for the first voice or company event…</div></div>
+      <div class="network-activity" id="network-activity"><div class="network-empty" data-i18n="internal_summaries">Internal summaries will appear here as agents communicate.</div></div>
     </section>
     </div>
   </main>
 </div>
 <div class="cmp-toast" id="cmp-toast"></div>
+<script>
+window.CV_I18N = {
+  page_title: { en: 'Coding Vibe · Voice Control + Company Kanban', zh: 'Coding Vibe · 语音控制与公司看板' },
+  switch_to_chinese: { en: 'Switch to Chinese', zh: '切换到中文' }, switch_to_english: { en: 'Switch to English', zh: '切换到英文' },
+  back_to_index: { en: 'Back to index', zh: '返回首页' }, workspace_title: { en: 'Coding Vibe Company', zh: 'Coding Vibe 公司空间' },
+  workspace_subtitle: { en: 'Voice Control · AI Role Team · Live Kanban', zh: '语音控制 · AI 角色团队 · 实时看板' }, board_connecting: { en: 'Board connecting', zh: '看板连接中' },
+  yellow_sheep_cs: { en: 'Yellow Sheep · CS', zh: '黄羊 · 客户成功' }, voice_subtitle: { en: 'Your digital teammate is listening. Call, then watch the crew move.', zh: '你的数字队友正在待命。呼叫后，看看团队如何协作。' },
+  call: { en: 'Call', zh: '呼叫' }, mute: { en: 'Mute', zh: '静音' }, unmute: { en: 'Unmute', zh: '取消静音' }, hang_up: { en: 'Hang up', zh: '挂断' },
+  ready_to_call: { en: 'Ready — tap Call to start', zh: '准备就绪 — 点击呼叫开始' }, latest_handoff: { en: 'Latest handoff', zh: '最新交接' }, no_task_dispatched: { en: 'No task dispatched yet.', zh: '尚未分派任务。' },
+  live_company_kanban: { en: 'Live Company Kanban', zh: '实时公司看板' }, board_subtitle: { en: 'Every voice request becomes a role-team card.', zh: '每一次语音需求都会进入团队角色看板。' },
+  run_team: { en: 'Run Team', zh: '运行团队' }, running: { en: 'Running', zh: '执行中' }, reset: { en: 'Reset', zh: '重置' }, connecting_board: { en: 'Connecting to live board…', zh: '正在连接实时看板…' },
+  backlog: { en: 'Backlog', zh: '待处理' }, needs_approval: { en: 'Needs Approval', zh: '需要确认' }, done: { en: 'Done', zh: '已完成' },
+  live_org_map: { en: 'Live org map', zh: '实时组织图' }, agent_network: { en: 'Agent Network · 组织协作图', zh: '智能体网络 · 组织协作图' },
+  network_subtitle: { en: 'You → Yellow Sheep CS → CEO → specialist team', zh: '你 → 黄羊 CS → CEO → 专家团队' }, upload_avatar: { en: 'Upload avatar', zh: '上传头像' }, generate_avatar: { en: 'Generate avatar', zh: '生成头像' },
+  waiting_for_event: { en: 'Waiting for the first voice or company event…', zh: '正在等待第一条语音或团队事件…' }, internal_summaries: { en: 'Internal summaries will appear here as agents communicate.', zh: '团队沟通时，内部摘要会显示在这里。' },
+  live: { en: 'Live', zh: '实时' }, disconnected: { en: 'Disconnected', zh: '已断开' }, connected_waiting: { en: 'Connected — waiting for events', zh: '已连接 — 等待事件' },
+  ws_failed: { en: 'WS connection failed', zh: 'WebSocket 连接失败' }, ws_closed: { en: 'WS closed — reconnecting...', zh: 'WebSocket 已关闭 — 正在重连…' }, ws_error: { en: 'WS error', zh: 'WebSocket 错误' },
+  voice_connecting: { en: 'Connecting your call…', zh: '正在连接通话…' }, voice_connected: { en: 'Voice channel connected', zh: '语音通道已连接' }, voice_muted: { en: 'Microphone muted', zh: '麦克风已静音' }, voice_error: { en: 'Voice connection needs attention', zh: '语音连接需要处理' },
+  running_ellipsis: { en: 'Running...', zh: '运行中…' }, starting_run: { en: 'Starting company run...', zh: '正在启动团队任务…' }, run_started: { en: 'Run started', zh: '任务已启动' }, error: { en: 'Error', zh: '错误' }, fetch_error: { en: 'Fetch error', zh: '请求错误' },
+  avatar_invalid: { en: 'Choose a PNG, JPEG, GIF, or WebP image under 5 MB.', zh: '请选择小于 5 MB 的 PNG、JPEG、GIF 或 WebP 图片。' }, avatar_uploaded: { en: 'Avatar uploaded locally.', zh: '头像已上传到本地。' }, avatar_upload_failed: { en: 'Avatar upload failed', zh: '头像上传失败' },
+  activity_empty: { en: 'Internal summaries will appear here as agents communicate.', zh: '团队沟通时，内部摘要会显示在这里。' }, you: { en: 'You', zh: '你' }, tool: { en: 'tool', zh: '工具' }, work: { en: 'work', zh: '工作' }, cards: { en: 'cards', zh: '张卡片' }, idle: { en: 'idle', zh: '空闲' },
+  task_dispatched: { en: 'Task dispatched', zh: '任务已分派' }, engineer_accepted: { en: 'Engineer team accepted', zh: '工程团队已接单' }, voice_ready: { en: 'Voice Control ready — board and call are connected.', zh: '语音控制已就绪 — 看板和通话已连接。' },
+  pet_waiting: { en: 'waiting by the lighthouse', zh: '在灯塔下等待' }, pet_mapping: { en: 'mapping a route through the mountains', zh: '正在穿过群山规划路线' }, pet_ready: { en: 'ready to build', zh: '准备开始创造' }, pet_shipping: { en: 'watching the crew ship something useful', zh: '看着团队交付有用的成果' }
+};
+</script>
+<script src="/static/language.js"></script>
 <script src="/static/voice-control.js"></script>
 <script>window.__CV_COMPANY_CAPABILITY__ = "";</script>
 <script src="/static/company.js"></script>

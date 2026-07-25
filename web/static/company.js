@@ -8,6 +8,7 @@
  * ──────────────────────────────────────────────────────────────────── */
 
 const COMPANY = (() => {
+  const t = (key, fallback = '') => window.cvT ? window.cvT(key, fallback) : (fallback || key);
   /* ── Auth token ──────────────────────────────────────────────────── */
   let token = new URLSearchParams(location.search).get('token')
            || document.querySelector('meta[name="cv-company-capability"]')?.content
@@ -37,7 +38,6 @@ const COMPANY = (() => {
   const colBadges = {};
 
   const COLUMNS = ['backlog', 'running', 'needs_approval', 'done'];
-  const COL_LABELS = ['Backlog', 'Running', 'Needs-Approval', 'Done'];
 
   /* ── DOM refs ────────────────────────────────────────────────────── */
   function $(id) { return document.getElementById(id); }
@@ -165,7 +165,7 @@ const COMPANY = (() => {
       }
     });
 
-    $('cmp-card-count').textContent = cards.size + ' cards';
+    $('cmp-card-count').textContent = `${cards.size} ${t('cards')}`;
   }
 
   /* ── Board update handler ─────────────────────────────────────────── */
@@ -206,7 +206,7 @@ const COMPANY = (() => {
     if (op === 'card_done') {
       const c = cards.get(cardId);
       if (c && c.el) c.el.classList.add('done');
-      setPetMood('celebration mode · the crew shipped a milestone', true);
+      setPetMood(t('pet_shipping'), true);
     }
   }
 
@@ -288,7 +288,7 @@ const COMPANY = (() => {
         avatar.textContent = (node.label || node.id).split(/\s+/).map(word => word[0]).join('').slice(0, 2).toUpperCase();
       }
       const label = document.createElement('div'); label.className = 'nn-label'; label.textContent = node.label || node.id;
-      const status = document.createElement('div'); status.className = 'nn-status'; status.textContent = node.status || 'idle';
+      const status = document.createElement('div'); status.className = 'nn-status'; status.textContent = t(node.status || 'idle', node.status || 'idle');
       const summary = document.createElement('div'); summary.className = 'nn-summary'; summary.textContent = node.summary || '';
       el.append(avatar, label, status, summary); graph.appendChild(el);
     });
@@ -297,9 +297,9 @@ const COMPANY = (() => {
     if (activity) {
       activity.replaceChildren();
       const items = (networkState.activity || []).slice(-5).reverse();
-      if (!items.length) { const e = document.createElement('div'); e.className = 'network-empty'; e.textContent = 'Internal summaries will appear here as agents communicate.'; activity.appendChild(e); }
-      const activityName = id => id === 'ceo' ? 'CEO' : id === 'cs' ? 'CS' : id === 'user' ? 'You' : String(id || '?').replaceAll('_', ' ');
-      items.forEach(item => { const row = document.createElement('div'); row.className = 'na-row'; const arrow = document.createElement('span'); arrow.className = 'na-arrow'; const from = item.from || '?'; const to = item.to || '?'; arrow.textContent = from === to ? `${activityName(from)} · ${item.kind || 'work'}` : `${activityName(from)} → ${activityName(to)}`; row.appendChild(arrow); const text = document.createElement('span'); text.className = 'na-text'; text.textContent = item.text || item.kind || ''; row.appendChild(text); activity.appendChild(row); });
+      if (!items.length) { const e = document.createElement('div'); e.className = 'network-empty'; e.textContent = t('activity_empty'); activity.appendChild(e); }
+      const activityName = id => id === 'ceo' ? 'CEO' : id === 'cs' ? 'CS' : id === 'user' ? t('you', 'You') : String(id || '?').replaceAll('_', ' ');
+      items.forEach(item => { const row = document.createElement('div'); row.className = 'na-row'; const arrow = document.createElement('span'); arrow.className = 'na-arrow'; const from = item.from || '?'; const to = item.to || '?'; const kind = t(item.kind || 'work', item.kind || t('work')); arrow.textContent = from === to ? `${activityName(from)} · ${kind}` : `${activityName(from)} → ${activityName(to)}`; row.appendChild(arrow); const text = document.createElement('span'); text.className = 'na-text'; text.textContent = item.text || item.kind || ''; row.appendChild(text); activity.appendChild(row); });
     }
   }
 
@@ -315,13 +315,13 @@ const COMPANY = (() => {
     try {
       ws = new WebSocket(wsUrl('/api/events'));
     } catch (e) {
-      setStatus('disconnected', 'WS connection failed');
+      setStatus('disconnected', t('ws_failed'));
       scheduleReconnect();
       return;
     }
 
     ws.onopen = () => {
-      setStatus('connected', 'Connected — waiting for events');
+      setStatus('connected', t('connected_waiting'));
       if (token) {
         try { ws.send(JSON.stringify({ type: 'auth', token })); } catch {}
       }
@@ -341,7 +341,7 @@ const COMPANY = (() => {
     };
 
     ws.onclose = () => {
-      setStatus('disconnected', 'WS closed — reconnecting...');
+      setStatus('disconnected', t('ws_closed'));
       // The demo endpoint is HTTP and remains usable while the live event
       // socket reconnects (or when the page is opened without a token).
       $('btn-run').disabled = false;
@@ -350,7 +350,7 @@ const COMPANY = (() => {
 
     ws.onerror = () => {
       // onclose fires after onerror, so reconnect is handled there
-      setStatus('disconnected', 'WS error');
+      setStatus('disconnected', t('ws_error'));
     };
   }
 
@@ -365,7 +365,7 @@ const COMPANY = (() => {
     const dot = $('cmp-dot');
     dot.className = 'live-dot' + (state === 'connected' ? ' connected' : '');
     $('cmp-status-text').textContent = text;
-    $('cmp-hd-badge').textContent = state === 'connected' ? 'Live' : 'Disconnected';
+    $('cmp-hd-badge').textContent = state === 'connected' ? t('live') : t('disconnected');
   }
 
   /* Hydrate cards for a board opened after a run already started. */
@@ -377,7 +377,7 @@ const COMPANY = (() => {
       const ops = data.emitted_ops || [];
       ops.forEach(handleBoardUpdate);
       if (data.network) handleNetworkUpdate(data.network);
-      if (data.status === 'running') setStatus('connected', `Live — run ${data.run_id || 'in progress'}`);
+      if (data.status === 'running') setStatus('connected', `${t('live')} — ${data.run_id || t('running')}`);
     } catch {}
   }
 
@@ -385,8 +385,8 @@ const COMPANY = (() => {
   async function postRun() {
     const btn = $('btn-run');
     btn.disabled = true;
-    btn.textContent = 'Running...';
-    showToast('Starting company run...');
+    btn.textContent = t('running_ellipsis');
+    showToast(t('starting_run'));
 
     try {
       const r = await fetch('/api/company/run', {
@@ -396,21 +396,21 @@ const COMPANY = (() => {
       });
       const data = await r.json();
       if (r.ok) {
-        showToast(`Run started: ${data.run_id} · ${data.backend}${data.fixture_mode ? ' fixture' : ''}`);
+        showToast(`${t('run_started')}: ${data.run_id} · ${data.backend}${data.fixture_mode ? ' fixture' : ''}`);
       } else {
-        showToast('Error: ' + (data.error || data.detail || 'Unknown error'));
+        showToast(`${t('error')}: ${data.error || data.detail || 'Unknown error'}`);
       }
     } catch (e) {
-      showToast('Fetch error: ' + (e && e.message ? e.message : e));
+      showToast(`${t('fetch_error')}: ${e && e.message ? e.message : e}`);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Run Team';
+      btn.textContent = t('run_team');
     }
   }
 
   async function uploadAvatar(file) {
     if (!file || !/^image\/(png|jpeg|gif|webp)$/.test(file.type) || file.size > 5 * 1024 * 1024) {
-      showToast('Choose a PNG, JPEG, GIF, or WebP image under 5 MB.');
+      showToast(t('avatar_invalid'));
       return;
     }
     try {
@@ -420,8 +420,8 @@ const COMPANY = (() => {
       if (!response.ok) throw new Error(data.detail || data.error || 'Upload failed');
       networkState.user_avatar = data.avatar_url;
       networkState.nodes = (networkState.nodes || []).map(n => n.id === 'user' ? { ...n, avatar: data.avatar_url } : n);
-      renderNetwork(); showToast('Avatar uploaded locally.');
-    } catch (error) { showToast('Avatar upload failed: ' + (error.message || error)); }
+      renderNetwork(); showToast(t('avatar_uploaded'));
+    } catch (error) { showToast(`${t('avatar_upload_failed')}: ${error.message || error}`); }
   }
 
   async function generateAvatar() {
@@ -449,7 +449,7 @@ const COMPANY = (() => {
       }
       if (colBadges[c]) colBadges[c].textContent = '0';
     });
-    $('cmp-card-count').textContent = '0 cards';
+    $('cmp-card-count').textContent = `0 ${t('cards')}`;
   }
 
   /* ── Toast ────────────────────────────────────────────────────────── */
@@ -495,16 +495,11 @@ const COMPANY = (() => {
     petButtonEl = $('pet-button');
     petImageEl = petButtonEl ? petButtonEl.querySelector('img') : null;
     if (petButtonEl) {
-      const moods = [
-        'waiting by the lighthouse',
-        'mapping a route through the mountains',
-        '船已准备好 · ready to build',
-        'watching the crew ship something useful',
-      ];
+      const moods = ['pet_waiting', 'pet_mapping', 'pet_ready', 'pet_shipping'];
       let moodIndex = 0;
       petButtonEl.addEventListener('click', () => {
         moodIndex = (moodIndex + 1) % moods.length;
-        setPetMood(moods[moodIndex], true);
+        setPetMood(t(moods[moodIndex]), true);
       });
     }
 
@@ -523,20 +518,17 @@ const COMPANY = (() => {
         token,
         onStatus: (state, text) => {
           statusEl.className = `voice-status ${state}`;
-          statusTextEl.textContent = text;
+          const statusKey = { idle: 'ready_to_call', connecting: 'voice_connecting', connected: 'voice_connected', muted: 'voice_muted', error: 'voice_error' }[state];
+          statusTextEl.textContent = statusKey ? t(statusKey, text) : text;
           callBtn.disabled = state === 'connecting' || state === 'connected' || state === 'muted';
           muteBtn.disabled = !(state === 'connected' || state === 'muted');
           hangupBtn.disabled = !(state === 'connecting' || state === 'connected' || state === 'muted');
-          muteBtn.textContent = state === 'muted' ? 'Unmute' : 'Mute';
+          muteBtn.textContent = state === 'muted' ? t('unmute') : t('mute');
           const moods = {
-            idle: 'waiting by the lighthouse',
-            connecting: 'tuning the radio to your voice',
-            connected: 'listening for your next move',
-            muted: 'quiet mode · still watching the board',
-            error: 'the signal dropped · tap Call to try again',
+            idle: 'pet_waiting', connecting: 'pet_mapping', connected: 'pet_ready', muted: 'pet_waiting', error: 'pet_waiting',
           };
           const petAsset = (state === 'idle' || state === 'muted') ? 'yellow-sheep-meditating.png' : 'yellow-sheep-hero.png';
-          setPetMood(moods[state] || 'keeping watch over the company', state === 'connected', petAsset);
+          setPetMood(t(moods[state] || 'pet_waiting'), state === 'connected', petAsset);
         },
         onTranscript: (text) => { transcriptEl.textContent = text; },
         onLog: (text) => {
@@ -547,21 +539,21 @@ const COMPANY = (() => {
           logEl.scrollTop = logEl.scrollHeight;
         },
         onDispatched: (data) => {
-          const task = data.task || 'Task dispatched';
-          transcriptEl.textContent = `工程师已接单：${task}`;
-          showToast(`Engineer team accepted: ${task}`);
-          setPetMood('happy hooves · the crew is on it', true);
+          const task = data.task || t('task_dispatched');
+          transcriptEl.textContent = `${t('engineer_accepted')}: ${task}`;
+          showToast(`${t('engineer_accepted')}: ${task}`);
+          setPetMood(t('pet_shipping'), true);
           syncCompanyState();
         },
         onAgentState: (data) => {
           const state = data.state || 'listening';
           const moods = {
-            dispatching: ['passing your brief to the CEO team', 'yellow-sheep-hero.png'],
-            listening: ['listening for your next move', 'yellow-sheep-hero.png'],
-            ending: ['waving goodbye from the lighthouse', 'yellow-sheep-meditating.png'],
+            dispatching: ['pet_ready', 'yellow-sheep-hero.png'],
+            listening: ['pet_mapping', 'yellow-sheep-hero.png'],
+            ending: ['pet_waiting', 'yellow-sheep-meditating.png'],
           };
           const [mood, asset] = moods[state] || moods.listening;
-          setPetMood(mood, state === 'dispatching', asset);
+          setPetMood(t(mood), state === 'dispatching', asset);
         },
       });
       callBtn.addEventListener('click', async () => {
@@ -569,12 +561,18 @@ const COMPANY = (() => {
       });
       muteBtn.addEventListener('click', () => voice.toggleMute());
       hangupBtn.addEventListener('click', () => voice.hangUp());
-      voice.onLog('Voice Control ready — board and call are connected.');
+      voice.onLog(t('voice_ready'));
     }
 
     // Keep the board accurate when a judge opens it after the first event.
     setInterval(syncCompanyState, 4000);
   }
+
+  window.addEventListener('cv-language-change', () => {
+    renderNetwork();
+    refreshCounts();
+    if ($('btn-run') && !$('btn-run').disabled) $('btn-run').textContent = t('run_team');
+  });
 
   window.addEventListener('DOMContentLoaded', init);
 
