@@ -14,6 +14,8 @@ __pycache__/
 *.pyc
 node_modules/
 **/node_modules/
+# Local development symlink; never version its target or the link itself.
+voice/frontend/node_modules
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
