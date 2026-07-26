@@ -1,0 +1,1337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#132633" />
+    <link rel="icon" href="assets/landing/yellow-sheep-bike.png" type="image/png" />
+    <meta
+      name="description"
+      content="AnyVibe is the voice-first interface for your AI team. Vibe anything, anywhere."
+    />
+    <title>AnyVibe — Vibe anything, anywhere</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --navy: #132633;
+        --navy-deep: #0d1d27;
+        --card: #2b4858;
+        --card-soft: #365562;
+        --cream: #fff1d5;
+        --muted: #acbbc2;
+        --peach: #f1a36f;
+        --gold: #efc45e;
+        --blue: #6f9aab;
+        --line: rgba(239, 196, 94, 0.33);
+        --shadow: 0 30px 80px rgba(4, 16, 23, 0.28);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background:
+          radial-gradient(circle at 82% 8%, rgba(241, 163, 111, 0.11), transparent 30rem),
+          linear-gradient(var(--navy), var(--navy-deep));
+        color: var(--cream);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        content: "";
+        pointer-events: none;
+        background-image: linear-gradient(rgba(239, 196, 94, 0.025) 1px, transparent 1px);
+        background-size: 100% 44px;
+        mask-image: linear-gradient(to bottom, #000, transparent 78%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .shell {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 78px;
+        border-bottom: 1px solid rgba(172, 187, 194, 0.2);
+        background: rgba(19, 38, 51, 0.82);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        overflow: hidden;
+        background: var(--cream);
+        box-shadow: 0 0 25px rgba(239, 196, 94, 0.18);
+      }
+
+      .brand-mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .nav-links a:hover {
+        color: var(--cream);
+      }
+
+      .mini-cta {
+        padding: 10px 15px;
+        border: 1px solid rgba(241, 163, 111, 0.55);
+        border-radius: 999px;
+        color: var(--peach);
+      }
+
+      .language-toggle { border: 0; padding: 0; background: transparent; color: var(--gold); cursor: pointer; font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .language-toggle:hover, .language-toggle:focus-visible { color: var(--cream); outline: none; }
+
+      .hero {
+        display: grid;
+        min-height: calc(100svh - 78px);
+        grid-template-columns: minmax(0, 1.18fr) minmax(350px, 0.82fr);
+        gap: 54px;
+        align-items: center;
+        padding: 80px 0 72px;
+      }
+
+      .kicker,
+      .section-kicker {
+        margin: 0 0 18px;
+        color: var(--gold);
+        font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 28px;
+        font-size: clamp(62px, 8.6vw, 128px);
+        font-weight: 820;
+        letter-spacing: -0.075em;
+        line-height: 0.91;
+      }
+
+      .typing-line {
+        display: block;
+        min-height: 1em;
+        color: var(--peach);
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 0.07em;
+        margin-left: 0.04em;
+        color: var(--gold);
+        animation: blink 0.9s steps(2, end) infinite;
+      }
+
+      .hero-copy {
+        max-width: 650px;
+        margin-bottom: 28px;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 22px);
+        letter-spacing: -0.02em;
+      }
+
+      .hero-copy strong {
+        color: var(--cream);
+      }
+
+      .scene-caption {
+        display: inline-flex;
+        min-height: 43px;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 30px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(43, 72, 88, 0.45);
+        color: var(--cream);
+        font: 650 14px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .scene-caption span:first-child {
+        font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+        font-size: 20px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 52px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 21px;
+        border-radius: 999px;
+        font-size: 15px;
+        font-weight: 780;
+        transition:
+          transform 180ms ease,
+          background 180ms ease;
+      }
+
+      .button:hover {
+        transform: translateY(-2px);
+      }
+
+      .button-primary {
+        background: var(--peach);
+        color: var(--navy-deep);
+      }
+
+      .button-secondary {
+        border: 1px solid rgba(172, 187, 194, 0.32);
+        color: var(--cream);
+      }
+
+      .mascot-stage {
+        position: relative;
+        min-height: 590px;
+        overflow: hidden;
+        border: 1px solid rgba(239, 196, 94, 0.48);
+        border-radius: 46px;
+        background:
+          radial-gradient(circle at 50% 38%, rgba(255, 241, 213, 0.23), transparent 35%),
+          linear-gradient(150deg, var(--card-soft), var(--card));
+        box-shadow: var(--shadow);
+      }
+
+      .mascot-stage::before,
+      .mascot-stage::after {
+        position: absolute;
+        border: 1px solid rgba(239, 196, 94, 0.23);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .mascot-stage::before {
+        inset: 80px 45px 95px;
+      }
+
+      .mascot-stage::after {
+        inset: 135px 100px 150px;
+      }
+
+      .stage-label {
+        position: absolute;
+        top: 25px;
+        left: 28px;
+        z-index: 3;
+        color: var(--gold);
+        font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .mascot-frame {
+        position: absolute;
+        inset: 54px 18px 68px;
+        display: grid;
+        place-items: center;
+      }
+
+      .mascot-frame img {
+        position: absolute;
+        width: min(100%, 510px);
+        border-radius: 28px;
+        mix-blend-mode: normal;
+        object-fit: contain;
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+        transition:
+          opacity 450ms ease,
+          transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .mascot-frame img.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .stage-status {
+        position: absolute;
+        right: 24px;
+        bottom: 22px;
+        left: 24px;
+        z-index: 3;
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .status-live {
+        color: var(--gold);
+      }
+
+      .ticker {
+        overflow: hidden;
+        border-block: 1px solid rgba(172, 187, 194, 0.18);
+        background: rgba(13, 29, 39, 0.44);
+      }
+
+      .ticker-track {
+        display: flex;
+        width: max-content;
+        gap: 14px;
+        padding: 16px 7px;
+        animation: marquee 34s linear infinite;
+      }
+
+      .brand-marquee { margin-top: -1px; border-top: 0; background: var(--gold); color: var(--navy-deep); }
+      .brand-marquee .ticker-track { gap: 42px; padding: 10px 7px; font: 800 11px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; }
+      .brand-marquee .ticker-item { padding: 0; border: 0; color: inherit; }
+      .brand-marquee .ticker-item b { color: inherit; }
+      .brand-marquee .lane-two { animation-direction: reverse; animation-duration: 42s; background: var(--peach); }
+      .brand-marquee .lane-three { animation-duration: 29s; background: var(--cream); }
+      .brand-marquee .ticker-track { min-width: 200%; }
+      .brand-copy { color: var(--gold); text-transform: none; }
+
+      .ticker-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 14px;
+        border: 1px solid rgba(172, 187, 194, 0.2);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .ticker-item b {
+        color: var(--cream);
+      }
+
+      .section {
+        padding: 118px 0;
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 1fr minmax(250px, 0.42fr);
+        gap: 44px;
+        align-items: end;
+        padding-bottom: 28px;
+        border-bottom: 1px solid rgba(172, 187, 194, 0.2);
+      }
+
+      h2 {
+        margin-bottom: 0;
+        font-size: clamp(40px, 6vw, 76px);
+        line-height: 0.98;
+        letter-spacing: -0.06em;
+      }
+
+      .section-intro {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-top: 26px;
+      }
+
+      .workflow-card {
+        position: relative;
+        min-height: 320px;
+        overflow: hidden;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--card);
+        box-shadow: 0 18px 44px rgba(4, 16, 23, 0.16);
+      }
+
+      .workflow-card::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: linear-gradient(var(--peach), var(--gold));
+        content: "";
+      }
+
+      .workflow-number {
+        color: var(--gold);
+        font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .workflow-icon {
+        display: grid;
+        height: 130px;
+        place-items: center;
+        margin: 28px 0 18px;
+        overflow: hidden;
+        border: 1px solid rgba(239, 196, 94, 0.21);
+        border-radius: 20px;
+        background: rgba(13, 29, 39, 0.24);
+      }
+
+      .workflow-icon img {
+        width: 158px;
+        max-width: 100%;
+        mix-blend-mode: normal;
+      }
+
+      .workflow-card h3 {
+        margin-bottom: 9px;
+        font-size: 25px;
+        letter-spacing: -0.035em;
+      }
+
+      .workflow-card p {
+        margin-bottom: 0;
+        color: var(--muted);
+      }
+
+      .handoff {
+        padding: 0 0 118px;
+      }
+
+      .handoff-intro {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 28px;
+        margin-bottom: 26px;
+      }
+
+      .handoff-intro h2 {
+        max-width: 740px;
+      }
+
+      .handoff-intro p {
+        max-width: 320px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .handoff-demo {
+        overflow: hidden;
+        padding: 28px;
+        border: 1px solid rgba(239, 196, 94, 0.46);
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 16% 20%, rgba(241, 163, 111, 0.12), transparent 22rem),
+          linear-gradient(145deg, rgba(54, 85, 98, 0.95), rgba(19, 38, 51, 0.96));
+        box-shadow: var(--shadow);
+      }
+
+      .handoff-live {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+        color: var(--muted);
+        font: 650 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .handoff-live strong {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--cream);
+        font-weight: 700;
+      }
+
+      .handoff-live strong::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gold);
+        box-shadow: 0 0 0 0 rgba(239, 196, 94, 0.62);
+        content: "";
+        animation: handoff-live-dot 1.8s ease-out infinite;
+      }
+
+      .handoff-rail {
+        display: flex;
+        align-items: stretch;
+        min-width: max-content;
+        gap: 10px;
+      }
+
+      .handoff-step {
+        position: relative;
+        display: grid;
+        width: 132px;
+        min-height: 218px;
+        align-content: start;
+        justify-items: center;
+        gap: 8px;
+        padding: 15px 10px 13px;
+        border: 1px solid rgba(172, 187, 194, 0.22);
+        border-radius: 20px;
+        background: rgba(13, 29, 39, 0.42);
+        color: var(--cream);
+        text-align: center;
+        animation: handoff-step 16s ease-in-out infinite both;
+        animation-delay: var(--handoff-delay);
+      }
+
+      .handoff-step--team {
+        width: 174px;
+      }
+
+      .handoff-step img {
+        width: 74px;
+        height: 62px;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 14px;
+        background: rgba(255, 241, 213, 0.08);
+      }
+
+      .handoff-step--team > img {
+        width: 84px;
+        height: 66px;
+      }
+
+      .handoff-number {
+        color: var(--gold);
+        font: 700 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.11em;
+      }
+
+      .handoff-step h3 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: -0.025em;
+      }
+
+      .handoff-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .handoff-crew {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-top: 2px;
+      }
+
+      .handoff-crew img {
+        width: 32px;
+        height: 29px;
+        border-radius: 8px;
+      }
+
+      .handoff-connector {
+        position: relative;
+        align-self: center;
+        width: 17px;
+        height: 20px;
+      }
+
+      .handoff-connector::before {
+        position: absolute;
+        top: 9px;
+        right: 0;
+        left: 0;
+        height: 1px;
+        background: rgba(172, 187, 194, 0.35);
+        content: "";
+      }
+
+      .handoff-connector::after {
+        position: absolute;
+        top: 6px;
+        right: 0;
+        width: 7px;
+        height: 7px;
+        border-top: 1px solid rgba(172, 187, 194, 0.5);
+        border-right: 1px solid rgba(172, 187, 194, 0.5);
+        content: "";
+        transform: rotate(45deg);
+      }
+
+      .handoff-connector--return::after {
+        transform: rotate(135deg);
+      }
+
+      .handoff-connector--return::before {
+        background: linear-gradient(to left, rgba(172, 187, 194, 0.35), rgba(172, 187, 194, 0.08));
+      }
+
+      .handoff-connector--one { --handoff-delay: 1.35s; }
+      .handoff-connector--two { --handoff-delay: 3.35s; }
+      .handoff-connector--three { --handoff-delay: 5.35s; }
+      .handoff-connector--four { --handoff-delay: 9.35s; }
+      .handoff-connector--five { --handoff-delay: 11.35s; }
+      .handoff-connector--six { --handoff-delay: 13.35s; }
+
+      .handoff-connector::before,
+      .handoff-connector::after {
+        animation: handoff-connector 16s ease-in-out infinite both;
+        animation-delay: var(--handoff-delay);
+      }
+
+      .vision-card {
+        display: grid;
+        gap: 28px;
+        overflow: hidden;
+        padding: 48px;
+        border: 1px solid rgba(239, 196, 94, 0.48);
+        border-radius: 42px;
+        background: linear-gradient(135deg, var(--card-soft), var(--card));
+        box-shadow: var(--shadow);
+      }
+
+      .vision-card blockquote {
+        margin: 0 0 24px;
+        font-size: clamp(30px, 4vw, 52px);
+        font-weight: 760;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+      }
+
+      .vision-card p {
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .tag-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .tag {
+        padding: 8px 11px;
+        border: 1px solid rgba(172, 187, 194, 0.22);
+        border-radius: 999px;
+        color: var(--muted);
+        font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .company-map {
+        display: grid;
+        grid-template-columns: 0.9fr 68px 1.25fr;
+        gap: 14px;
+        align-items: center;
+        min-height: 310px;
+        padding: 6px;
+      }
+
+      .call-node, .team-node {
+        position: relative;
+        display: grid;
+        justify-items: center;
+        gap: 9px;
+        padding: 14px 10px;
+        border: 1px solid rgba(239, 196, 94, 0.32);
+        border-radius: 18px;
+        background: rgba(13, 29, 39, 0.27);
+        text-align: center;
+        font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .call-node img { width: 170px; max-width: 100%; }
+      .route-line { position: relative; min-height: 190px; }
+      .route-line::before { position: absolute; top: 50%; right: 0; left: 0; height: 1px; background: var(--gold); content: ""; }
+      .route-line::after { position: absolute; top: calc(50% - 4px); right: -1px; width: 8px; height: 8px; border-top: 1px solid var(--gold); border-right: 1px solid var(--gold); content: ""; transform: rotate(45deg); }
+      .team-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+      .team-node img { width: 72px; height: 56px; object-fit: cover; object-position: center; border-radius: 10px; }
+      .team-node span { color: var(--gold); font-size: 9px; }
+
+      .final-cta {
+        padding: 24px 0 112px;
+        text-align: center;
+      }
+
+      .slogan-wall {
+        display: grid;
+        gap: 4px;
+        margin: 0 auto 38px;
+        overflow: hidden;
+        color: var(--cream);
+        font-size: clamp(20px, 3.5vw, 48px);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: .98;
+        text-align: left;
+      }
+
+      .slogan-wall p { margin: 0; white-space: nowrap; }
+      .slogan-wall p:nth-child(1) { padding-left: 2%; opacity: .92; transform: rotate(-1deg); }
+      .slogan-wall p:nth-child(2) { padding-left: 13%; color: var(--gold); opacity: .72; transform: rotate(.6deg); }
+      .slogan-wall p:nth-child(3) { padding-left: 5%; opacity: .9; transform: rotate(-.45deg); }
+      .slogan-wall p:nth-child(4) { padding-left: 19%; color: var(--peach); opacity: .72; transform: rotate(.8deg); }
+      .slogan-wall p:nth-child(5) { padding-left: 8%; opacity: .86; transform: rotate(-.7deg); }
+      .slogan-wall p:nth-child(6) { padding-left: 24%; color: var(--gold); opacity: .65; transform: rotate(.35deg); }
+      .slogan-wall p:nth-child(7) { padding-left: 4%; opacity: .88; transform: rotate(-.4deg); }
+      .slogan-wall p:nth-child(8) { padding-left: 17%; color: var(--peach); opacity: .7; transform: rotate(.55deg); }
+      .slogan-wall p:nth-child(9) { padding-left: 10%; opacity: .9; transform: rotate(-.3deg); }
+      .slogan-wall p:nth-child(10) { padding-left: 22%; color: var(--gold); opacity: .68; transform: rotate(.45deg); }
+
+      .final-cta h2 {
+        max-width: 850px;
+        margin: 0 auto 22px;
+      }
+
+      .final-cta p {
+        max-width: 590px;
+        margin: 0 auto 30px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 26px 0 38px;
+        border-top: 1px solid rgba(172, 187, 194, 0.2);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+          opacity 700ms ease,
+          transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .reveal.visible {
+        opacity: 1;
+        transform: none;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes marquee {
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      @keyframes handoff-live-dot {
+        70% {
+          box-shadow: 0 0 0 8px rgba(239, 196, 94, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 196, 94, 0);
+        }
+      }
+
+      @keyframes handoff-step {
+        0%, 8%, 100% {
+          border-color: rgba(239, 196, 94, 0.88);
+          background: rgba(255, 241, 213, 0.14);
+          box-shadow: 0 0 0 1px rgba(239, 196, 94, 0.18), 0 18px 30px rgba(4, 16, 23, 0.24);
+          transform: translateY(-5px);
+        }
+        15%, 94% {
+          border-color: rgba(172, 187, 194, 0.22);
+          background: rgba(13, 29, 39, 0.42);
+          box-shadow: none;
+          transform: none;
+        }
+      }
+
+      @keyframes handoff-connector {
+        0%, 12%, 100% {
+          opacity: 1;
+          filter: drop-shadow(0 0 3px rgba(239, 196, 94, 0.8));
+        }
+        18%, 94% {
+          opacity: 0.42;
+          filter: none;
+        }
+      }
+
+      @media (max-width: 860px) {
+        .nav-links a:not(.mini-cta) {
+          display: none;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+          padding-top: 64px;
+        }
+
+        .mascot-stage {
+          min-height: 520px;
+        }
+
+        .workflow,
+        .section-heading {
+          grid-template-columns: 1fr;
+        }
+
+        .handoff-intro {
+          display: block;
+        }
+
+        .handoff-intro p {
+          margin-top: 18px;
+        }
+
+        .handoff-demo {
+          overflow-x: auto;
+        }
+
+        .vision-card {
+          padding: 25px;
+        }
+
+        .company-map { grid-template-columns: 1fr; }
+        .route-line { min-height: 28px; transform: rotate(90deg); }
+      }
+
+      @media (max-width: 560px) {
+        .shell {
+          width: min(100% - 28px, 1180px);
+        }
+
+        .nav {
+          min-height: 66px;
+        }
+
+        .mini-cta {
+          padding: 8px 11px;
+        }
+
+        .language-toggle { font-size: 11px; }
+
+        h1 {
+          font-size: clamp(54px, 18vw, 88px);
+        }
+
+        .hero {
+          min-height: auto;
+          padding: 58px 0 50px;
+        }
+
+        .mascot-stage {
+          min-height: 430px;
+          border-radius: 32px;
+        }
+
+        .mascot-frame {
+          inset-inline: 8px;
+        }
+
+        .section {
+          padding: 84px 0;
+        }
+
+        .workflow-card {
+          min-height: 260px;
+        }
+
+        .handoff {
+          padding-bottom: 84px;
+        }
+
+        .handoff-demo {
+          margin-inline: -2px;
+          padding: 18px;
+          border-radius: 26px;
+        }
+
+        .handoff-step {
+          width: 124px;
+          min-height: 205px;
+        }
+
+        .handoff-step--team {
+          width: 154px;
+        }
+
+        footer {
+          display: block;
+          line-height: 2;
+        }
+
+        .brand-marquee .ticker-track { min-width: 300%; font-size: 9px; letter-spacing: .05em; }
+        .slogan-wall { margin-bottom: 30px; font-size: clamp(17px, 6.3vw, 25px); line-height: 1.02; }
+        .slogan-wall p:nth-child(even) { padding-left: 8%; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+
+        .reveal {
+          opacity: 1;
+          transform: none;
+        }
+
+        .handoff-live strong::before,
+        .handoff-step,
+        .handoff-connector::before,
+        .handoff-connector::after {
+          animation: none;
+        }
+
+        .brand-marquee .ticker-track { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; padding: 8px 14px; animation: none; white-space: normal; }
+        .brand-marquee .ticker-item { white-space: nowrap; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="shell">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="#top">
+          <span class="brand-mark"><img src="assets/landing/onezion-yellow-sheep-call-avatar-v1.png?v=20260726" alt="Happy Yellow Sheep answering a call" /></span>
+          <span>AnyVibe</span>
+        </a>
+        <div class="nav-links">
+          <a href="#how" data-i18n="navHow">How it works</a>
+          <a href="#handoff" data-i18n="navHandoff">Live flow</a>
+          <a href="#vision" data-i18n="navVision">Vision</a>
+          <button class="language-toggle" type="button" aria-label="Switch language" aria-pressed="false">EN / 中文</button>
+          <a class="mini-cta" href="https://anyvibe.onezion.top/company">
+            <span data-i18n="navCta">Open workspace</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="ticker brand-marquee" aria-label="AnyVibe brand statement">
+        <div class="ticker-track" aria-hidden="true">
+          <span class="ticker-item"><b>AnyThing, AnyTime, AnyWhere, AnyVibe</b></span><span class="ticker-item"><b>AnyWalk, AnyCycle, AnyTrain, AnyVibe</b></span><span class="ticker-item"><b>AnyCode, AnySlide, AnyLearn, AnyVibe</b></span><span class="ticker-item"><b>AnyThing, AnyTime, AnyWhere, AnyVibe</b></span><span class="ticker-item"><b>AnyWalk, AnyCycle, AnyTrain, AnyVibe</b></span><span class="ticker-item"><b>AnyCode, AnySlide, AnyLearn, AnyVibe</b></span>
+        </div>
+        <div class="ticker-track lane-two" aria-hidden="true">
+          <span class="ticker-item"><b>AnyCall, AnyBrief, AnyBuild, AnyVibe</b></span><span class="ticker-item"><b>AnyPitch, AnyMarket, AnySell, AnyVibe</b></span><span class="ticker-item"><b>AnyNote, AnyThink, AnyCreate, AnyVibe</b></span><span class="ticker-item"><b>AnyCall, AnyBrief, AnyBuild, AnyVibe</b></span><span class="ticker-item"><b>AnyPitch, AnyMarket, AnySell, AnyVibe</b></span><span class="ticker-item"><b>AnyNote, AnyThink, AnyCreate, AnyVibe</b></span>
+        </div>
+        <div class="ticker-track lane-three" aria-hidden="true">
+          <span class="ticker-item"><b>AnyRun, AnyRide, AnyCommute, AnyVibe</b></span><span class="ticker-item"><b>AnyVoice, AnyTeam, AnyTask, AnyVibe</b></span><span class="ticker-item"><b>AnySpark, AnyPlan, AnyShip, AnyVibe</b></span><span class="ticker-item"><b>AnyMorning, AnyMidnight, AnyMoment, AnyVibe</b></span><span class="ticker-item"><b>AnyRun, AnyRide, AnyCommute, AnyVibe</b></span><span class="ticker-item"><b>AnyVoice, AnyTeam, AnyTask, AnyVibe</b></span><span class="ticker-item"><b>AnySpark, AnyPlan, AnyShip, AnyVibe</b></span><span class="ticker-item"><b>AnyMorning, AnyMidnight, AnyMoment, AnyVibe</b></span>
+        </div>
+      </section>
+      <section class="hero shell">
+        <div>
+          <p class="kicker" data-i18n="heroKicker">Your AI team that works in your life</p>
+          <h1>
+            Vibe
+            <span class="typing-line">
+              <span id="typed-word" aria-live="polite">working</span><span class="cursor">|</span>
+            </span>
+          </h1>
+          <p class="hero-copy" data-i18n-html="heroCopy">
+            <strong>Say what you need. Then keep moving.</strong> AnyVibe turns a phone call into work for an AI team—and calls you back when the result is ready.
+          </p>
+          <div class="scene-caption" aria-live="polite">
+            <span id="scene-emoji">🚲</span>
+            <span id="scene-context">on the bicycle</span>
+          </div>
+          <div class="actions">
+            <a class="button button-primary" href="https://anyvibe.onezion.top/company">
+              <span data-i18n="heroCta">Open the live workspace</span>
+            </a>
+            <a class="button button-secondary" href="#how" data-i18n="heroSecondary">See the loop ↓</a>
+          </div>
+        </div>
+
+        <div class="mascot-stage" aria-label="Yellow Sheep changes with each Vibe">
+          <span class="stage-label">Yellow Sheep · live companion</span>
+          <div class="mascot-frame" id="mascot-frame">
+            <img src="assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep coding" data-scene="code" />
+            <img src="assets/landing/yellow-sheep-pitch.png?v=20260726" alt="Yellow Sheep pitching" data-scene="pitch" />
+            <img src="assets/landing/yellow-sheep-learn.png?v=20260726" alt="Yellow Sheep learning" data-scene="learn" />
+            <img src="assets/landing/yellow-sheep-market.png?v=20260726" alt="Yellow Sheep marketing" data-scene="market" />
+            <img class="active" src="assets/landing/yellow-sheep-bike.png?v=20260726" alt="Yellow Sheep riding a bicycle" data-scene="bike" />
+            <img src="assets/landing/yellow-sheep-walk.png?v=20260726" alt="Yellow Sheep walking" data-scene="walk" />
+            <img src="assets/landing/yellow-sheep-run.png?v=20260726" alt="Yellow Sheep running" data-scene="run" />
+            <img src="assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep celebrating completed work" data-scene="done" />
+          </div>
+          <div class="stage-status">
+            <span class="status-live">● Voice connected</span>
+            <span id="stage-status-text">working</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="ticker" aria-label="AnyVibe contexts">
+        <div class="ticker-track" aria-hidden="true">
+          <span class="ticker-item">🚲 <b>Vibe on the bicycle</b></span>
+          <span class="ticker-item">🚗 <b>Vibe in the car</b></span>
+          <span class="ticker-item">🚆 <b>Vibe on the train</b></span>
+          <span class="ticker-item">🚌 <b>Vibe on the bus</b></span>
+          <span class="ticker-item">🚶 <b>Vibe while walking</b></span>
+          <span class="ticker-item">🏃 <b>Vibe while running</b></span>
+          <span class="ticker-item">🚲 <b>Vibe on the bicycle</b></span>
+          <span class="ticker-item">🚗 <b>Vibe in the car</b></span>
+          <span class="ticker-item">🚆 <b>Vibe on the train</b></span>
+          <span class="ticker-item">🚌 <b>Vibe on the bus</b></span>
+          <span class="ticker-item">🚶 <b>Vibe while walking</b></span>
+          <span class="ticker-item">🏃 <b>Vibe while running</b></span>
+        </div>
+      </section>
+
+      <section id="how" class="section shell reveal">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">One call · one closed loop</p>
+            <h2>Your crew starts with a hello.</h2>
+          </div>
+          <p class="section-intro">
+            No prompt window to babysit. No tabs to manage. Speak naturally; the team handles the
+            route from idea to shipped result.
+          </p>
+        </div>
+
+        <div class="workflow">
+          <article class="workflow-card">
+            <span class="workflow-number" data-i18n="callNo">01 / CALL</span>
+            <div class="workflow-icon"><img src="assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep receptionist answering a phone call" /></div>
+            <h3 data-i18n="callTitle">Describe the outcome</h3><p data-i18n="callCopy">A fast receptionist AI listens, asks the useful follow-ups and writes a clear brief.</p>
+          </article>
+          <article class="workflow-card">
+            <span class="workflow-number" data-i18n="dispatchNo">02 / DISPATCH</span>
+            <div class="workflow-icon"><img src="assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep engineering team at work" /></div>
+            <h3 data-i18n="dispatchTitle">Your AI team works</h3><p data-i18n="dispatchCopy">Architect, builder and reviewer agents plan, implement and verify the task together.</p>
+          </article>
+          <article class="workflow-card">
+            <span class="workflow-number" data-i18n="callbackNo">03 / CALLBACK</span>
+            <div class="workflow-icon"><img src="assets/landing/yellow-sheep-done.png?v=20260726" alt="Happy Yellow Sheep calling back with completed work" /></div>
+            <h3 data-i18n="callbackTitle">Get the result</h3><p data-i18n="callbackCopy">AnyVibe calls back with what changed, what passed and the next useful decision.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="handoff" class="handoff shell reveal">
+        <div class="handoff-intro">
+          <div>
+            <p class="section-kicker" data-i18n="handoffKicker">Live handoff · one shared brief</p>
+            <h2 data-i18n="handoffTitle">One call becomes a whole company in motion.</h2>
+          </div>
+          <p data-i18n="handoffCopy">Yellow Sheep listens first. The CEO owns the plan, specialists ship the work, and the caller gets a useful callback—not a dead end.</p>
+        </div>
+        <div class="handoff-demo" aria-label="Animated AnyVibe call handoff">
+          <div class="handoff-live">
+            <strong data-i18n="handoffLive">Live handoff</strong>
+            <span id="handoff-status" aria-live="polite">Harry is calling Yellow Sheep</span>
+          </div>
+          <div class="handoff-rail">
+            <article class="handoff-step" style="--handoff-delay: 0s">
+              <img src="assets/landing/onezion-yellow-sheep-call-avatar-v1.png?v=20260726" alt="Caller starts an AnyVibe call" />
+              <span class="handoff-number">01 / CALL</span>
+              <h3 data-i18n="handoffCallerTitle">You call</h3>
+              <p data-i18n="handoffCallerCopy">Speak naturally.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--one" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 2s">
+              <img src="assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep CS answers the phone" />
+              <span class="handoff-number">02 / CS</span>
+              <h3 data-i18n="handoffCsTitle">Yellow Sheep answers</h3>
+              <p data-i18n="handoffCsCopy">Clarifies the brief.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--two" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 4s">
+              <img src="assets/landing/yellow-sheep-pitch.png?v=20260726" alt="Yellow Sheep CEO plans the work" />
+              <span class="handoff-number">03 / CEO</span>
+              <h3 data-i18n="handoffCeoTitle">CEO plans</h3>
+              <p data-i18n="handoffCeoCopy">Owns the outcome.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--three" aria-hidden="true"></span>
+            <article class="handoff-step handoff-step--team" style="--handoff-delay: 6s">
+              <img src="assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep specialist team works on the task" />
+              <span class="handoff-number">04 / CREW</span>
+              <h3 data-i18n="handoffCrewTitle">Specialists build</h3>
+              <p data-i18n="handoffCrewCopy">Design, build, verify.</p>
+              <div class="handoff-crew" aria-hidden="true">
+                <img src="assets/landing/yellow-sheep-learn.png?v=20260726" alt="" />
+                <img src="assets/landing/yellow-sheep-market.png?v=20260726" alt="" />
+                <img src="assets/landing/yellow-sheep-done.png?v=20260726" alt="" />
+              </div>
+            </article>
+            <span class="handoff-connector handoff-connector--four" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 9.8s">
+              <img src="assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep CEO receives the completed work" />
+              <span class="handoff-number">05 / CEO</span>
+              <h3 data-i18n="handoffReviewTitle">CEO reviews</h3>
+              <p data-i18n="handoffReviewCopy">Checks the result.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--five" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 11.8s">
+              <img src="assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep CS receives the handoff result" />
+              <span class="handoff-number">06 / CS</span>
+              <h3 data-i18n="handoffReturnTitle">CS wraps it up</h3>
+              <p data-i18n="handoffReturnCopy">Makes the result clear.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--six" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 13.8s">
+              <img src="assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep calls the user back with the result" />
+              <span class="handoff-number">07 / CALLBACK</span>
+              <h3 data-i18n="handoffCallbackTitle">You get the callback</h3>
+              <p data-i18n="handoffCallbackCopy">Changed, checked, ready.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="vision" class="section shell reveal">
+        <div class="vision-card">
+          <div>
+            <p class="section-kicker" data-i18n="visionKicker">Not an assistant · a company interface</p>
+            <blockquote data-i18n="visionQuote">Yesterday, you worked for your computer. Now your computer works for you.</blockquote>
+            <p data-i18n="visionCopy">
+              AnyVibe is an always-available voice layer for a one-person company: coding, pitching,
+              learning, notes, marketing and whatever comes next.
+            </p>
+            <div class="tag-grid" aria-label="AnyVibe capabilities">
+              <span class="tag">VOICE FIRST</span>
+              <span class="tag">MULTI-AGENT</span>
+              <span class="tag">HANDS FREE</span>
+              <span class="tag">CALLBACK LOOP</span>
+              <span class="tag">HARNESS AGNOSTIC</span>
+            </div>
+          </div>
+          <div class="company-map" aria-label="A user call routes through AnyVibe to several specialist Yellow Sheep teams">
+            <div class="call-node"><img src="assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep receptionist takes the user's call" /><span data-i18n="userCalls">User calls AnyVibe</span></div>
+            <div class="route-line" aria-hidden="true"></div>
+            <div class="team-grid">
+              <div class="team-node"><img src="assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep builder team" /><span data-i18n="builder">Builder</span></div><div class="team-node"><img src="assets/landing/yellow-sheep-pitch.png?v=20260726" alt="Yellow Sheep strategist team" /><span data-i18n="strategist">Strategist</span></div><div class="team-node"><img src="assets/landing/yellow-sheep-learn.png?v=20260726" alt="Yellow Sheep researcher team" /><span data-i18n="researcher">Researcher</span></div><div class="team-node"><img src="assets/landing/yellow-sheep-market.png?v=20260726" alt="Yellow Sheep marketer team" /><span data-i18n="marketer">Marketer</span></div><div class="team-node"><img src="assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep reviewer team" /><span data-i18n="reviewer">Reviewer</span></div><div class="team-node"><img src="assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep coordinator team" /><span data-i18n="coordinator">Coordinator</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="final-cta shell reveal">
+        <div class="slogan-wall" aria-label="AnyVibe language">
+          <p>AnyThing, AnyTime, AnyWhere, AnyVibe</p><p>AnyWalk, AnyCycle, AnyTrain, AnyVibe</p><p>AnyCode, AnySlide, AnyLearn, AnyVibe</p><p>AnyCall, AnyBrief, AnyBuild, AnyVibe</p><p>AnyPitch, AnyMarket, AnySell, AnyVibe</p><p>AnyNote, AnyThink, AnyCreate, AnyVibe</p><p>AnyRun, AnyRide, AnyCommute, AnyVibe</p><p>AnyVoice, AnyTeam, AnyTask, AnyVibe</p><p>AnySpark, AnyPlan, AnyShip, AnyVibe</p><p>AnyMorning, AnyMidnight, AnyMoment, AnyVibe</p>
+        </div>
+        <p class="section-kicker brand-copy" data-i18n="sloganExplain">AnyThing, AnyTime, AnyWhere, AnyVibe</p>
+        <h2 data-i18n="finalTitle">Let inspiration arrive before the screen does.</h2>
+        <p data-i18n="finalCopy">
+          Walk, ride, commute or work out. Tell AnyVibe what should happen next, and let the team
+          carry it forward.
+        </p>
+        <a class="button button-primary" href="https://anyvibe.onezion.top/company">
+          <span data-i18n="finalCta">Meet your AI team</span>
+        </a>
+      </section>
+    </main>
+
+    <footer class="shell">
+      <span data-i18n="footerLeft">© 2026 AnyVibe · AdventureX</span><span data-i18n="footerRight">Yellow Sheep · OneZion</span>
+    </footer>
+
+    <script>
+      (() => {
+        const translations = { zh: {
+          navHow:'如何运作', navHandoff:'实时交接', navVision:'团队界面', navCta:'打开工作台', heroKicker:'融入你生活的 AI 团队', heroCopy:'<strong>说出你的需求，然后继续前行。</strong>AnyVibe 把一通电话变成 AI 团队的工作，并在结果准备好时回拨给你。', heroCta:'打开实时工作台', heroSecondary:'查看闭环 ↓',
+          callNo:'01 / 来电', callTitle:'描述你想要的结果', callCopy:'前台黄羊聆听、追问关键细节，并写成清晰任务简报。', dispatchNo:'02 / 派工', dispatchTitle:'AI 团队开始工作', dispatchCopy:'架构、构建与审查智能体一起规划、实现并验证任务。', callbackNo:'03 / 回电', callbackTitle:'拿到结果', callbackCopy:'AnyVibe 回拨告诉你改了什么、通过了什么，以及下一步。',
+          visionKicker:'不只是助手 · 而是公司的界面', visionQuote:'昨天你为电脑工作。现在，电脑为你工作。', visionCopy:'AnyVibe 是一人公司的随时在线语音层：编程、路演、学习、记录、营销，以及下一件事。', userCalls:'用户呼叫 AnyVibe', builder:'构建', strategist:'策略', researcher:'研究', marketer:'营销', reviewer:'审查', coordinator:'协调',
+          handoffKicker:'实时交接 · 一份共享任务简报', handoffTitle:'一通电话，让整家公司开始运转。', handoffCopy:'黄羊先听懂你。CEO 对结果负责，专家团队完成工作，再由接线员带着有用结论回拨给你。', handoffLive:'实时交接', handoffCallerTitle:'你来电话', handoffCallerCopy:'自然地说出需求。', handoffCsTitle:'黄羊接听', handoffCsCopy:'澄清任务简报。', handoffCeoTitle:'CEO 制定计划', handoffCeoCopy:'为结果负责。', handoffCrewTitle:'专家团队开工', handoffCrewCopy:'设计、实现、验证。', handoffReviewTitle:'CEO 审阅', handoffReviewCopy:'检查完成结果。', handoffReturnTitle:'CS 整理交付', handoffReturnCopy:'把结果讲清楚。', handoffCallbackTitle:'你收到回拨', handoffCallbackCopy:'已完成、已验证、可继续。', sloganExplain:'任意事情，任意时间，任意地点，AnyVibe', finalTitle:'让灵感先于屏幕抵达。', finalCopy:'步行、骑行、通勤或锻炼时，告诉 AnyVibe 下一步该做什么，让团队继续推进。', finalCta:'认识你的 AI 团队', footerLeft:'© 2026 AnyVibe · AdventureX', footerRight:'黄羊 · OneZion'
+        }};
+        const languageButton = document.querySelector('.language-toggle');
+        const setLanguage = (language) => {
+          const isChinese = language === 'zh';
+          document.documentElement.lang = isChinese ? 'zh-CN' : 'en';
+          document.querySelectorAll('[data-i18n]').forEach((element) => { element.textContent = isChinese ? translations.zh[element.dataset.i18n] : element.dataset.en || element.textContent; });
+          document.querySelectorAll('[data-i18n-html]').forEach((element) => { if (!element.dataset.en) element.dataset.en = element.innerHTML; element.innerHTML = isChinese ? translations.zh[element.dataset.i18nHtml] : element.dataset.en; });
+          if (languageButton) { languageButton.textContent = isChinese ? '中文 / EN' : 'EN / 中文'; languageButton.setAttribute('aria-pressed', String(isChinese)); languageButton.setAttribute('aria-label', isChinese ? '切换至英文' : 'Switch to Chinese'); }
+          document.querySelector('.brand-marquee').setAttribute('aria-label', isChinese ? 'AnyVibe 品牌语言：任意事情、任意时间、任意地点' : 'AnyVibe brand language');
+          try { localStorage.setItem('anyvibe-language', language); } catch (_) {}
+        };
+        document.querySelectorAll('[data-i18n]').forEach((element) => { element.dataset.en = element.textContent; });
+        languageButton?.addEventListener('click', () => setLanguage(document.documentElement.lang === 'zh-CN' ? 'en' : 'zh'));
+        try { if (localStorage.getItem('anyvibe-language') === 'zh') setLanguage('zh'); } catch (_) {}
+
+        // The voice of the brand deliberately interrupts every three ordinary moments.
+        // This keeps the hero human-scale while making AnyVibe the repeated payoff.
+        const ordinaryExperiences = [
+          { word: "working", emoji: "🚲", context: "on the bicycle", zhContext: "骑自行车时", scene: "bike" },
+          { word: "pitching", emoji: "🚆", context: "on the train", scene: "pitch" },
+          { word: "sliding", emoji: "🚗", context: "in the car", scene: "pitch" },
+          { word: "learning", emoji: "🚶", context: "while walking", scene: "learn" },
+          { word: "noting", emoji: "🚌", context: "on the bus", scene: "walk" },
+          { word: "marketing", emoji: "🏃", context: "while running", scene: "market" },
+          { word: "coding", emoji: "🚲", context: "on the bicycle", scene: "code" },
+          { word: "creating", emoji: "🚶", context: "while walking", scene: "walk" },
+          { word: "anything", emoji: "🏃", context: "while running", scene: "run" },
+        ];
+        const brandExperience = {
+          word: "AnyVibe",
+          emoji: "✨",
+          context: "anyhow, anywhere",
+          zhContext: "任何方式，任何地点",
+          scene: "done",
+          brand: true,
+        };
+        const experiences = ordinaryExperiences.flatMap((experience, index) =>
+          (index + 1) % 3 === 0 ? [experience, brandExperience] : [experience],
+        );
+        // Exposed for lightweight visual/sequence checks without changing runtime behavior.
+        window.__anyVibeSequence = experiences.map(({ word, brand = false }) => ({ word, brand }));
+
+        const typed = document.querySelector("#typed-word");
+        const emoji = document.querySelector("#scene-emoji");
+        const context = document.querySelector("#scene-context");
+        const status = document.querySelector("#stage-status-text");
+        const mascotImages = [...document.querySelectorAll("#mascot-frame img")];
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const handoffStatus = document.querySelector("#handoff-status");
+        const handoffStates = [
+          { en: "Harry is calling Yellow Sheep", zh: "Harry 正在呼叫黄羊" },
+          { en: "Yellow Sheep is clarifying the brief", zh: "黄羊正在澄清任务简报" },
+          { en: "CEO is shaping the plan", zh: "CEO 正在制定计划" },
+          { en: "Specialists are building and checking", zh: "专家团队正在实现与验证" },
+          { en: "CEO is reviewing the result", zh: "CEO 正在审阅结果" },
+          { en: "Yellow Sheep is preparing the handoff", zh: "黄羊正在整理交付说明" },
+          { en: "Callback: result ready", zh: "正在回拨：结果已准备好" },
+        ];
+        let handoffIndex = 0;
+
+        const renderHandoffStatus = () => {
+          if (!handoffStatus) return;
+          const current = handoffStates[handoffIndex];
+          handoffStatus.textContent = document.documentElement.lang === "zh-CN" ? current.zh : current.en;
+        };
+
+        const updateExperience = (experience) => {
+          emoji.textContent = experience.emoji;
+          context.textContent = document.documentElement.lang === 'zh-CN' ? (experience.zhContext || experience.context) : experience.context;
+          status.textContent = experience.word;
+          mascotImages.forEach((image) => {
+            image.classList.toggle("active", image.dataset.scene === experience.scene);
+          });
+        };
+
+        updateExperience(experiences[0]);
+        renderHandoffStatus();
+
+        if (!prefersReducedMotion) {
+          let experienceIndex = 0;
+          let characterIndex = experiences[0].word.length;
+          let deleting = false;
+
+          const type = () => {
+            const experience = experiences[experienceIndex];
+            typed.textContent = experience.word.slice(0, characterIndex);
+
+            let delay = deleting ? 54 : 88;
+            if (!deleting && characterIndex === experience.word.length) {
+              deleting = true;
+              delay = 1450;
+            } else if (deleting && characterIndex === 0) {
+              deleting = false;
+              experienceIndex = (experienceIndex + 1) % experiences.length;
+              updateExperience(experiences[experienceIndex]);
+              delay = 300;
+            }
+
+            characterIndex += deleting ? -1 : 1;
+            window.setTimeout(type, delay);
+          };
+
+          window.setTimeout(type, 1200);
+          window.setInterval(() => {
+            handoffIndex = (handoffIndex + 1) % handoffStates.length;
+            renderHandoffStatus();
+          }, 2000);
+        }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) entry.target.classList.add("visible");
+            });
+          },
+          { threshold: 0.15, rootMargin: "0px 0px -45px" },
+        );
+
+        document.querySelectorAll(".reveal").forEach((element) => observer.observe(element));
+      })();
+    </script>
+  </body>
+</html>
