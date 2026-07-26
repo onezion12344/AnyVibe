@@ -4,6 +4,8 @@ AnyVibe is a voice-first AI company: speak naturally, let the right team work, a
 
 **AdventureX 2026** | Yellow Sheep by OneZion | Harness-agnostic multi-agent workflow
 
+**Live:** https://anyvibe.onezion.top/ · **Workspace:** https://anyvibe.onezion.top/company · **Code:** https://github.com/onezion12344/AnyVibe
+
 ## Product surfaces
 
 - **Landing page (/)** — a responsive English/中文 introduction to the AnyVibe loop, its Yellow Sheep companion, and the team behind every call.
