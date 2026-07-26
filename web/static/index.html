@@ -1,395 +1,981 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AnyVibe — Project Index</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg:       #182735;
-  --surface:  #213546;
-  --card:     #294255;
-  --border:   #3a5968;
-  --accent:   #d9824f;
-  --accent2:  #e3ae45;
-  --accent3:  #6f9aad;
-  --white:    #f7edd4;
-  --muted:    #a8b8bd;
-}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#132633" />
+    <link rel="icon" href="/static/assets/landing/yellow-sheep-bike.png" type="image/png" />
+    <meta
+      name="description"
+      content="AnyVibe is the voice-first interface for your AI team. Vibe anything, anywhere."
+    />
+    <title>AnyVibe — Vibe anything, anywhere</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --navy: #132633;
+        --navy-deep: #0d1d27;
+        --card: #2b4858;
+        --card-soft: #365562;
+        --cream: #fff1d5;
+        --muted: #acbbc2;
+        --peach: #f1a36f;
+        --gold: #efc45e;
+        --blue: #6f9aab;
+        --line: rgba(239, 196, 94, 0.33);
+        --shadow: 0 30px 80px rgba(4, 16, 23, 0.28);
+      }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      * {
+        box-sizing: border-box;
+      }
 
-html, body { height: 100%; }
+      html {
+        scroll-behavior: smooth;
+      }
 
-body {
-  background: var(--bg);
-  color: var(--white);
-  font-family: 'Space Grotesk', 'Noto Sans SC', -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-}
+      body {
+        margin: 0;
+        min-width: 320px;
+        background:
+          radial-gradient(circle at 82% 8%, rgba(241, 163, 111, 0.11), transparent 30rem),
+          linear-gradient(var(--navy), var(--navy-deep));
+        color: var(--cream);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
 
-/* Starfield background */
-.stars {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 0%,  rgba(224,122,95,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 85% 25%, rgba(212,168,67,0.04) 0%, transparent 50%),
-    radial-gradient(ellipse 45% 40% at 15% 75%, rgba(58,138,138,0.05) 0%, transparent 55%);
-}
+      body::before {
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        content: "";
+        pointer-events: none;
+        background-image: linear-gradient(rgba(239, 196, 94, 0.025) 1px, transparent 1px);
+        background-size: 100% 44px;
+        mask-image: linear-gradient(to bottom, #000, transparent 78%);
+      }
 
-.container {
-  position: relative; z-index: 1;
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 24px 20px 60px;
-}
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
 
-/* Header */
-.header {
-  position: relative;
-  text-align: center;
-  margin-bottom: 36px;
-  padding-top: 16px;
-}
-.language-toggle {
-  position: absolute; top: 0; right: 0;
-  min-width: 44px; padding: 5px 9px;
-  border: 1px solid var(--border); border-radius: 999px;
-  background: rgba(33,53,70,.78); color: var(--white);
-  font: 700 11px/1 'Space Grotesk', 'Noto Sans SC', sans-serif;
-  cursor: pointer; letter-spacing: .05em;
-}
-.language-toggle:hover { border-color: var(--accent2); color: var(--accent2); }
-.header h1 {
-  font-size: 28px; font-weight: 700;
-  background: linear-gradient(135deg, #f0c87a, #e07a5f);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.02em;
-  margin-bottom: 6px;
-}
-.header .sub {
-  font-size: 12px; color: var(--muted);
-  letter-spacing: 0.06em;
-}
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
 
-.sheep-banner {
-  display:flex; align-items:center; gap:16px; min-height:128px;
-  margin:0 0 28px; padding:0 16px; overflow:hidden;
-  border:1px solid rgba(227,174,69,.38); border-radius:18px;
-  background:linear-gradient(115deg,rgba(41,66,85,.96),rgba(102,137,144,.56));
-  box-shadow:0 16px 34px rgba(0,0,0,.2);
-}
-.sheep-banner img { width:112px; height:112px; flex:0 0 auto; object-fit:contain; margin-left:-5px; border:1px solid rgba(227,174,69,.28); border-radius:16px; background:#f7edd4; box-shadow:0 10px 22px rgba(0,0,0,.16); filter:saturate(.94); }
-.sheep-banner-copy { padding:18px 0; }
-.sheep-banner-kicker { color:#f0c87a; font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
-.sheep-banner-title { margin-top:3px; font-size:18px; font-weight:700; color:var(--white); }
-.sheep-banner-desc { margin-top:4px; color:#c1d1cf; font-size:11px; line-height:1.45; }
+      .shell {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+      }
 
-/* Section labels */
-.section-label {
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  text-transform: uppercase;
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 14px;
-  margin-top: 28px;
-}
-.section-label::after {
-  content: '';
-  flex: 1; height: 1px;
-  background: rgba(224,122,95,0.12);
-}
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 78px;
+        border-bottom: 1px solid rgba(172, 187, 194, 0.2);
+        background: rgba(19, 38, 51, 0.82);
+        backdrop-filter: blur(18px);
+      }
 
-/* Link cards */
-.links {
-  display: flex; flex-direction: column; gap: 8px;
-}
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
 
-.link-card {
-  display: flex; align-items: center; gap: 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 15px 16px;
-  text-decoration: none;
-  color: var(--white);
-  transition: border-color 0.3s, transform 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-.link-card:hover {
-  border-color: rgba(224,122,95,0.35);
-  transform: translateX(4px);
-}
-.link-card::before {
-  content: '';
-  position: absolute; left: 0; top: 0; bottom: 0;
-  width: 3px;
-}
+      .brand-mark {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        overflow: hidden;
+        background: var(--cream);
+        box-shadow: 0 0 25px rgba(239, 196, 94, 0.18);
+      }
 
-/* Alternate gradient stripes */
-.link-card:nth-child(5n+1)::before { background: linear-gradient(180deg, #e07a5f, #d4a843); }
-.link-card:nth-child(5n+2)::before { background: linear-gradient(180deg, #d4a843, #e07a5f); }
-.link-card:nth-child(5n+3)::before { background: linear-gradient(180deg, #3a8a8a, #e07a5f); }
-.link-card:nth-child(5n+4)::before { background: linear-gradient(180deg, #e07a5f, #3a8a8a); }
-.link-card:nth-child(5n+5)::before { background: linear-gradient(180deg, #d4a843, #3a8a8a); }
+      .brand-mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+      }
 
-.link-icon {
-  width: 42px; height: 42px; border-radius: 10px;
-  background: rgba(224,122,95,0.08);
-  border: 1px solid rgba(224,122,95,0.12);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20px; flex-shrink: 0;
-}
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        color: var(--muted);
+        font-size: 14px;
+      }
 
-.link-body { flex: 1; min-width: 0; }
-.link-title {
-  font-size: 14px; font-weight: 600;
-  color: var(--white);
-  margin-bottom: 2px;
-}
-.link-desc {
-  font-size: 11px; color: var(--muted);
-  line-height: 1.4;
-}
+      .nav-links a:hover {
+        color: var(--cream);
+      }
 
-.link-badge {
-  font-size: 10px; font-weight: 600;
-  padding: 3px 10px; border-radius: 10px;
-  background: rgba(224,122,95,0.08);
-  border: 1px solid rgba(224,122,95,0.15);
-  color: var(--accent2);
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-.link-badge.local {
-  background: rgba(58,138,138,0.08);
-  border-color: rgba(58,138,138,0.15);
-  color: var(--accent3);
-}
+      .mini-cta {
+        padding: 10px 15px;
+        border: 1px solid rgba(241, 163, 111, 0.55);
+        border-radius: 999px;
+        color: var(--peach);
+      }
 
-.link-arrow {
-  font-size: 16px; color: var(--muted);
-  transition: color 0.2s, transform 0.2s;
-}
-.link-card:hover .link-arrow { color: var(--accent); transform: translateX(3px); }
+      .language-toggle { border: 0; padding: 0; background: transparent; color: var(--gold); cursor: pointer; font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .language-toggle:hover, .language-toggle:focus-visible { color: var(--cream); outline: none; }
 
-/* Status dot */
-.status-dot {
-  display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  margin-right: 4px;
-}
-.status-dot.online { background: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,0.5); }
-.status-dot.offline { background: #e74c3c; }
+      .hero {
+        display: grid;
+        min-height: calc(100svh - 78px);
+        grid-template-columns: minmax(0, 1.18fr) minmax(350px, 0.82fr);
+        gap: 54px;
+        align-items: center;
+        padding: 80px 0 72px;
+      }
 
-/* Footer */
-.footer {
-  text-align: center; padding-top: 28px;
-  border-top: 1px solid var(--border);
-  margin-top: 32px;
-}
-.footer-tagline {
-  font-size: 16px; font-weight: 700;
-  background: linear-gradient(135deg, #c084fc, #e07a5f);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
-}
-.footer-meta {
-  font-size: 11px; color: var(--muted);
-  letter-spacing: 0.04em;
-}
-.footer-meta a { color: var(--accent2); text-decoration: none; }
+      .kicker,
+      .section-kicker {
+        margin: 0 0 18px;
+        color: var(--gold);
+        font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
 
-/* Scroll reveal */
-.reveal {
-  opacity: 0; transform: translateY(14px);
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-.reveal.visible { opacity: 1; transform: translateY(0); }
-</style>
-</head>
-<body>
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
 
-<div class="stars"></div>
+      h1 {
+        margin-bottom: 28px;
+        font-size: clamp(62px, 8.6vw, 128px);
+        font-weight: 820;
+        letter-spacing: -0.075em;
+        line-height: 0.91;
+      }
 
-<div class="container">
+      .typing-line {
+        display: block;
+        min-height: 1em;
+        color: var(--peach);
+      }
 
-  <!-- Header -->
-  <div class="header reveal">
-    <button class="language-toggle" data-language-toggle type="button"></button>
-    <h1>AnyVibe</h1>
-    <p class="sub">AdventureX 2026 · Demo Day 2026-07-26</p>
-  </div>
+      .cursor {
+        display: inline-block;
+        width: 0.07em;
+        margin-left: 0.04em;
+        color: var(--gold);
+        animation: blink 0.9s steps(2, end) infinite;
+      }
 
-  <div class="sheep-banner reveal">
-    <img src="/static/assets/onezion/yellow-sheep-hello.gif" alt="OneZion the Yellow Sheep waving hello" />
-    <div class="sheep-banner-copy">
-      <div class="sheep-banner-kicker">黄羊 · OneZion</div>
-      <div class="sheep-banner-title" data-i18n="hero_title">Your crew starts with a hello.</div>
-      <div class="sheep-banner-desc" data-i18n="hero_description">A small digital teammate for the long route from voice to shipped code.</div>
-    </div>
-  </div>
+      .hero-copy {
+        max-width: 650px;
+        margin-bottom: 28px;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 22px);
+        letter-spacing: -0.02em;
+      }
 
-  <!-- Live Demos -->
-  <div class="section-label reveal" data-i18n="live_demos">Live Demos</div>
-  <div class="links reveal">
-    <a href="/company" class="link-card">
-      <div class="link-icon">📞</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="voice_company_title">Voice Control + Company Kanban</div>
-        <div class="link-desc" data-i18n="voice_company_description">Call the Yellow Sheep, speak naturally, and watch the AI role team work on one live screen</div>
-      </div>
-      <span class="link-badge" data-i18n="live">Live</span>
-      <span class="link-arrow">→</span>
-    </a>
-    <a href="http://localhost:7860" class="link-card" target="_blank">
-      <div class="link-icon">🎙️</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="voice_server_title">Voice Server</div>
-        <div class="link-desc" data-i18n="voice_server_description">StepFun WebSocket bridge — realtime audio pipeline</div>
-      </div>
-      <span class="link-badge local">local:7860</span>
-      <span class="link-arrow">→</span>
-    </a>
-  </div>
+      .hero-copy strong {
+        color: var(--cream);
+      }
 
-  <!-- Docs & Resources -->
-  <div class="section-label reveal" data-i18n="docs_resources">Docs & Resources</div>
-  <div class="links reveal">
-    <a href="/docs/landing.html" class="link-card">
-      <div class="link-icon">🌐</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="landing_page">Landing Page</div>
-        <div class="link-desc" data-i18n="landing_page_description">Marketing landing page — architecture, features, partners, try-it links</div>
-      </div>
-      <span class="link-arrow">→</span>
-    </a>
-    <a href="/docs/success-narrative-vs-mechanism.html" class="link-card">
-      <div class="link-icon">📖</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="architecture_docs">Architecture Docs</div>
-        <div class="link-desc" data-i18n="architecture_docs_description">Success Narratives vs Success Mechanisms — pitch deck / narrative doc</div>
-      </div>
-      <span class="link-arrow">→</span>
-    </a>
-    <a href="https://github.com/onezion12344/AnyVibe" class="link-card" target="_blank" rel="noopener">
-      <div class="link-icon">💻</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="github_repository">GitHub Repository</div>
-        <div class="link-desc" data-i18n="github_repository_description">Source code, README, MCP server, voice bridge. MIT licensed.</div>
-      </div>
-      <span class="link-badge" data-i18n="open_source">Open Source</span>
-      <span class="link-arrow">→</span>
-    </a>
-    <a href="https://onezion12344.github.io/projects/coding-vibe/" class="link-card" target="_blank" rel="noopener">
-      <div class="link-icon">🚀</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="deployed_landing_page">Deployed Landing Page</div>
-        <div class="link-desc" data-i18n="deployed_landing_page_description">GitHub Pages — share this with judges and visitors</div>
-      </div>
-      <span class="link-badge" data-i18n="github_pages">GitHub Pages</span>
-      <span class="link-arrow">→</span>
-    </a>
-  </div>
+      .scene-caption {
+        display: inline-flex;
+        min-height: 43px;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 30px;
+        padding: 10px 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(43, 72, 88, 0.45);
+        color: var(--cream);
+        font: 650 14px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
 
-  <!-- Quick Start -->
-  <div class="section-label reveal" data-i18n="quick_start">Quick Start</div>
-  <div class="links reveal">
-    <a href="docs/QODER-COMPANY-PLAN.md" class="link-card">
-      <div class="link-icon">🏗️</div>
-      <div class="link-body">
-        <div class="link-title" data-i18n="qoder_company_plan">Qoder Company Plan</div>
-        <div class="link-desc" data-i18n="qoder_company_plan_description">SDD plan — persistent AI company backend. T1-T5, demo-critical slice.</div>
-      </div>
-      <span class="link-arrow">→</span>
-    </a>
-    <a href="/static/HANDOFF.md" class="link-card">
-      <div class="link-icon">📋</div>
-      <div class="link-body">
-        <div class="link-title">HANDOFF</div>
-        <div class="link-desc" data-i18n="handoff_description">Code map, what works/doesn't, how to run, priority TODO.</div>
-      </div>
-      <span class="link-arrow">→</span>
-    </a>
-  </div>
+      .scene-caption span:first-child {
+        font-family: system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+        font-size: 20px;
+      }
 
-  <!-- Footer -->
-  <footer class="footer reveal">
-    <div class="footer-tagline">为创造，再一次信仰之跃</div>
-    <div class="footer-meta">
-      AdventureX 2026 · Track #04<br>
-      <a href="https://github.com/onezion12344" target="_blank" rel="noopener">Harry Huang</a> ·
-      Built with Viaim · Qoder · StepFun 阶跃星辰
-    </div>
-  </footer>
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
 
-</div>
+      .button {
+        display: inline-flex;
+        min-height: 52px;
+        align-items: center;
+        justify-content: center;
+        padding: 0 21px;
+        border-radius: 999px;
+        font-size: 15px;
+        font-weight: 780;
+        transition:
+          transform 180ms ease,
+          background 180ms ease;
+      }
 
-<script>
-window.CV_I18N = {
-  switch_to_chinese: { en: 'Switch to Chinese', zh: '切换到中文' },
-  switch_to_english: { en: 'Switch to English', zh: '切换到英文' },
-  hero_title: { en: 'Your crew starts with a hello.', zh: '从一句你好，启动你的团队。' },
-  hero_description: { en: 'A small digital teammate for the long route from voice to shipped code.', zh: '一个陪你从语音想法走到代码交付的数字队友。' },
-  live_demos: { en: 'Live Demos', zh: '实时演示' },
-  live: { en: 'Live', zh: '在线' },
-  voice_company_title: { en: 'Voice Control + Company Kanban', zh: '语音控制 + 公司看板' },
-  voice_company_description: { en: 'Call the Yellow Sheep, speak naturally, and watch the AI role team work on one live screen.', zh: '呼叫黄羊，自然说话，在同一个界面观看 AI 团队协作。' },
-  voice_server_title: { en: 'Voice Server', zh: '语音服务' },
-  voice_server_description: { en: 'StepFun WebSocket bridge — realtime audio pipeline', zh: 'StepFun WebSocket 桥接 — 实时语音管线' },
-  docs_resources: { en: 'Docs & Resources', zh: '文档与资源' },
-  landing_page: { en: 'Landing Page', zh: '落地页' },
-  landing_page_description: { en: 'Marketing landing page — architecture, features, partners, try-it links', zh: '产品落地页 — 架构、功能、合作伙伴与体验入口' },
-  architecture_docs: { en: 'Architecture Docs', zh: '架构文档' },
-  architecture_docs_description: { en: 'Success Narratives vs Success Mechanisms — pitch deck / narrative doc', zh: '成功叙事与成功机制 — 路演与叙事文档' },
-  github_repository: { en: 'GitHub Repository', zh: 'GitHub 仓库' },
-  github_repository_description: { en: 'Source code, README, MCP server, voice bridge. MIT licensed.', zh: '源代码、README、MCP 服务与语音桥接，采用 MIT 协议。' },
-  open_source: { en: 'Open Source', zh: '开源' },
-  deployed_landing_page: { en: 'Deployed Landing Page', zh: '已部署落地页' },
-  deployed_landing_page_description: { en: 'GitHub Pages — share this with judges and visitors', zh: 'GitHub Pages — 可分享给评委和访客' },
-  github_pages: { en: 'GitHub Pages', zh: 'GitHub Pages' },
-  quick_start: { en: 'Quick Start', zh: '快速开始' },
-  qoder_company_plan: { en: 'Qoder Company Plan', zh: 'Qoder 公司方案' },
-  qoder_company_plan_description: { en: 'SDD plan — persistent AI company backend. T1-T5, demo-critical slice.', zh: 'SDD 方案 — 持续运行的 AI 公司后端，T1-T5 演示核心路径。' },
-  handoff_description: { en: 'Code map, what works/doesn\'t, how to run, priority TODO.', zh: '代码地图、已实现与未实现部分、运行方式与优先级待办。' },
-};
-</script>
-<script src="/static/language.js"></script>
-<script>
-(function() {
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) entry.target.classList.add('visible');
-    });
-  }, { threshold: 0.08 });
+      .button:hover {
+        transform: translateY(-2px);
+      }
 
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+      .button-primary {
+        background: var(--peach);
+        color: var(--navy-deep);
+      }
 
-  setTimeout(() => {
-    document.querySelectorAll('.reveal').forEach(el => {
-      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('visible');
-    });
-  }, 100);
+      .button-secondary {
+        border: 1px solid rgba(172, 187, 194, 0.32);
+        color: var(--cream);
+      }
 
-  // Quick server status check (non-blocking)
-  fetch('/api/board').then(r => {
-    const dots = document.querySelectorAll('.status-dot');
-    if (r.ok) {
-      dots.forEach(d => { d.classList.add('online'); d.classList.remove('offline'); });
-    }
-  }).catch(() => {});
-})();
-</script>
+      .mascot-stage {
+        position: relative;
+        min-height: 590px;
+        overflow: hidden;
+        border: 1px solid rgba(239, 196, 94, 0.48);
+        border-radius: 46px;
+        background:
+          radial-gradient(circle at 50% 38%, rgba(255, 241, 213, 0.23), transparent 35%),
+          linear-gradient(150deg, var(--card-soft), var(--card));
+        box-shadow: var(--shadow);
+      }
 
-</body>
+      .mascot-stage::before,
+      .mascot-stage::after {
+        position: absolute;
+        border: 1px solid rgba(239, 196, 94, 0.23);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .mascot-stage::before {
+        inset: 80px 45px 95px;
+      }
+
+      .mascot-stage::after {
+        inset: 135px 100px 150px;
+      }
+
+      .stage-label {
+        position: absolute;
+        top: 25px;
+        left: 28px;
+        z-index: 3;
+        color: var(--gold);
+        font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+      }
+
+      .mascot-frame {
+        position: absolute;
+        inset: 54px 18px 68px;
+        display: grid;
+        place-items: center;
+      }
+
+      .mascot-frame img {
+        position: absolute;
+        width: min(100%, 510px);
+        border-radius: 28px;
+        mix-blend-mode: normal;
+        object-fit: contain;
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+        transition:
+          opacity 450ms ease,
+          transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .mascot-frame img.active {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+
+      .stage-status {
+        position: absolute;
+        right: 24px;
+        bottom: 22px;
+        left: 24px;
+        z-index: 3;
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .status-live {
+        color: var(--gold);
+      }
+
+      .ticker {
+        overflow: hidden;
+        border-block: 1px solid rgba(172, 187, 194, 0.18);
+        background: rgba(13, 29, 39, 0.44);
+      }
+
+      .ticker-track {
+        display: flex;
+        width: max-content;
+        gap: 14px;
+        padding: 16px 7px;
+        animation: marquee 34s linear infinite;
+      }
+
+      .brand-marquee { margin-top: -1px; border-top: 0; background: var(--gold); color: var(--navy-deep); }
+      .brand-marquee .ticker-track { gap: 42px; padding: 10px 7px; font: 800 11px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .1em; }
+      .brand-marquee .ticker-item { padding: 0; border: 0; color: inherit; }
+      .brand-marquee .ticker-item b { color: inherit; }
+      .brand-marquee .lane-two { animation-direction: reverse; animation-duration: 42s; background: var(--peach); }
+      .brand-marquee .lane-three { animation-duration: 29s; background: var(--cream); }
+      .brand-marquee .ticker-track { min-width: 200%; }
+      .brand-copy { color: var(--gold); text-transform: none; }
+
+      .ticker-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 14px;
+        border: 1px solid rgba(172, 187, 194, 0.2);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .ticker-item b {
+        color: var(--cream);
+      }
+
+      .section {
+        padding: 118px 0;
+      }
+
+      .section-heading {
+        display: grid;
+        grid-template-columns: 1fr minmax(250px, 0.42fr);
+        gap: 44px;
+        align-items: end;
+        padding-bottom: 28px;
+        border-bottom: 1px solid rgba(172, 187, 194, 0.2);
+      }
+
+      h2 {
+        margin-bottom: 0;
+        font-size: clamp(40px, 6vw, 76px);
+        line-height: 0.98;
+        letter-spacing: -0.06em;
+      }
+
+      .section-intro {
+        margin-bottom: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-top: 26px;
+      }
+
+      .workflow-card {
+        position: relative;
+        min-height: 320px;
+        overflow: hidden;
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--card);
+        box-shadow: 0 18px 44px rgba(4, 16, 23, 0.16);
+      }
+
+      .workflow-card::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 5px;
+        background: linear-gradient(var(--peach), var(--gold));
+        content: "";
+      }
+
+      .workflow-number {
+        color: var(--gold);
+        font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .workflow-icon {
+        display: grid;
+        height: 130px;
+        place-items: center;
+        margin: 28px 0 18px;
+        overflow: hidden;
+        border: 1px solid rgba(239, 196, 94, 0.21);
+        border-radius: 20px;
+        background: rgba(13, 29, 39, 0.24);
+      }
+
+      .workflow-icon img {
+        width: 158px;
+        max-width: 100%;
+        mix-blend-mode: normal;
+      }
+
+      .workflow-card h3 {
+        margin-bottom: 9px;
+        font-size: 25px;
+        letter-spacing: -0.035em;
+      }
+
+      .workflow-card p {
+        margin-bottom: 0;
+        color: var(--muted);
+      }
+
+      .vision-card {
+        display: grid;
+        gap: 28px;
+        overflow: hidden;
+        padding: 48px;
+        border: 1px solid rgba(239, 196, 94, 0.48);
+        border-radius: 42px;
+        background: linear-gradient(135deg, var(--card-soft), var(--card));
+        box-shadow: var(--shadow);
+      }
+
+      .vision-card blockquote {
+        margin: 0 0 24px;
+        font-size: clamp(30px, 4vw, 52px);
+        font-weight: 760;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+      }
+
+      .vision-card p {
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .tag-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .tag {
+        padding: 8px 11px;
+        border: 1px solid rgba(172, 187, 194, 0.22);
+        border-radius: 999px;
+        color: var(--muted);
+        font: 600 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .company-map {
+        display: grid;
+        grid-template-columns: 0.9fr 68px 1.25fr;
+        gap: 14px;
+        align-items: center;
+        min-height: 310px;
+        padding: 6px;
+      }
+
+      .call-node, .team-node {
+        position: relative;
+        display: grid;
+        justify-items: center;
+        gap: 9px;
+        padding: 14px 10px;
+        border: 1px solid rgba(239, 196, 94, 0.32);
+        border-radius: 18px;
+        background: rgba(13, 29, 39, 0.27);
+        text-align: center;
+        font: 700 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .call-node img { width: 170px; max-width: 100%; }
+      .route-line { position: relative; min-height: 190px; }
+      .route-line::before { position: absolute; top: 50%; right: 0; left: 0; height: 1px; background: var(--gold); content: ""; }
+      .route-line::after { position: absolute; top: calc(50% - 4px); right: -1px; width: 8px; height: 8px; border-top: 1px solid var(--gold); border-right: 1px solid var(--gold); content: ""; transform: rotate(45deg); }
+      .team-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+      .team-node img { width: 72px; height: 56px; object-fit: cover; object-position: center; border-radius: 10px; }
+      .team-node span { color: var(--gold); font-size: 9px; }
+
+      .final-cta {
+        padding: 24px 0 112px;
+        text-align: center;
+      }
+
+      .slogan-wall {
+        display: grid;
+        gap: 4px;
+        margin: 0 auto 38px;
+        overflow: hidden;
+        color: var(--cream);
+        font-size: clamp(20px, 3.5vw, 48px);
+        font-weight: 800;
+        letter-spacing: -0.055em;
+        line-height: .98;
+        text-align: left;
+      }
+
+      .slogan-wall p { margin: 0; white-space: nowrap; }
+      .slogan-wall p:nth-child(1) { padding-left: 2%; opacity: .92; transform: rotate(-1deg); }
+      .slogan-wall p:nth-child(2) { padding-left: 13%; color: var(--gold); opacity: .72; transform: rotate(.6deg); }
+      .slogan-wall p:nth-child(3) { padding-left: 5%; opacity: .9; transform: rotate(-.45deg); }
+      .slogan-wall p:nth-child(4) { padding-left: 19%; color: var(--peach); opacity: .72; transform: rotate(.8deg); }
+      .slogan-wall p:nth-child(5) { padding-left: 8%; opacity: .86; transform: rotate(-.7deg); }
+      .slogan-wall p:nth-child(6) { padding-left: 24%; color: var(--gold); opacity: .65; transform: rotate(.35deg); }
+      .slogan-wall p:nth-child(7) { padding-left: 4%; opacity: .88; transform: rotate(-.4deg); }
+      .slogan-wall p:nth-child(8) { padding-left: 17%; color: var(--peach); opacity: .7; transform: rotate(.55deg); }
+      .slogan-wall p:nth-child(9) { padding-left: 10%; opacity: .9; transform: rotate(-.3deg); }
+      .slogan-wall p:nth-child(10) { padding-left: 22%; color: var(--gold); opacity: .68; transform: rotate(.45deg); }
+
+      .final-cta h2 {
+        max-width: 850px;
+        margin: 0 auto 22px;
+      }
+
+      .final-cta p {
+        max-width: 590px;
+        margin: 0 auto 30px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 26px 0 38px;
+        border-top: 1px solid rgba(172, 187, 194, 0.2);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(28px);
+        transition:
+          opacity 700ms ease,
+          transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .reveal.visible {
+        opacity: 1;
+        transform: none;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      @keyframes marquee {
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      @media (max-width: 860px) {
+        .nav-links a:not(.mini-cta) {
+          display: none;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+          padding-top: 64px;
+        }
+
+        .mascot-stage {
+          min-height: 520px;
+        }
+
+        .workflow,
+        .section-heading {
+          grid-template-columns: 1fr;
+        }
+
+        .vision-card {
+          padding: 25px;
+        }
+
+        .company-map { grid-template-columns: 1fr; }
+        .route-line { min-height: 28px; transform: rotate(90deg); }
+      }
+
+      @media (max-width: 560px) {
+        .shell {
+          width: min(100% - 28px, 1180px);
+        }
+
+        .nav {
+          min-height: 66px;
+        }
+
+        .mini-cta {
+          padding: 8px 11px;
+        }
+
+        .language-toggle { font-size: 11px; }
+
+        h1 {
+          font-size: clamp(54px, 18vw, 88px);
+        }
+
+        .hero {
+          min-height: auto;
+          padding: 58px 0 50px;
+        }
+
+        .mascot-stage {
+          min-height: 430px;
+          border-radius: 32px;
+        }
+
+        .mascot-frame {
+          inset-inline: 8px;
+        }
+
+        .section {
+          padding: 84px 0;
+        }
+
+        .workflow-card {
+          min-height: 260px;
+        }
+
+        footer {
+          display: block;
+          line-height: 2;
+        }
+
+        .brand-marquee .ticker-track { min-width: 300%; font-size: 9px; letter-spacing: .05em; }
+        .slogan-wall { margin-bottom: 30px; font-size: clamp(17px, 6.3vw, 25px); line-height: 1.02; }
+        .slogan-wall p:nth-child(even) { padding-left: 8%; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+
+        .reveal {
+          opacity: 1;
+          transform: none;
+        }
+
+        .brand-marquee .ticker-track { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; padding: 8px 14px; animation: none; white-space: normal; }
+        .brand-marquee .ticker-item { white-space: nowrap; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="shell">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="#top">
+          <span class="brand-mark"><img src="/static/assets/landing/onezion-yellow-sheep-call-avatar-v1.png" alt="Happy Yellow Sheep answering a call" /></span>
+          <span>AnyVibe</span>
+        </a>
+        <div class="nav-links">
+          <a href="#how" data-i18n="navHow">How it works</a>
+          <a href="#vision" data-i18n="navVision">Vision</a>
+          <button class="language-toggle" type="button" aria-label="Switch language" aria-pressed="false">EN / 中文</button>
+          <a class="mini-cta" href="/company">
+            <span data-i18n="navCta">Open workspace</span>
+          </a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="ticker brand-marquee" aria-label="AnyVibe brand statement">
+        <div class="ticker-track" aria-hidden="true">
+          <span class="ticker-item"><b>AnyThing, AnyTime, AnyWhere, AnyVibe</b></span><span class="ticker-item"><b>AnyWalk, AnyCycle, AnyTrain, AnyVibe</b></span><span class="ticker-item"><b>AnyCode, AnySlide, AnyLearn, AnyVibe</b></span><span class="ticker-item"><b>AnyThing, AnyTime, AnyWhere, AnyVibe</b></span><span class="ticker-item"><b>AnyWalk, AnyCycle, AnyTrain, AnyVibe</b></span><span class="ticker-item"><b>AnyCode, AnySlide, AnyLearn, AnyVibe</b></span>
+        </div>
+        <div class="ticker-track lane-two" aria-hidden="true">
+          <span class="ticker-item"><b>AnyCall, AnyBrief, AnyBuild, AnyVibe</b></span><span class="ticker-item"><b>AnyPitch, AnyMarket, AnySell, AnyVibe</b></span><span class="ticker-item"><b>AnyNote, AnyThink, AnyCreate, AnyVibe</b></span><span class="ticker-item"><b>AnyCall, AnyBrief, AnyBuild, AnyVibe</b></span><span class="ticker-item"><b>AnyPitch, AnyMarket, AnySell, AnyVibe</b></span><span class="ticker-item"><b>AnyNote, AnyThink, AnyCreate, AnyVibe</b></span>
+        </div>
+        <div class="ticker-track lane-three" aria-hidden="true">
+          <span class="ticker-item"><b>AnyRun, AnyRide, AnyCommute, AnyVibe</b></span><span class="ticker-item"><b>AnyVoice, AnyTeam, AnyTask, AnyVibe</b></span><span class="ticker-item"><b>AnySpark, AnyPlan, AnyShip, AnyVibe</b></span><span class="ticker-item"><b>AnyMorning, AnyMidnight, AnyMoment, AnyVibe</b></span><span class="ticker-item"><b>AnyRun, AnyRide, AnyCommute, AnyVibe</b></span><span class="ticker-item"><b>AnyVoice, AnyTeam, AnyTask, AnyVibe</b></span><span class="ticker-item"><b>AnySpark, AnyPlan, AnyShip, AnyVibe</b></span><span class="ticker-item"><b>AnyMorning, AnyMidnight, AnyMoment, AnyVibe</b></span>
+        </div>
+      </section>
+      <section class="hero shell">
+        <div>
+          <p class="kicker" data-i18n="heroKicker">Your AI team that works in your life</p>
+          <h1>
+            Vibe
+            <span class="typing-line">
+              <span id="typed-word" aria-live="polite">working</span><span class="cursor">|</span>
+            </span>
+          </h1>
+          <p class="hero-copy" data-i18n-html="heroCopy">
+            <strong>Say what you need. Then keep moving.</strong> AnyVibe turns a phone call into work for an AI team—and calls you back when the result is ready.
+          </p>
+          <div class="scene-caption" aria-live="polite">
+            <span id="scene-emoji">🚲</span>
+            <span id="scene-context">on the bicycle</span>
+          </div>
+          <div class="actions">
+            <a class="button button-primary" href="/company">
+              <span data-i18n="heroCta">Open the live workspace</span>
+            </a>
+            <a class="button button-secondary" href="#how" data-i18n="heroSecondary">See the loop ↓</a>
+          </div>
+        </div>
+
+        <div class="mascot-stage" aria-label="Yellow Sheep changes with each Vibe">
+          <span class="stage-label">Yellow Sheep · live companion</span>
+          <div class="mascot-frame" id="mascot-frame">
+            <img src="/static/assets/landing/yellow-sheep-code.png" alt="Yellow Sheep coding" data-scene="code" />
+            <img src="/static/assets/landing/yellow-sheep-pitch.png" alt="Yellow Sheep pitching" data-scene="pitch" />
+            <img src="/static/assets/landing/yellow-sheep-learn.png" alt="Yellow Sheep learning" data-scene="learn" />
+            <img src="/static/assets/landing/yellow-sheep-market.png" alt="Yellow Sheep marketing" data-scene="market" />
+            <img class="active" src="/static/assets/landing/yellow-sheep-bike.png" alt="Yellow Sheep riding a bicycle" data-scene="bike" />
+            <img src="/static/assets/landing/yellow-sheep-walk.png" alt="Yellow Sheep walking" data-scene="walk" />
+            <img src="/static/assets/landing/yellow-sheep-run.png" alt="Yellow Sheep running" data-scene="run" />
+            <img src="/static/assets/landing/yellow-sheep-done.png" alt="Yellow Sheep celebrating completed work" data-scene="done" />
+          </div>
+          <div class="stage-status">
+            <span class="status-live">● Voice connected</span>
+            <span id="stage-status-text">working</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="ticker" aria-label="AnyVibe contexts">
+        <div class="ticker-track" aria-hidden="true">
+          <span class="ticker-item">🚲 <b>Vibe on the bicycle</b></span>
+          <span class="ticker-item">🚗 <b>Vibe in the car</b></span>
+          <span class="ticker-item">🚆 <b>Vibe on the train</b></span>
+          <span class="ticker-item">🚌 <b>Vibe on the bus</b></span>
+          <span class="ticker-item">🚶 <b>Vibe while walking</b></span>
+          <span class="ticker-item">🏃 <b>Vibe while running</b></span>
+          <span class="ticker-item">🚲 <b>Vibe on the bicycle</b></span>
+          <span class="ticker-item">🚗 <b>Vibe in the car</b></span>
+          <span class="ticker-item">🚆 <b>Vibe on the train</b></span>
+          <span class="ticker-item">🚌 <b>Vibe on the bus</b></span>
+          <span class="ticker-item">🚶 <b>Vibe while walking</b></span>
+          <span class="ticker-item">🏃 <b>Vibe while running</b></span>
+        </div>
+      </section>
+
+      <section id="how" class="section shell reveal">
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker">One call · one closed loop</p>
+            <h2>Your crew starts with a hello.</h2>
+          </div>
+          <p class="section-intro">
+            No prompt window to babysit. No tabs to manage. Speak naturally; the team handles the
+            route from idea to shipped result.
+          </p>
+        </div>
+
+        <div class="workflow">
+          <article class="workflow-card">
+            <span class="workflow-number" data-i18n="callNo">01 / CALL</span>
+            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-call.png" alt="Yellow Sheep receptionist answering a phone call" /></div>
+            <h3 data-i18n="callTitle">Describe the outcome</h3><p data-i18n="callCopy">A fast receptionist AI listens, asks the useful follow-ups and writes a clear brief.</p>
+          </article>
+          <article class="workflow-card">
+            <span class="workflow-number" data-i18n="dispatchNo">02 / DISPATCH</span>
+            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-code.png" alt="Yellow Sheep engineering team at work" /></div>
+            <h3 data-i18n="dispatchTitle">Your AI team works</h3><p data-i18n="dispatchCopy">Architect, builder and reviewer agents plan, implement and verify the task together.</p>
+          </article>
+          <article class="workflow-card">
+            <span class="workflow-number" data-i18n="callbackNo">03 / CALLBACK</span>
+            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-done.png" alt="Happy Yellow Sheep calling back with completed work" /></div>
+            <h3 data-i18n="callbackTitle">Get the result</h3><p data-i18n="callbackCopy">AnyVibe calls back with what changed, what passed and the next useful decision.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="vision" class="section shell reveal">
+        <div class="vision-card">
+          <div>
+            <p class="section-kicker" data-i18n="visionKicker">Not an assistant · a company interface</p>
+            <blockquote data-i18n="visionQuote">Yesterday, you worked for your computer. Now your computer works for you.</blockquote>
+            <p data-i18n="visionCopy">
+              AnyVibe is an always-available voice layer for a one-person company: coding, pitching,
+              learning, notes, marketing and whatever comes next.
+            </p>
+            <div class="tag-grid" aria-label="AnyVibe capabilities">
+              <span class="tag">VOICE FIRST</span>
+              <span class="tag">MULTI-AGENT</span>
+              <span class="tag">HANDS FREE</span>
+              <span class="tag">CALLBACK LOOP</span>
+              <span class="tag">HARNESS AGNOSTIC</span>
+            </div>
+          </div>
+          <div class="company-map" aria-label="A user call routes through AnyVibe to several specialist Yellow Sheep teams">
+            <div class="call-node"><img src="/static/assets/landing/yellow-sheep-call.png" alt="Yellow Sheep receptionist takes the user's call" /><span data-i18n="userCalls">User calls AnyVibe</span></div>
+            <div class="route-line" aria-hidden="true"></div>
+            <div class="team-grid">
+              <div class="team-node"><img src="/static/assets/landing/yellow-sheep-code.png" alt="Yellow Sheep builder team" /><span data-i18n="builder">Builder</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-pitch.png" alt="Yellow Sheep strategist team" /><span data-i18n="strategist">Strategist</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-learn.png" alt="Yellow Sheep researcher team" /><span data-i18n="researcher">Researcher</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-market.png" alt="Yellow Sheep marketer team" /><span data-i18n="marketer">Marketer</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-done.png" alt="Yellow Sheep reviewer team" /><span data-i18n="reviewer">Reviewer</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-call.png" alt="Yellow Sheep coordinator team" /><span data-i18n="coordinator">Coordinator</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="final-cta shell reveal">
+        <div class="slogan-wall" aria-label="AnyVibe language">
+          <p>AnyThing, AnyTime, AnyWhere, AnyVibe</p><p>AnyWalk, AnyCycle, AnyTrain, AnyVibe</p><p>AnyCode, AnySlide, AnyLearn, AnyVibe</p><p>AnyCall, AnyBrief, AnyBuild, AnyVibe</p><p>AnyPitch, AnyMarket, AnySell, AnyVibe</p><p>AnyNote, AnyThink, AnyCreate, AnyVibe</p><p>AnyRun, AnyRide, AnyCommute, AnyVibe</p><p>AnyVoice, AnyTeam, AnyTask, AnyVibe</p><p>AnySpark, AnyPlan, AnyShip, AnyVibe</p><p>AnyMorning, AnyMidnight, AnyMoment, AnyVibe</p>
+        </div>
+        <p class="section-kicker brand-copy" data-i18n="sloganExplain">AnyThing, AnyTime, AnyWhere, AnyVibe</p>
+        <h2 data-i18n="finalTitle">Let inspiration arrive before the screen does.</h2>
+        <p data-i18n="finalCopy">
+          Walk, ride, commute or work out. Tell AnyVibe what should happen next, and let the team
+          carry it forward.
+        </p>
+        <a class="button button-primary" href="/company">
+          <span data-i18n="finalCta">Meet your AI team</span>
+        </a>
+      </section>
+    </main>
+
+    <footer class="shell">
+      <span data-i18n="footerLeft">© 2026 AnyVibe · AdventureX</span><span data-i18n="footerRight">Yellow Sheep · OneZion</span>
+    </footer>
+
+    <script>
+      (() => {
+        const translations = { zh: {
+          navHow:'如何运作', navVision:'团队界面', navCta:'打开工作台', heroKicker:'融入你生活的 AI 团队', heroCopy:'<strong>说出你的需求，然后继续前行。</strong>AnyVibe 把一通电话变成 AI 团队的工作，并在结果准备好时回拨给你。', heroCta:'打开实时工作台', heroSecondary:'查看闭环 ↓',
+          callNo:'01 / 来电', callTitle:'描述你想要的结果', callCopy:'前台黄羊聆听、追问关键细节，并写成清晰任务简报。', dispatchNo:'02 / 派工', dispatchTitle:'AI 团队开始工作', dispatchCopy:'架构、构建与审查智能体一起规划、实现并验证任务。', callbackNo:'03 / 回电', callbackTitle:'拿到结果', callbackCopy:'AnyVibe 回拨告诉你改了什么、通过了什么，以及下一步。',
+          visionKicker:'不只是助手 · 而是公司的界面', visionQuote:'昨天你为电脑工作。现在，电脑为你工作。', visionCopy:'AnyVibe 是一人公司的随时在线语音层：编程、路演、学习、记录、营销，以及下一件事。', userCalls:'用户呼叫 AnyVibe', builder:'构建', strategist:'策略', researcher:'研究', marketer:'营销', reviewer:'审查', coordinator:'协调',
+          sloganExplain:'任意事情，任意时间，任意地点，AnyVibe', finalTitle:'让灵感先于屏幕抵达。', finalCopy:'步行、骑行、通勤或锻炼时，告诉 AnyVibe 下一步该做什么，让团队继续推进。', finalCta:'认识你的 AI 团队', footerLeft:'© 2026 AnyVibe · AdventureX', footerRight:'黄羊 · OneZion'
+        }};
+        const languageButton = document.querySelector('.language-toggle');
+        const setLanguage = (language) => {
+          const isChinese = language === 'zh';
+          document.documentElement.lang = isChinese ? 'zh-CN' : 'en';
+          document.querySelectorAll('[data-i18n]').forEach((element) => { element.textContent = isChinese ? translations.zh[element.dataset.i18n] : element.dataset.en || element.textContent; });
+          document.querySelectorAll('[data-i18n-html]').forEach((element) => { if (!element.dataset.en) element.dataset.en = element.innerHTML; element.innerHTML = isChinese ? translations.zh[element.dataset.i18nHtml] : element.dataset.en; });
+          if (languageButton) { languageButton.textContent = isChinese ? '中文 / EN' : 'EN / 中文'; languageButton.setAttribute('aria-pressed', String(isChinese)); languageButton.setAttribute('aria-label', isChinese ? '切换至英文' : 'Switch to Chinese'); }
+          document.querySelector('.brand-marquee').setAttribute('aria-label', isChinese ? 'AnyVibe 品牌语言：任意事情、任意时间、任意地点' : 'AnyVibe brand language');
+          try { localStorage.setItem('anyvibe-language', language); } catch (_) {}
+        };
+        document.querySelectorAll('[data-i18n]').forEach((element) => { element.dataset.en = element.textContent; });
+        languageButton?.addEventListener('click', () => setLanguage(document.documentElement.lang === 'zh-CN' ? 'en' : 'zh'));
+        try { if (localStorage.getItem('anyvibe-language') === 'zh') setLanguage('zh'); } catch (_) {}
+
+        // The voice of the brand deliberately interrupts every three ordinary moments.
+        // This keeps the hero human-scale while making AnyVibe the repeated payoff.
+        const ordinaryExperiences = [
+          { word: "working", emoji: "🚲", context: "on the bicycle", zhContext: "骑自行车时", scene: "bike" },
+          { word: "pitching", emoji: "🚆", context: "on the train", scene: "pitch" },
+          { word: "sliding", emoji: "🚗", context: "in the car", scene: "pitch" },
+          { word: "learning", emoji: "🚶", context: "while walking", scene: "learn" },
+          { word: "noting", emoji: "🚌", context: "on the bus", scene: "walk" },
+          { word: "marketing", emoji: "🏃", context: "while running", scene: "market" },
+          { word: "coding", emoji: "🚲", context: "on the bicycle", scene: "code" },
+          { word: "creating", emoji: "🚶", context: "while walking", scene: "walk" },
+          { word: "anything", emoji: "🏃", context: "while running", scene: "run" },
+        ];
+        const brandExperience = {
+          word: "AnyVibe",
+          emoji: "✨",
+          context: "anyhow, anywhere",
+          zhContext: "任何方式，任何地点",
+          scene: "done",
+          brand: true,
+        };
+        const experiences = ordinaryExperiences.flatMap((experience, index) =>
+          (index + 1) % 3 === 0 ? [experience, brandExperience] : [experience],
+        );
+        // Exposed for lightweight visual/sequence checks without changing runtime behavior.
+        window.__anyVibeSequence = experiences.map(({ word, brand = false }) => ({ word, brand }));
+
+        const typed = document.querySelector("#typed-word");
+        const emoji = document.querySelector("#scene-emoji");
+        const context = document.querySelector("#scene-context");
+        const status = document.querySelector("#stage-status-text");
+        const mascotImages = [...document.querySelectorAll("#mascot-frame img")];
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        const updateExperience = (experience) => {
+          emoji.textContent = experience.emoji;
+          context.textContent = document.documentElement.lang === 'zh-CN' ? (experience.zhContext || experience.context) : experience.context;
+          status.textContent = experience.word;
+          mascotImages.forEach((image) => {
+            image.classList.toggle("active", image.dataset.scene === experience.scene);
+          });
+        };
+
+        updateExperience(experiences[0]);
+
+        if (!prefersReducedMotion) {
+          let experienceIndex = 0;
+          let characterIndex = experiences[0].word.length;
+          let deleting = false;
+
+          const type = () => {
+            const experience = experiences[experienceIndex];
+            typed.textContent = experience.word.slice(0, characterIndex);
+
+            let delay = deleting ? 54 : 88;
+            if (!deleting && characterIndex === experience.word.length) {
+              deleting = true;
+              delay = 1450;
+            } else if (deleting && characterIndex === 0) {
+              deleting = false;
+              experienceIndex = (experienceIndex + 1) % experiences.length;
+              updateExperience(experiences[experienceIndex]);
+              delay = 300;
+            }
+
+            characterIndex += deleting ? -1 : 1;
+            window.setTimeout(type, delay);
+          };
+
+          window.setTimeout(type, 1200);
+        }
+
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) entry.target.classList.add("visible");
+            });
+          },
+          { threshold: 0.15, rootMargin: "0px 0px -45px" },
+        );
+
+        document.querySelectorAll(".reveal").forEach((element) => observer.observe(element));
+      })();
+    </script>
+  </body>
 </html>

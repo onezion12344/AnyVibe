@@ -1,5 +1,37 @@
+# Secrets and local configuration
 .env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+.certs/
+
+# Python / Node dependencies and local caches
 __pycache__/
 .venv/
 *.pyc
-.certs/
+node_modules/
+**/node_modules/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+.coverage
+dist/
+build/
+.cache/
+tmp/
+.tmp/
+
+# Local render output and release-only artifacts
+product-video/
+campaign-poster/
+yellow-sheep-3d/
+*.mp4
+*.mov
+*.stl
+*.3mf
+*.pdf
+.DS_Store

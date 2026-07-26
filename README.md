@@ -1,6 +1,26 @@
-# Coding Vibe
+# AnyVibe
 
-Voice-first AI coding companion — talk to your codebase while you're on the go.
+AnyVibe is a voice-first AI company: speak naturally, let the right team work, and return to a clear result.
+
+**AdventureX 2026** | Yellow Sheep by OneZion | Harness-agnostic multi-agent workflow
+
+## Product surfaces
+
+- **Landing page (/)** — a responsive English/中文 introduction to the AnyVibe loop, its Yellow Sheep companion, and the team behind every call.
+- **Company Workspace (/company)** — the live demo where a caller, Yellow Sheep CS, CEO, and specialist agents coordinate a task.
+- **Voice call (/call)** — the realtime speech interface.
+
+The landing page and the workspace are intentionally linked: every primary call-to-action opens the live Company Workspace instead of sending users to a dead-end marketing form.
+
+## Brand assets
+
+Runtime Yellow Sheep assets live in web/static/assets/. The integrated landing artwork lives in web/static/assets/landing/. Canonical B-direction mascot source sheets are retained in brand/mascot-final/, with early explorations in brand/mascot-explorations/.
+
+The larger 36-role professional Yellow Sheep package remains in the external onezion-the-yellow-sheep asset workspace for now. It is not bundled here until it has a deliberate packaging/release plan.
+
+## Release-artifact policy
+
+Video renders, campaign PDFs, and 3D-print files are release assets rather than ordinary Git source. Keep their source, lightweight previews, and documentation in Git; distribute finished MP4/PDF/STL/3MF files through a GitHub Release or an appropriate media host. Never start a 3D print without explicit user confirmation.
 
 **AdventureX 2026** | Harness-agnostic | Two-tier CS+CEO architecture
 
