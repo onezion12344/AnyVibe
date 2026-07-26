@@ -454,6 +454,195 @@
         color: var(--muted);
       }
 
+      .handoff {
+        padding: 0 0 118px;
+      }
+
+      .handoff-intro {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 28px;
+        margin-bottom: 26px;
+      }
+
+      .handoff-intro h2 {
+        max-width: 740px;
+      }
+
+      .handoff-intro p {
+        max-width: 320px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .handoff-demo {
+        overflow: hidden;
+        padding: 28px;
+        border: 1px solid rgba(239, 196, 94, 0.46);
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 16% 20%, rgba(241, 163, 111, 0.12), transparent 22rem),
+          linear-gradient(145deg, rgba(54, 85, 98, 0.95), rgba(19, 38, 51, 0.96));
+        box-shadow: var(--shadow);
+      }
+
+      .handoff-live {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-bottom: 22px;
+        color: var(--muted);
+        font: 650 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .handoff-live strong {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--cream);
+        font-weight: 700;
+      }
+
+      .handoff-live strong::before {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--gold);
+        box-shadow: 0 0 0 0 rgba(239, 196, 94, 0.62);
+        content: "";
+        animation: handoff-live-dot 1.8s ease-out infinite;
+      }
+
+      .handoff-rail {
+        display: flex;
+        align-items: stretch;
+        min-width: max-content;
+        gap: 10px;
+      }
+
+      .handoff-step {
+        position: relative;
+        display: grid;
+        width: 132px;
+        min-height: 218px;
+        align-content: start;
+        justify-items: center;
+        gap: 8px;
+        padding: 15px 10px 13px;
+        border: 1px solid rgba(172, 187, 194, 0.22);
+        border-radius: 20px;
+        background: rgba(13, 29, 39, 0.42);
+        color: var(--cream);
+        text-align: center;
+        animation: handoff-step 16s ease-in-out infinite both;
+        animation-delay: var(--handoff-delay);
+      }
+
+      .handoff-step--team {
+        width: 174px;
+      }
+
+      .handoff-step img {
+        width: 74px;
+        height: 62px;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 14px;
+        background: rgba(255, 241, 213, 0.08);
+      }
+
+      .handoff-step--team > img {
+        width: 84px;
+        height: 66px;
+      }
+
+      .handoff-number {
+        color: var(--gold);
+        font: 700 10px ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.11em;
+      }
+
+      .handoff-step h3 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: -0.025em;
+      }
+
+      .handoff-step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .handoff-crew {
+        display: flex;
+        justify-content: center;
+        gap: 4px;
+        margin-top: 2px;
+      }
+
+      .handoff-crew img {
+        width: 32px;
+        height: 29px;
+        border-radius: 8px;
+      }
+
+      .handoff-connector {
+        position: relative;
+        align-self: center;
+        width: 17px;
+        height: 20px;
+      }
+
+      .handoff-connector::before {
+        position: absolute;
+        top: 9px;
+        right: 0;
+        left: 0;
+        height: 1px;
+        background: rgba(172, 187, 194, 0.35);
+        content: "";
+      }
+
+      .handoff-connector::after {
+        position: absolute;
+        top: 6px;
+        right: 0;
+        width: 7px;
+        height: 7px;
+        border-top: 1px solid rgba(172, 187, 194, 0.5);
+        border-right: 1px solid rgba(172, 187, 194, 0.5);
+        content: "";
+        transform: rotate(45deg);
+      }
+
+      .handoff-connector--return::after {
+        transform: rotate(135deg);
+      }
+
+      .handoff-connector--return::before {
+        background: linear-gradient(to left, rgba(172, 187, 194, 0.35), rgba(172, 187, 194, 0.08));
+      }
+
+      .handoff-connector--one { --handoff-delay: 1.35s; }
+      .handoff-connector--two { --handoff-delay: 3.35s; }
+      .handoff-connector--three { --handoff-delay: 5.35s; }
+      .handoff-connector--four { --handoff-delay: 9.35s; }
+      .handoff-connector--five { --handoff-delay: 11.35s; }
+      .handoff-connector--six { --handoff-delay: 13.35s; }
+
+      .handoff-connector::before,
+      .handoff-connector::after {
+        animation: handoff-connector 16s ease-in-out infinite both;
+        animation-delay: var(--handoff-delay);
+      }
+
       .vision-card {
         display: grid;
         gap: 28px;
@@ -602,6 +791,41 @@
         }
       }
 
+      @keyframes handoff-live-dot {
+        70% {
+          box-shadow: 0 0 0 8px rgba(239, 196, 94, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(239, 196, 94, 0);
+        }
+      }
+
+      @keyframes handoff-step {
+        0%, 8%, 100% {
+          border-color: rgba(239, 196, 94, 0.88);
+          background: rgba(255, 241, 213, 0.14);
+          box-shadow: 0 0 0 1px rgba(239, 196, 94, 0.18), 0 18px 30px rgba(4, 16, 23, 0.24);
+          transform: translateY(-5px);
+        }
+        15%, 94% {
+          border-color: rgba(172, 187, 194, 0.22);
+          background: rgba(13, 29, 39, 0.42);
+          box-shadow: none;
+          transform: none;
+        }
+      }
+
+      @keyframes handoff-connector {
+        0%, 12%, 100% {
+          opacity: 1;
+          filter: drop-shadow(0 0 3px rgba(239, 196, 94, 0.8));
+        }
+        18%, 94% {
+          opacity: 0.42;
+          filter: none;
+        }
+      }
+
       @media (max-width: 860px) {
         .nav-links a:not(.mini-cta) {
           display: none;
@@ -619,6 +843,18 @@
         .workflow,
         .section-heading {
           grid-template-columns: 1fr;
+        }
+
+        .handoff-intro {
+          display: block;
+        }
+
+        .handoff-intro p {
+          margin-top: 18px;
+        }
+
+        .handoff-demo {
+          overflow-x: auto;
         }
 
         .vision-card {
@@ -670,6 +906,25 @@
           min-height: 260px;
         }
 
+        .handoff {
+          padding-bottom: 84px;
+        }
+
+        .handoff-demo {
+          margin-inline: -2px;
+          padding: 18px;
+          border-radius: 26px;
+        }
+
+        .handoff-step {
+          width: 124px;
+          min-height: 205px;
+        }
+
+        .handoff-step--team {
+          width: 154px;
+        }
+
         footer {
           display: block;
           line-height: 2;
@@ -698,6 +953,13 @@
           transform: none;
         }
 
+        .handoff-live strong::before,
+        .handoff-step,
+        .handoff-connector::before,
+        .handoff-connector::after {
+          animation: none;
+        }
+
         .brand-marquee .ticker-track { width: 100%; min-width: 0; flex-wrap: wrap; justify-content: center; padding: 8px 14px; animation: none; white-space: normal; }
         .brand-marquee .ticker-item { white-space: nowrap; }
       }
@@ -707,11 +969,12 @@
     <header class="shell">
       <nav class="nav" aria-label="Primary navigation">
         <a class="brand" href="#top">
-          <span class="brand-mark"><img src="/static/assets/landing/onezion-yellow-sheep-call-avatar-v1.png" alt="Happy Yellow Sheep answering a call" /></span>
+          <span class="brand-mark"><img src="/static/assets/landing/onezion-yellow-sheep-call-avatar-v1.png?v=20260726" alt="Happy Yellow Sheep answering a call" /></span>
           <span>AnyVibe</span>
         </a>
         <div class="nav-links">
           <a href="#how" data-i18n="navHow">How it works</a>
+          <a href="#handoff" data-i18n="navHandoff">Live flow</a>
           <a href="#vision" data-i18n="navVision">Vision</a>
           <button class="language-toggle" type="button" aria-label="Switch language" aria-pressed="false">EN / 中文</button>
           <a class="mini-cta" href="/company">
@@ -760,14 +1023,14 @@
         <div class="mascot-stage" aria-label="Yellow Sheep changes with each Vibe">
           <span class="stage-label">Yellow Sheep · live companion</span>
           <div class="mascot-frame" id="mascot-frame">
-            <img src="/static/assets/landing/yellow-sheep-code.png" alt="Yellow Sheep coding" data-scene="code" />
-            <img src="/static/assets/landing/yellow-sheep-pitch.png" alt="Yellow Sheep pitching" data-scene="pitch" />
-            <img src="/static/assets/landing/yellow-sheep-learn.png" alt="Yellow Sheep learning" data-scene="learn" />
-            <img src="/static/assets/landing/yellow-sheep-market.png" alt="Yellow Sheep marketing" data-scene="market" />
-            <img class="active" src="/static/assets/landing/yellow-sheep-bike.png" alt="Yellow Sheep riding a bicycle" data-scene="bike" />
-            <img src="/static/assets/landing/yellow-sheep-walk.png" alt="Yellow Sheep walking" data-scene="walk" />
-            <img src="/static/assets/landing/yellow-sheep-run.png" alt="Yellow Sheep running" data-scene="run" />
-            <img src="/static/assets/landing/yellow-sheep-done.png" alt="Yellow Sheep celebrating completed work" data-scene="done" />
+            <img src="/static/assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep coding" data-scene="code" />
+            <img src="/static/assets/landing/yellow-sheep-pitch.png?v=20260726" alt="Yellow Sheep pitching" data-scene="pitch" />
+            <img src="/static/assets/landing/yellow-sheep-learn.png?v=20260726" alt="Yellow Sheep learning" data-scene="learn" />
+            <img src="/static/assets/landing/yellow-sheep-market.png?v=20260726" alt="Yellow Sheep marketing" data-scene="market" />
+            <img class="active" src="/static/assets/landing/yellow-sheep-bike.png?v=20260726" alt="Yellow Sheep riding a bicycle" data-scene="bike" />
+            <img src="/static/assets/landing/yellow-sheep-walk.png?v=20260726" alt="Yellow Sheep walking" data-scene="walk" />
+            <img src="/static/assets/landing/yellow-sheep-run.png?v=20260726" alt="Yellow Sheep running" data-scene="run" />
+            <img src="/static/assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep celebrating completed work" data-scene="done" />
           </div>
           <div class="stage-status">
             <span class="status-live">● Voice connected</span>
@@ -808,19 +1071,90 @@
         <div class="workflow">
           <article class="workflow-card">
             <span class="workflow-number" data-i18n="callNo">01 / CALL</span>
-            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-call.png" alt="Yellow Sheep receptionist answering a phone call" /></div>
+            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep receptionist answering a phone call" /></div>
             <h3 data-i18n="callTitle">Describe the outcome</h3><p data-i18n="callCopy">A fast receptionist AI listens, asks the useful follow-ups and writes a clear brief.</p>
           </article>
           <article class="workflow-card">
             <span class="workflow-number" data-i18n="dispatchNo">02 / DISPATCH</span>
-            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-code.png" alt="Yellow Sheep engineering team at work" /></div>
+            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep engineering team at work" /></div>
             <h3 data-i18n="dispatchTitle">Your AI team works</h3><p data-i18n="dispatchCopy">Architect, builder and reviewer agents plan, implement and verify the task together.</p>
           </article>
           <article class="workflow-card">
             <span class="workflow-number" data-i18n="callbackNo">03 / CALLBACK</span>
-            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-done.png" alt="Happy Yellow Sheep calling back with completed work" /></div>
+            <div class="workflow-icon"><img src="/static/assets/landing/yellow-sheep-done.png?v=20260726" alt="Happy Yellow Sheep calling back with completed work" /></div>
             <h3 data-i18n="callbackTitle">Get the result</h3><p data-i18n="callbackCopy">AnyVibe calls back with what changed, what passed and the next useful decision.</p>
           </article>
+        </div>
+      </section>
+
+      <section id="handoff" class="handoff shell reveal">
+        <div class="handoff-intro">
+          <div>
+            <p class="section-kicker" data-i18n="handoffKicker">Live handoff · one shared brief</p>
+            <h2 data-i18n="handoffTitle">One call becomes a whole company in motion.</h2>
+          </div>
+          <p data-i18n="handoffCopy">Yellow Sheep listens first. The CEO owns the plan, specialists ship the work, and the caller gets a useful callback—not a dead end.</p>
+        </div>
+        <div class="handoff-demo" aria-label="Animated AnyVibe call handoff">
+          <div class="handoff-live">
+            <strong data-i18n="handoffLive">Live handoff</strong>
+            <span id="handoff-status" aria-live="polite">Harry is calling Yellow Sheep</span>
+          </div>
+          <div class="handoff-rail">
+            <article class="handoff-step" style="--handoff-delay: 0s">
+              <img src="/static/assets/landing/onezion-yellow-sheep-call-avatar-v1.png?v=20260726" alt="Caller starts an AnyVibe call" />
+              <span class="handoff-number">01 / CALL</span>
+              <h3 data-i18n="handoffCallerTitle">You call</h3>
+              <p data-i18n="handoffCallerCopy">Speak naturally.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--one" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 2s">
+              <img src="/static/assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep CS answers the phone" />
+              <span class="handoff-number">02 / CS</span>
+              <h3 data-i18n="handoffCsTitle">Yellow Sheep answers</h3>
+              <p data-i18n="handoffCsCopy">Clarifies the brief.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--two" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 4s">
+              <img src="/static/assets/landing/yellow-sheep-pitch.png?v=20260726" alt="Yellow Sheep CEO plans the work" />
+              <span class="handoff-number">03 / CEO</span>
+              <h3 data-i18n="handoffCeoTitle">CEO plans</h3>
+              <p data-i18n="handoffCeoCopy">Owns the outcome.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--three" aria-hidden="true"></span>
+            <article class="handoff-step handoff-step--team" style="--handoff-delay: 6s">
+              <img src="/static/assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep specialist team works on the task" />
+              <span class="handoff-number">04 / CREW</span>
+              <h3 data-i18n="handoffCrewTitle">Specialists build</h3>
+              <p data-i18n="handoffCrewCopy">Design, build, verify.</p>
+              <div class="handoff-crew" aria-hidden="true">
+                <img src="/static/assets/landing/yellow-sheep-learn.png?v=20260726" alt="" />
+                <img src="/static/assets/landing/yellow-sheep-market.png?v=20260726" alt="" />
+                <img src="/static/assets/landing/yellow-sheep-done.png?v=20260726" alt="" />
+              </div>
+            </article>
+            <span class="handoff-connector handoff-connector--four" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 9.8s">
+              <img src="/static/assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep CEO receives the completed work" />
+              <span class="handoff-number">05 / CEO</span>
+              <h3 data-i18n="handoffReviewTitle">CEO reviews</h3>
+              <p data-i18n="handoffReviewCopy">Checks the result.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--five" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 11.8s">
+              <img src="/static/assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep CS receives the handoff result" />
+              <span class="handoff-number">06 / CS</span>
+              <h3 data-i18n="handoffReturnTitle">CS wraps it up</h3>
+              <p data-i18n="handoffReturnCopy">Makes the result clear.</p>
+            </article>
+            <span class="handoff-connector handoff-connector--six" aria-hidden="true"></span>
+            <article class="handoff-step" style="--handoff-delay: 13.8s">
+              <img src="/static/assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep calls the user back with the result" />
+              <span class="handoff-number">07 / CALLBACK</span>
+              <h3 data-i18n="handoffCallbackTitle">You get the callback</h3>
+              <p data-i18n="handoffCallbackCopy">Changed, checked, ready.</p>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -842,10 +1176,10 @@
             </div>
           </div>
           <div class="company-map" aria-label="A user call routes through AnyVibe to several specialist Yellow Sheep teams">
-            <div class="call-node"><img src="/static/assets/landing/yellow-sheep-call.png" alt="Yellow Sheep receptionist takes the user's call" /><span data-i18n="userCalls">User calls AnyVibe</span></div>
+            <div class="call-node"><img src="/static/assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep receptionist takes the user's call" /><span data-i18n="userCalls">User calls AnyVibe</span></div>
             <div class="route-line" aria-hidden="true"></div>
             <div class="team-grid">
-              <div class="team-node"><img src="/static/assets/landing/yellow-sheep-code.png" alt="Yellow Sheep builder team" /><span data-i18n="builder">Builder</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-pitch.png" alt="Yellow Sheep strategist team" /><span data-i18n="strategist">Strategist</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-learn.png" alt="Yellow Sheep researcher team" /><span data-i18n="researcher">Researcher</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-market.png" alt="Yellow Sheep marketer team" /><span data-i18n="marketer">Marketer</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-done.png" alt="Yellow Sheep reviewer team" /><span data-i18n="reviewer">Reviewer</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-call.png" alt="Yellow Sheep coordinator team" /><span data-i18n="coordinator">Coordinator</span></div>
+              <div class="team-node"><img src="/static/assets/landing/yellow-sheep-code.png?v=20260726" alt="Yellow Sheep builder team" /><span data-i18n="builder">Builder</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-pitch.png?v=20260726" alt="Yellow Sheep strategist team" /><span data-i18n="strategist">Strategist</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-learn.png?v=20260726" alt="Yellow Sheep researcher team" /><span data-i18n="researcher">Researcher</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-market.png?v=20260726" alt="Yellow Sheep marketer team" /><span data-i18n="marketer">Marketer</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-done.png?v=20260726" alt="Yellow Sheep reviewer team" /><span data-i18n="reviewer">Reviewer</span></div><div class="team-node"><img src="/static/assets/landing/yellow-sheep-call.png?v=20260726" alt="Yellow Sheep coordinator team" /><span data-i18n="coordinator">Coordinator</span></div>
             </div>
           </div>
         </div>
@@ -874,10 +1208,10 @@
     <script>
       (() => {
         const translations = { zh: {
-          navHow:'如何运作', navVision:'团队界面', navCta:'打开工作台', heroKicker:'融入你生活的 AI 团队', heroCopy:'<strong>说出你的需求，然后继续前行。</strong>AnyVibe 把一通电话变成 AI 团队的工作，并在结果准备好时回拨给你。', heroCta:'打开实时工作台', heroSecondary:'查看闭环 ↓',
+          navHow:'如何运作', navHandoff:'实时交接', navVision:'团队界面', navCta:'打开工作台', heroKicker:'融入你生活的 AI 团队', heroCopy:'<strong>说出你的需求，然后继续前行。</strong>AnyVibe 把一通电话变成 AI 团队的工作，并在结果准备好时回拨给你。', heroCta:'打开实时工作台', heroSecondary:'查看闭环 ↓',
           callNo:'01 / 来电', callTitle:'描述你想要的结果', callCopy:'前台黄羊聆听、追问关键细节，并写成清晰任务简报。', dispatchNo:'02 / 派工', dispatchTitle:'AI 团队开始工作', dispatchCopy:'架构、构建与审查智能体一起规划、实现并验证任务。', callbackNo:'03 / 回电', callbackTitle:'拿到结果', callbackCopy:'AnyVibe 回拨告诉你改了什么、通过了什么，以及下一步。',
           visionKicker:'不只是助手 · 而是公司的界面', visionQuote:'昨天你为电脑工作。现在，电脑为你工作。', visionCopy:'AnyVibe 是一人公司的随时在线语音层：编程、路演、学习、记录、营销，以及下一件事。', userCalls:'用户呼叫 AnyVibe', builder:'构建', strategist:'策略', researcher:'研究', marketer:'营销', reviewer:'审查', coordinator:'协调',
-          sloganExplain:'任意事情，任意时间，任意地点，AnyVibe', finalTitle:'让灵感先于屏幕抵达。', finalCopy:'步行、骑行、通勤或锻炼时，告诉 AnyVibe 下一步该做什么，让团队继续推进。', finalCta:'认识你的 AI 团队', footerLeft:'© 2026 AnyVibe · AdventureX', footerRight:'黄羊 · OneZion'
+          handoffKicker:'实时交接 · 一份共享任务简报', handoffTitle:'一通电话，让整家公司开始运转。', handoffCopy:'黄羊先听懂你。CEO 对结果负责，专家团队完成工作，再由接线员带着有用结论回拨给你。', handoffLive:'实时交接', handoffCallerTitle:'你来电话', handoffCallerCopy:'自然地说出需求。', handoffCsTitle:'黄羊接听', handoffCsCopy:'澄清任务简报。', handoffCeoTitle:'CEO 制定计划', handoffCeoCopy:'为结果负责。', handoffCrewTitle:'专家团队开工', handoffCrewCopy:'设计、实现、验证。', handoffReviewTitle:'CEO 审阅', handoffReviewCopy:'检查完成结果。', handoffReturnTitle:'CS 整理交付', handoffReturnCopy:'把结果讲清楚。', handoffCallbackTitle:'你收到回拨', handoffCallbackCopy:'已完成、已验证、可继续。', sloganExplain:'任意事情，任意时间，任意地点，AnyVibe', finalTitle:'让灵感先于屏幕抵达。', finalCopy:'步行、骑行、通勤或锻炼时，告诉 AnyVibe 下一步该做什么，让团队继续推进。', finalCta:'认识你的 AI 团队', footerLeft:'© 2026 AnyVibe · AdventureX', footerRight:'黄羊 · OneZion'
         }};
         const languageButton = document.querySelector('.language-toggle');
         const setLanguage = (language) => {
@@ -926,6 +1260,23 @@
         const status = document.querySelector("#stage-status-text");
         const mascotImages = [...document.querySelectorAll("#mascot-frame img")];
         const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const handoffStatus = document.querySelector("#handoff-status");
+        const handoffStates = [
+          { en: "Harry is calling Yellow Sheep", zh: "Harry 正在呼叫黄羊" },
+          { en: "Yellow Sheep is clarifying the brief", zh: "黄羊正在澄清任务简报" },
+          { en: "CEO is shaping the plan", zh: "CEO 正在制定计划" },
+          { en: "Specialists are building and checking", zh: "专家团队正在实现与验证" },
+          { en: "CEO is reviewing the result", zh: "CEO 正在审阅结果" },
+          { en: "Yellow Sheep is preparing the handoff", zh: "黄羊正在整理交付说明" },
+          { en: "Callback: result ready", zh: "正在回拨：结果已准备好" },
+        ];
+        let handoffIndex = 0;
+
+        const renderHandoffStatus = () => {
+          if (!handoffStatus) return;
+          const current = handoffStates[handoffIndex];
+          handoffStatus.textContent = document.documentElement.lang === "zh-CN" ? current.zh : current.en;
+        };
 
         const updateExperience = (experience) => {
           emoji.textContent = experience.emoji;
@@ -937,6 +1288,7 @@
         };
 
         updateExperience(experiences[0]);
+        renderHandoffStatus();
 
         if (!prefersReducedMotion) {
           let experienceIndex = 0;
@@ -963,6 +1315,10 @@
           };
 
           window.setTimeout(type, 1200);
+          window.setInterval(() => {
+            handoffIndex = (handoffIndex + 1) % handoffStates.length;
+            renderHandoffStatus();
+          }, 2000);
         }
 
         const observer = new IntersectionObserver(
