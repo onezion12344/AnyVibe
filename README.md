@@ -4,7 +4,7 @@ AnyVibe is a voice-first AI company: speak naturally, let the right team work, a
 
 **AdventureX 2026** | Yellow Sheep by OneZion | Harness-agnostic multi-agent workflow
 
-**Live:** https://anyvibe.onezion.top/ · **Workspace:** https://anyvibe.onezion.top/company · **Code:** https://github.com/onezion12344/AnyVibe
+**Public landing:** https://onezion12344.github.io/AnyVibe/ · **Live workspace:** https://anyvibe.onezion.top/company · **Code:** https://github.com/onezion12344/AnyVibe
 
 ## Product surfaces
 
@@ -13,6 +13,12 @@ AnyVibe is a voice-first AI company: speak naturally, let the right team work, a
 - **Voice call (/call)** — the realtime speech interface.
 
 The landing page and the workspace are intentionally linked: every primary call-to-action opens the live Company Workspace instead of sending users to a dead-end marketing form.
+
+The GitHub Pages landing is a static public launch fallback. It includes the bilingual brand experience, Yellow Sheep assets, and the animated handoff loop: **caller → Yellow Sheep CS → CEO → specialist team → CEO → CS → callback**. The voice workspace remains the dynamic surface, so it is served by the application host rather than Pages.
+
+## Demo verification
+
+The current local demo is checked as an end-to-end loop: StepFun TTS and ASR return valid audio/transcripts, the authenticated realtime call WebSocket returns model-authored opening audio, the call planner distinguishes social replies, task dispatch, and goodbyes, and a real Qoder CLI dispatch was verified in an isolated temporary repository. The automated suite currently passes with `122 passed`.
 
 ## Brand assets
 
@@ -159,7 +165,7 @@ Returns full session: all checkpoints, all delegations with status, and pending 
 |------|-------------|--------|
 | `halfduplex` | stdin text → macOS `say` output | Works (no API key needed) |
 | `livekit` | Deepgram STT → DeepSeek LLM → Deepgram TTS | Requires API keys |
-| `stepaudio` | StepFun Realtime API (WebSocket) | Stub (needs implementation) |
+| `stepaudio` | StepFun Realtime API (WebSocket) | Browser runtime is implemented in `web/call_bridge.py` |
 | `seeduplex` | ByteDance Seeduplex (WebRTC) | Stub (needs implementation) |
 
 ```bash
