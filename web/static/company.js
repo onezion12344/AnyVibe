@@ -216,7 +216,7 @@ const COMPANY = (() => {
     if (op === 'card_done') {
       const c = cards.get(cardId);
       if (c && c.el) c.el.classList.add('done');
-      setPetMood(t('pet_shipping'), true);
+      setPetMood(t('pet_shipping'), true, 'onezion/yellow-sheep-complete.gif');
     }
   }
 
@@ -290,7 +290,7 @@ const COMPANY = (() => {
       el.style.left = p[0] + '%'; el.style.top = p[1] + '%';
       const displayName = node.id === 'user' ? callerName : (node.label || node.id);
       const avatar = document.createElement('div'); avatar.className = 'nn-avatar';
-      const avatarSrc = node.avatar || (node.kind === 'user' ? networkState.user_avatar : node.kind === 'cs' ? '/static/assets/yellow-sheep-meditating.png' : '');
+      const avatarSrc = node.avatar || (node.kind === 'user' ? networkState.user_avatar : node.kind === 'cs' ? '/static/assets/onezion/yellow-sheep-hello.gif' : '');
       if (avatarSrc) {
         const img = document.createElement('img'); img.alt = displayName; img.src = avatarSrc;
         img.onerror = () => { avatar.textContent = displayName.slice(0, 2).toUpperCase(); };
@@ -507,10 +507,16 @@ const COMPANY = (() => {
     petImageEl = petButtonEl ? petButtonEl.querySelector('img') : null;
     if (petButtonEl) {
       const moods = ['pet_waiting', 'pet_mapping', 'pet_ready', 'pet_shipping'];
+      const petImages = [
+        'onezion/yellow-sheep-hello.gif',
+        'onezion/yellow-sheep-explaining.gif',
+        'onezion/yellow-sheep-working.gif',
+        'onezion/yellow-sheep-complete.gif',
+      ];
       let moodIndex = 0;
       petButtonEl.addEventListener('click', () => {
         moodIndex = (moodIndex + 1) % moods.length;
-        setPetMood(t(moods[moodIndex]), true);
+        setPetMood(t(moods[moodIndex]), true, petImages[moodIndex]);
       });
     }
 
@@ -541,7 +547,13 @@ const COMPANY = (() => {
           const moods = {
             idle: 'pet_waiting', connecting: 'pet_mapping', connected: 'pet_ready', muted: 'pet_waiting', error: 'pet_waiting',
           };
-          const petAsset = (state === 'idle' || state === 'muted') ? 'yellow-sheep-meditating.png' : 'yellow-sheep-hero.png';
+          const petAsset = {
+            idle: 'onezion/yellow-sheep-hello.gif',
+            connecting: 'onezion/yellow-sheep-working.gif',
+            connected: 'onezion/yellow-sheep-explaining.gif',
+            muted: 'onezion/yellow-sheep-hello.gif',
+            error: 'onezion/yellow-sheep-hello.gif',
+          }[state] || 'onezion/yellow-sheep-hello.gif';
           setPetMood(t(moods[state] || 'pet_waiting'), state === 'connected', petAsset);
         },
         onTranscript: (text) => { transcriptEl.textContent = text; },
@@ -556,15 +568,15 @@ const COMPANY = (() => {
           const task = data.task || t('task_dispatched');
           transcriptEl.textContent = `${t('engineer_accepted')}: ${task}`;
           showToast(`${t('engineer_accepted')}: ${task}`);
-          setPetMood(t('pet_shipping'), true);
+          setPetMood(t('pet_shipping'), true, 'onezion/yellow-sheep-working.gif');
           syncCompanyState();
         },
         onAgentState: (data) => {
           const state = data.state || 'listening';
           const moods = {
-            dispatching: ['pet_ready', 'yellow-sheep-hero.png'],
-            listening: ['pet_mapping', 'yellow-sheep-hero.png'],
-            ending: ['pet_waiting', 'yellow-sheep-meditating.png'],
+            dispatching: ['pet_ready', 'onezion/yellow-sheep-working.gif'],
+            listening: ['pet_mapping', 'onezion/yellow-sheep-explaining.gif'],
+            ending: ['pet_waiting', 'onezion/yellow-sheep-hello.gif'],
           };
           const [mood, asset] = moods[state] || moods.listening;
           setPetMood(t(mood), state === 'dispatching', asset);

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="cv-company-capability" content="">
-<title data-i18n="page_title">Coding Vibe · Voice Control + Company Kanban</title>
+<title data-i18n="page_title">AnyVibe · Voice Control + Company Kanban</title>
 <link rel="stylesheet" href="/static/call.css">
 <style>
   :root { --bg:#182735; --surface:#213546; --card:#294255; --border:#3a5968; --accent:#d9824f; --accent2:#e3ae45; --accent3:#6f9aad; --white:#f7edd4; --muted:#a8b8bd; }
@@ -27,11 +27,11 @@
   .voice-panel { display:flex; flex-direction:column; align-items:center; padding:20px 18px 16px; background:linear-gradient(180deg,rgba(32,45,58,.9),rgba(22,33,47,.9)); }
   .pet-stage { position:relative; width:100%; min-height:228px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; }
   .pet-halo { position:absolute; top:13px; width:188px; height:188px; border-radius:50%; background:radial-gradient(circle,rgba(227,174,69,.28),rgba(91,137,157,.1) 54%,transparent 72%); filter:blur(2px); }
-  .pet-button { position:relative; z-index:1; width:172px; height:190px; overflow:hidden; border:2px solid rgba(227,174,69,.65); border-radius:48% 48% 18% 18%; background:#c8934e; box-shadow:0 18px 34px rgba(0,0,0,.35),0 0 26px rgba(227,174,69,.18); cursor:pointer; transform:translateY(0); transition:transform .2s,box-shadow .2s; }
+  .pet-button { position:relative; z-index:1; width:172px; height:190px; overflow:hidden; border:2px solid rgba(227,174,69,.65); border-radius:48% 48% 18% 18%; background:#f7edd4; box-shadow:0 18px 34px rgba(0,0,0,.35),0 0 26px rgba(227,174,69,.18); cursor:pointer; transform:translateY(0); transition:transform .2s,box-shadow .2s; }
   .pet-button:hover { transform:translateY(-5px) rotate(-1deg); box-shadow:0 24px 42px rgba(0,0,0,.4),0 0 34px rgba(227,174,69,.28); }
   .pet-button:active { transform:translateY(-1px) scale(.98); }
   .pet-button.pet-bounce { animation:pet-bounce .7s ease; }
-  .pet-button img { width:100%; height:100%; object-fit:cover; object-position:50% 56%; display:block; filter:saturate(.96) contrast(1.03); }
+  .pet-button img { width:100%; height:100%; object-fit:contain; object-position:center; display:block; filter:saturate(.96) contrast(1.03); }
   .pet-spark { position:absolute; right:16px; top:15px; color:#fff3bd; font-size:20px; text-shadow:0 0 12px #e3ae45; animation:pet-spark 2.4s ease-in-out infinite; }
   .pet-name { position:relative; z-index:2; margin-top:-2px; padding:3px 12px; border:1px solid rgba(227,174,69,.45); border-radius:999px; background:rgba(31,43,55,.92); color:#f4d58b; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
   .pet-mood { margin-top:7px; color:#b7c9c7; font:italic 11px/1.35 Georgia,serif; text-align:center; }
@@ -112,7 +112,7 @@
 <div id="star-bg"></div>
 <div id="company-app">
   <header class="cmp-hd">
-    <div class="cmp-brand"><a class="cmp-back" href="/" aria-label="Back to index" data-i18n-aria-label="back_to_index">←</a><div><div class="cmp-hd-title" data-i18n="workspace_title">Coding Vibe Company</div><div class="board-subtitle" data-i18n="workspace_subtitle">Voice Control · AI Role Team · Live Kanban</div></div></div>
+    <div class="cmp-brand"><a class="cmp-back" href="/" aria-label="Back to index" data-i18n-aria-label="back_to_index">←</a><div><div class="cmp-hd-title" data-i18n="workspace_title">AnyVibe Company</div><div class="board-subtitle" data-i18n="workspace_subtitle">Voice Control · AI Role Team · Live Kanban</div></div></div>
     <div class="cmp-hd-actions"><button class="language-toggle" data-language-toggle type="button"></button><div class="cmp-hd-badge" id="cmp-hd-badge" data-i18n="board_connecting">Board connecting</div></div>
   </header>
   <main class="cmp-layout">
@@ -120,7 +120,7 @@
       <div class="pet-stage" id="pet-stage">
         <div class="pet-halo"></div>
         <button class="pet-button" id="pet-button" aria-label="Interact with Yellow Sheep">
-          <img src="/static/assets/yellow-sheep-hero.png" alt="Yellow Sheep standing in a boat beneath the lighthouse" />
+          <img src="/static/assets/onezion/yellow-sheep-hello.gif" alt="OneZion the Yellow Sheep ready to help" />
           <span class="pet-spark">✦</span>
         </button>
         <div class="pet-name">黄羊 · Yellow Sheep</div>
@@ -160,9 +160,9 @@
 <div class="cmp-toast" id="cmp-toast"></div>
 <script>
 window.CV_I18N = {
-  page_title: { en: 'Coding Vibe · Voice Control + Company Kanban', zh: 'Coding Vibe · 语音控制与公司看板' },
+  page_title: { en: 'AnyVibe · Voice Control + Company Kanban', zh: 'AnyVibe · 语音控制与公司看板' },
   switch_to_chinese: { en: 'Switch to Chinese', zh: '切换到中文' }, switch_to_english: { en: 'Switch to English', zh: '切换到英文' },
-  back_to_index: { en: 'Back to index', zh: '返回首页' }, workspace_title: { en: 'Coding Vibe Company', zh: 'Coding Vibe 公司空间' },
+  back_to_index: { en: 'Back to index', zh: '返回首页' }, workspace_title: { en: 'AnyVibe Company', zh: 'AnyVibe 公司空间' },
   workspace_subtitle: { en: 'Voice Control · AI Role Team · Live Kanban', zh: '语音控制 · AI 角色团队 · 实时看板' }, board_connecting: { en: 'Board connecting', zh: '看板连接中' },
   yellow_sheep_cs: { en: 'Yellow Sheep · CS', zh: '黄羊 · 客户成功' }, voice_subtitle: { en: 'Your digital teammate is listening. Call, then watch the crew move.', zh: '你的数字队友正在待命。呼叫后，看看团队如何协作。' },
   calling_as: { en: 'Speaking as', zh: '当前说话人' }, caller_name: { en: 'Your name', zh: '你的名字' },
